@@ -1,2 +1,5 @@
 # rms-pds4indextools
-PDS4 index tools Python module
+
+Supported versions: Python >= 3.8
+
+# PDS Ring-Moon Systems Node, SETI Institute
