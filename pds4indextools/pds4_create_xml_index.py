@@ -1,3 +1,47 @@
+"""
+XML Bundle Scraper
+This script scrapes XML files within specified directories, extracts information from
+user-defined XML elements, and generates a CSV index file. The script provides options
+for customizing the extraction process, such as specifying XPath headers, limiting
+search levels, and selecting elements to scrape.
+Usage:
+    python xml_bundle_scraper.py <directorypath> <pattern>
+        [--elements-file ELEMENTS_FILE]
+        [--disambiguate-xpaths]
+        [--output-file OUTPUT_FILE]
+        [--verbose]
+        [--sort-by SORT_BY] 
+        [--clean-header-field-names]
+        [--extra-file-info EXTRA_FILE_INFO]
+        [--config-file CONFIG_FILE]
+Arguments:
+    directorypath        The path to the directory containing the bundle to scrape.
+    pattern              The glob pattern(s) (which may include wildcards like *, ?,
+                         and **) for the files you wish to index. Multiple patterns
+                         may be specified separated by spaces. Surround each pattern
+                         with quotes.
+    --elements-file ELEMENTS_FILE
+                         Optional text file containing elements to scrape.
+    --disambiguate-xpaths
+                         Replace unique XPath headers with shortened versions.
+    --output-file OUTPUT_FILE
+                         The output path and filename for the resulting index file.
+    --verbose            Activate verbose printed statements during runtime.
+    --sort-by SORT_BY    Sort the index file by a chosen set of columns.
+    --clean-header-field-names
+                         Replace the ":" and "/" with Windows-friendly characters.
+    --extra-file-info EXTRA_FILE_INFO  
+                         Add additional column(s) to the index file containing file or
+                         bundle information. Possible values are: "LID", "filename",
+                         "filepath", "bundle", and "bundle_lid". Multiple values may be
+                         specified separated by spaces.
+    --config-file CONFIG_FILE
+                         An optional .ini configuration file for further customization.
+Example:
+python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2" 
+--output_file <outputfile> --elements-file sample_elements.txt --verbose
+"""
+
 import argparse
 import configparser
 from lxml import etree
@@ -55,6 +99,14 @@ def default_value_for_nil(config, data_type, nil_value):
 
 
 def grab_elements(xpath):
+    """Extract elements from an XPath in the order they appear.
+
+    Inputs:
+        xpath    The XPath of a scraped element
+
+    Returns:
+        The tuple of elements the XPath is composed of.
+    """
     elements = ()
     parts = xpath.split('/')
 
@@ -103,7 +155,7 @@ def load_config_file(specified_config_file):
 def process_schema_location(file_path):
     """Process schema location from an XML file.
 
-    Args:
+    Inputs:
         file_path    Path to the XML file.
 
     Returns:
@@ -383,7 +435,7 @@ def main():
 
         for key in list(xml_results.keys()):
             process_tags(xml_results, key, root,
-                         namespaces, prefixes, args)
+                         namespaces, prefixes)
 
         if args.disambiguate_xpaths:
                 elements = ()
@@ -427,4 +479,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
