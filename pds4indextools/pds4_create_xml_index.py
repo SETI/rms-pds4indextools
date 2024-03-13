@@ -1,50 +1,3 @@
-"""
-XML Bundle Scraper
-
-This script scrapes XML files within specified directories, extracts information from
-user-defined XML elements, and generates a CSV index file. The script provides options
-for customizing the extraction process, such as specifying XPath headers, limiting
-search levels, and selecting elements to scrape.
-
-Usage:
-    python xml_bundle_scraper.py <directorypath> <pattern>
-        [--elements-file ELEMENTS_FILE]
-        [--xpaths]
-        [--output-file OUTPUT_FILE]
-        [--verbose]
-        [--sort-by SORT_BY] 
-        [--clean-header-field-names]
-        [--extra-file-info EXTRA_FILE_INFO]
-        [--config-file CONFIG_FILE]
-
-Arguments:
-    directorypath        The path to the directory containing the bundle to scrape.
-    pattern              The glob pattern(s) (which may include wildcards like *, ?,
-                         and **) for the files you wish to index. Multiple patterns
-                         may be specified separated by spaces. Surround each pattern
-                         with quotes.
-    --elements-file ELEMENTS_FILE
-                         Optional text file containing elements to scrape.
-    --xpaths             Activate XPath headers in the final index file.
-    --output-file OUTPUT_FILE
-                         The output path and filename for the resulting index file.
-    --verbose            Activate verbose printed statements during runtime.
-    --sort-by SORT_BY    Sort the index file by a chosen set of columns.
-    --clean-header-field-names
-                         Replace the ":" and "/" with Windows-friendly characters.
-    --extra-file-info EXTRA_FILE_INFO  
-                         Add additional column(s) to the index file containing file or
-                         bundle information. Possible values are: "LID", "filename",
-                         "filepath", "bundle", and "bundle_lid". Multiple values may be
-                         specified separated by spaces.
-    --config-file CONFIG_FILE
-                         An optional .ini configuration file for further customization.
-
-Example:
-python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2" 
---output_file <outputfile> --elements-file sample_elements.txt --verbose
-"""
-
 import argparse
 import configparser
 from lxml import etree
@@ -52,6 +5,32 @@ import pandas as pd
 from pathlib import Path
 import requests
 import sys
+
+
+def convert_header_to_xpath(root, xpath_find, namespaces):
+    """Convert an XML header path to an XPath expression.
+
+    Inputs:
+        root           The root element of the XML document.
+        xpath_find     Original XML header path.
+        namespaces     Dictionary of XML namespace mappings.
+
+    Returns:
+        Converted XPath expression.
+    """
+    sections = xpath_find.split('/')
+    xpath_final = ''
+    portion = ''
+    for sec in sections[1:]:
+        portion = portion + '/' + sec
+        tag = str(root.xpath(portion, namespaces=namespaces)[0].tag)
+        if '*' in sec:
+            sec = sec[1:]
+        if ':' in sec:
+            sec = ''
+        xpath_final = xpath_final + '/' + tag + sec
+
+    return xpath_final
 
 
 def default_value_for_nil(config, data_type, nil_value):
@@ -75,42 +54,16 @@ def default_value_for_nil(config, data_type, nil_value):
     return default
 
 
-def convert_header_to_tag(path, root, namespaces):
-    """Convert an XPath expression to an XML tag.
+def grab_elements(xpath):
+    elements = ()
+    parts = xpath.split('/')
 
-    Inputs:
-        path          XPath expression.
-        root          The root element of the XML document.
-        namespaces    Dictionary of XML namespace mappings.
-
-    Returns:
-        Converted XML tag.
-    """
-    tag = str(root.xpath(path, namespaces=namespaces)[0].tag)
-
-    return tag
-
-
-def convert_header_to_xpath(root, xpath_find, namespaces):
-    """Convert an XML header path to an XPath expression.
-
-    Inputs:
-        root           The root element of the XML document.
-        xpath_find     Original XML header path.
-        namespaces     Dictionary of XML namespace mappings.
-
-    Returns:
-        Converted XPath expression.
-    """
-    sections = xpath_find.split('/')
-    xpath_final = ''
-    portion = ''
-    for sec in sections[1:]:
-        portion = portion + '/' + sec
-        tag = str(root.xpath(portion, namespaces=namespaces)[0].tag)
-        xpath_final = xpath_final + '/' + tag
-
-    return xpath_final
+    for part in parts:
+        if '[' in part:
+            part = part.split('[')
+            elements += (part[0],)
+    
+    return elements
 
 
 def load_config_file(specified_config_file):
@@ -146,57 +99,6 @@ def load_config_file(specified_config_file):
     
     return config
 
-def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
-    """Store all nillable elements and their data types in a dictionary.
-
-    Inputs:
-        xsd file                  An XML Schema Definition file.
-        nillable_elements_info    A dictionary containing nillable element information.
-    """
-    tree = etree.fromstring(requests.get(xsd_file).content)
-    namespace = {'xs': 'http://www.w3.org/2001/XMLSchema'}
-
-    elements_with_nillable = tree.xpath('//xs:element[@nillable="true"]',
-                                        namespaces=namespace)
-
-    for element in elements_with_nillable:
-        name = element.get('name')
-        type_attribute = element.get('type')
-        if type_attribute not in nillable_elements_info.keys():
-            if type_attribute:
-                # Split the type attribute to handle namespace:typename format
-                type_parts = type_attribute.split(':')
-                # Take the last part as the type name
-                type_name = type_parts[-1]
-
-                # Attempt to find the type definition in the document
-                type_definition_xpath = (f'//xs:simpleType[@name="{type_name}"] | '
-                                         f'//xs:complexType[@name="{type_name}"]')
-                type_definition = tree.xpath(
-                    type_definition_xpath, namespaces=namespace)
-
-                if type_definition:
-                    # Take the first match
-                    type_definition = type_definition[0]
-                    base_type = None
-                    # For complexType with simpleContent or simpleType, find base attr
-                    if type_definition.tag.endswith('simpleType'):
-                        restriction = type_definition.find('.//xs:restriction',
-                                                           namespaces=namespace)
-                        if restriction is not None:
-                            base_type = restriction.get('base')
-                    elif type_definition.tag.endswith('complexType'):
-                        extension = type_definition.find('.//xs:extension',
-                                                         namespaces=namespace)
-                        if extension is not None:
-                            base_type = extension.get('base')
-
-                    nillable_elements_info[name] = (
-                        base_type or 'External or built-in type')
-                else:
-                    # Type definition not found, might be external or built-in type
-                    nillable_elements_info[name] = 'External or built-in type'
-
 
 def process_schema_location(file_path):
     """Process schema location from an XML file.
@@ -222,7 +124,7 @@ def process_schema_location(file_path):
     return xsd_urls
 
 
-def process_tags(xml_results, key, root, namespaces, prefixes, args):
+def process_tags(xml_results, key, root, namespaces, prefixes):
     """Process XML tags based on the provided options.
 
     If the --xpaths command is used, the XPath is converted into a format that
@@ -238,24 +140,13 @@ def process_tags(xml_results, key, root, namespaces, prefixes, args):
         root           The root element of the XML tree.
         namespaces     A dictionary containing XML namespace mappings.
         prefixes       A dictionary containing XML namespace prefixes.
-        args           Command-line arguments.
     """
-    if args.xpaths:
-        key_new = convert_header_to_xpath(root, key, namespaces)
-        for namespace in prefixes.keys():
-            if namespace in key_new:
-                key_new = key_new.replace(
-                    '{'+namespace+'}', prefixes[namespace]+':')
-        xml_results[key_new] = xml_results[key]
-        del xml_results[key]
-    else:
-        key_new = convert_header_to_tag(key, root, namespaces)
-        for namespace in prefixes.keys():
-            if namespace in key_new:
-                key_new = key_new.replace(
-                    '{'+namespace+'}', prefixes[namespace]+':')
-        xml_results[key_new] = xml_results[key]
-        del xml_results[key]
+    key_new = convert_header_to_xpath(root, key, namespaces)
+    for namespace in prefixes.keys():
+        if namespace in key_new:
+            key_new = key_new.replace(
+                '{'+namespace+'}', prefixes[namespace]+':')
+    xml_results[key_new] = xml_results.pop(key)
 
 
 def store_element_text(element, tree, results_dict, nillable_elements_info, config, label):
@@ -319,6 +210,58 @@ def traverse_and_store(element, tree, results_dict, elements_to_scrape,
                            nillable_elements_info, config, label)
 
 
+def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
+    """Store all nillable elements and their data types in a dictionary.
+
+    Inputs:
+        xsd file                  An XML Schema Definition file.
+        nillable_elements_info    A dictionary containing nillable element information.
+    """
+    tree = etree.fromstring(requests.get(xsd_file).content)
+    namespace = {'xs': 'http://www.w3.org/2001/XMLSchema'}
+
+    elements_with_nillable = tree.xpath('//xs:element[@nillable="true"]',
+                                        namespaces=namespace)
+
+    for element in elements_with_nillable:
+        name = element.get('name')
+        type_attribute = element.get('type')
+        if type_attribute not in nillable_elements_info.keys():
+            if type_attribute:
+                # Split the type attribute to handle namespace:typename format
+                type_parts = type_attribute.split(':')
+                # Take the last part as the type name
+                type_name = type_parts[-1]
+
+                # Attempt to find the type definition in the document
+                type_definition_xpath = (f'//xs:simpleType[@name="{type_name}"] | '
+                                         f'//xs:complexType[@name="{type_name}"]')
+                type_definition = tree.xpath(
+                    type_definition_xpath, namespaces=namespace)
+
+                if type_definition:
+                    # Take the first match
+                    type_definition = type_definition[0]
+                    base_type = None
+                    # For complexType with simpleContent or simpleType, find base attr
+                    if type_definition.tag.endswith('simpleType'):
+                        restriction = type_definition.find('.//xs:restriction',
+                                                           namespaces=namespace)
+                        if restriction is not None:
+                            base_type = restriction.get('base')
+                    elif type_definition.tag.endswith('complexType'):
+                        extension = type_definition.find('.//xs:extension',
+                                                         namespaces=namespace)
+                        if extension is not None:
+                            base_type = extension.get('base')
+
+                    nillable_elements_info[name] = (
+                        base_type or 'External or built-in type')
+                else:
+                    # Type definition not found, might be external or built-in type
+                    nillable_elements_info[name] = 'External or built-in type'
+
+
 def write_results_to_csv(results_list, args, output_csv_path):
     """Write results from a list of dictionaries to a CSV file.
 
@@ -359,7 +302,7 @@ def main():
                              'specified, all elements found in the XML files are '
                              'included.')
 
-    parser.add_argument('--xpaths', action='store_true',
+    parser.add_argument('--disambiguate-xpaths', action='store_true',
                         help='If specified, use full XPaths in the column '
                              'headers. If not specified, use only elements tags.')
 
@@ -442,6 +385,23 @@ def main():
             process_tags(xml_results, key, root,
                          namespaces, prefixes, args)
 
+        if args.disambiguate_xpaths:
+                elements = ()
+                xpath_elements = []
+                for key in list(xml_results.keys()):
+                    xpath_elements.append(grab_elements(key))
+                
+                duplicates = [t for t in set(xpath_elements) if xpath_elements.count(t) > 1]
+
+                for key in list(xml_results.keys()):
+                    elements = grab_elements(key)
+                    if elements not in duplicates:
+                        value = elements[-1]
+                    else:
+                        value = key
+                    xml_results[value] = xml_results.pop(key)
+                    
+
         lid = xml_results.get('pds:logical_identifier', 'Missing_LID')
 
         # Attach extra columns if asked for.
@@ -467,3 +427,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
