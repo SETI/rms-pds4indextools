@@ -440,6 +440,7 @@ def main():
         if args.disambiguate_xpaths:
                 elements = ()
                 xpath_elements = []
+                tags = []
                 for key in list(xml_results.keys()):
                     xpath_elements.append(grab_elements(key))
                 
@@ -447,8 +448,10 @@ def main():
 
                 for key in list(xml_results.keys()):
                     elements = grab_elements(key)
-                    if elements not in duplicates:
-                        value = elements[-1]
+                    tag = elements[-1]
+                    if elements not in duplicates and elements[-1] not in tags:
+                        value = tag
+                        tags.append(tag)
                     else:
                         value = key
                     xml_results[value] = xml_results.pop(key)
