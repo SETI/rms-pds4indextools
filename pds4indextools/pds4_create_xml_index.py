@@ -4,6 +4,7 @@ This script scrapes XML files within specified directories, extracts information
 user-defined XML elements, and generates a CSV index file. The script provides options
 for customizing the extraction process, such as specifying XPath headers, limiting
 search levels, and selecting elements to scrape.
+
 Usage:
     python xml_bundle_scraper.py <directorypath> <pattern>
         [--elements-file ELEMENTS_FILE]
@@ -14,6 +15,7 @@ Usage:
         [--clean-header-field-names]
         [--extra-file-info EXTRA_FILE_INFO]
         [--config-file CONFIG_FILE]
+
 Arguments:
     directorypath        The path to the directory containing the bundle to scrape.
     pattern              The glob pattern(s) (which may include wildcards like *, ?,
@@ -37,6 +39,7 @@ Arguments:
                          specified separated by spaces.
     --config-file CONFIG_FILE
                          An optional .ini configuration file for further customization.
+
 Example:
 python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2" 
 --output_file <outputfile> --elements-file sample_elements.txt --verbose
@@ -194,10 +197,10 @@ def process_tags(label_results, key, root, namespaces, prefixes):
 
     Inputs:
         label_results    A dictionary containing XML data to be processed.
-        key            The key representing the XML tag to be processed.
-        root           The root element of the XML tree.
-        namespaces     A dictionary containing XML namespace mappings.
-        prefixes       A dictionary containing XML namespace prefixes.
+        key              The key representing the XML tag to be processed.
+        root             The root element of the XML tree.
+        namespaces       A dictionary containing XML namespace mappings.
+        prefixes         A dictionary containing XML namespace prefixes.
     """
     key_new = convert_header_to_xpath(root, key, namespaces)
     for namespace in prefixes.keys():
@@ -468,8 +471,8 @@ def main():
                              'included.')
 
     parser.add_argument('--disambiguate-xpaths', action='store_true',
-                        help='If specified, use full XPaths in the column '
-                             'headers. If not specified, use only elements tags.')
+                        help='If specified, uses tags of unique XPaths. Any values with '
+                             'duplicate values will still use their full XPath.')
 
     parser.add_argument('--output-file', type=str,
                         help='The output filepath ending with your chosen filename for '
