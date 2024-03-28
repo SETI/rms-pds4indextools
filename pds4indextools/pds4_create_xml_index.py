@@ -43,12 +43,18 @@ python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
 """
 
 import argparse
+from collections import namedtuple
 import configparser
+from itertools import groupby
 from lxml import etree
 import pandas as pd
 from pathlib import Path
 import requests
 import sys
+
+
+SplitXPath = namedtuple('SplitXPath',
+                        ['xpath', 'parent', 'child', 'prefix', 'num'])
 
 
 def convert_header_to_xpath(root, xpath_find, namespaces):
@@ -176,18 +182,18 @@ def process_schema_location(file_path):
     return xsd_urls
 
 
-def process_tags(xml_results, key, root, namespaces, prefixes):
+def process_tags(label_results, key, root, namespaces, prefixes):
     """Process XML tags based on the provided options.
 
     If the --xpaths command is used, the XPath is converted into a format that
     contains the names and namespaces of all the parent elements of that element.
     If the --xpaths command is not used, the XPath is converted into the
     associated element tag of that element, and given its associated namespace. These
-    values then replace their old versions in the xml_results dictionary.
+    values then replace their old versions in the label_results dictionary.
 
 
     Inputs:
-        xml_results    A dictionary containing XML data to be processed.
+        label_results    A dictionary containing XML data to be processed.
         key            The key representing the XML tag to be processed.
         root           The root element of the XML tree.
         namespaces     A dictionary containing XML namespace mappings.
@@ -198,7 +204,114 @@ def process_tags(xml_results, key, root, namespaces, prefixes):
         if namespace in key_new:
             key_new = key_new.replace(
                 '{'+namespace+'}', prefixes[namespace]+':')
-    xml_results[key_new] = xml_results.pop(key)
+    label_results[key_new] = label_results.pop(key)
+
+
+def renumber_xpaths(xpaths):
+    """Renumber a list of XPaths to be sequential at each level.
+
+    lxml appends a unique ID in [] after each tag based on its physical position
+    in the XML hierarcy. For example:
+
+        /pds:Product_Observational/pds:Observation_Area[2]/
+        pds:Observing_System[4]/pds:name[1]
+
+    For ease of use, we would rather have these numbers based on the occurrence
+    number rather than the physical position.
+
+    This function takes in a list of XPaths (or XPath fragments) and renumbers
+    them at each level of the hierarchy such that each unique tag name is
+    numbered sequentially starting at 1. The list of XPaths must already be
+    sorted such that the numbers at each level are in ascending order.
+    Further, if there are multiple occurrences of a tag at a level, those
+    occurrences must be next to each other with no other tags in between.
+
+    Input:
+        xpaths      The list of XPaths or XPath fragments.
+
+    Returns:
+        A dictionary containing a mapping from the original XPaths to the
+        renumbered XPaths.
+    """
+
+    def split_xpath_prefix_and_num(xpath):
+        """Convert an XPath into a SplitXPath namedtuple.
+
+        Each XPath is of the form:
+            <parent> or
+            <parent>/<child>    where <child> includes all further levels of the
+                                hierarchy
+                <parent> is of the form:
+                    <prefix> or
+                    <prefix>[<num>]     where [<num>] is an optional unique ID
+
+        If there is no <child>, None is used. If there is no [<num>], None is
+        used.
+
+        Inputs:
+            xpath    The XPath to be converted
+
+        Returns:
+            a SplitXPath namedtuple
+        """
+        parent, child, *_ = xpath.split('/', 1) + [None]
+        try:
+            idx = parent.index('[')
+        except ValueError:
+            return SplitXPath(xpath, parent, child, parent, None)
+        return SplitXPath(xpath, parent, child, parent[:idx], int(parent[idx+1:-1]))
+
+    xpath_map = {}
+
+    # split_xpaths is a list containing tuples of
+    #   (full_xpath, parent, child, prefix_of_parent, num_of_parent)
+    # If there is no child, child is None
+    # If there is no number in [n], num_of_parent is None
+    split_xpaths = [split_xpath_prefix_and_num(x) for x in xpaths]
+
+    # Group split_xpaths by prefix
+    for prefix, prefix_group in groupby(split_xpaths, lambda x: x.prefix):
+        prefix_group_list = list(prefix_group)
+
+        # The parents in the resulting group may have unique IDs.
+        # We collect those IDs and create a mapping from the original numbers
+        # to a new set of suffixes of the form "[<n>]" where <n> is sequentially
+        # increasing starting at 1. We also add a special entry for the empty
+        # suffix when there is no number.
+        unique_nums = sorted(list(set(x.num for x in prefix_group_list
+                                            if x.num is not None)))
+        renumber_map = {x: f'[{i+1}]' for i, x in enumerate(unique_nums)}
+        renumber_map[None] = ''
+
+        # We further group these by unique parent (including the number)
+        # and recursively process all children for each unique parent.
+        # When the child map is returned, we update our map using the number
+        # remapping for the current parent combined with the child map.
+        for parent, parent_group in groupby(prefix_group_list,
+                                            lambda x: x.parent):
+            parent_group_list = list(parent_group)
+
+            # Find all the entries that have children, package them up,
+            # and call renumber_xpaths recursively to renumber the next level
+            # down.
+            children = [x for x in parent_group_list if x.child is not None]
+            if children:
+                child_map = renumber_xpaths([x.child for x in children])
+                xpath_map.update(
+                    {f'{x.parent}/{x.child}':
+                        f'{x.prefix}{renumber_map[x.num]}/{child_map[x.child]}'
+                            for x in children}
+                )
+
+            # Find all the entries that have no children. These are leaf
+            # nodes. Renumber them.
+            no_children = [x for x in parent_group_list if x.child is None]
+            xpath_map.update(
+                    {f'{x.parent}': f'{x.prefix}{renumber_map[x.num]}'
+                        for x in no_children}
+            )
+
+    return xpath_map
 
 
 def store_element_text(element, tree, results_dict, nillable_elements_info, config, label):
@@ -429,24 +542,28 @@ def main():
         namespaces['pds'] = namespaces.pop(None)
         prefixes = {v: k for k, v in namespaces.items()}
 
-        xml_results = {}
-        traverse_and_store(root, tree, xml_results, elements_to_scrape,
+        label_results = {}
+        traverse_and_store(root, tree, label_results, elements_to_scrape,
                            nillable_elements_info, config, file)
 
-        for key in list(xml_results.keys()):
-            process_tags(xml_results, key, root,
+        for key in list(label_results.keys()):
+            process_tags(label_results, key, root,
                          namespaces, prefixes)
+            
+        new_xpaths = renumber_xpaths(label_results.keys())
+        for key, value in new_xpaths.items():
+            label_results[value] = label_results.pop(key)
 
         if args.disambiguate_xpaths:
                 elements = ()
                 xpath_elements = []
                 tags = []
-                for key in list(xml_results.keys()):
+                for key in list(label_results.keys()):
                     xpath_elements.append(grab_elements(key))
                 
                 duplicates = [t for t in set(xpath_elements) if xpath_elements.count(t) > 1]
 
-                for key in list(xml_results.keys()):
+                for key in list(label_results.keys()):
                     elements = grab_elements(key)
                     tag = elements[-1]
                     if elements not in duplicates and elements[-1] not in tags:
@@ -454,10 +571,10 @@ def main():
                         tags.append(tag)
                     else:
                         value = key
-                    xml_results[value] = xml_results.pop(key)
+                    label_results[value] = label_results.pop(key)
                     
 
-        lid = xml_results.get('pds:logical_identifier', 'Missing_LID')
+        lid = label_results.get('pds:logical_identifier', 'Missing_LID')
 
         # Attach extra columns if asked for.
         bundle_lid = ':'.join(lid.split(':')[:4])
@@ -465,10 +582,10 @@ def main():
         extras = {'LID': lid, 'filepath': filepath, 'filename': file.name,
                   'bundle': bundle, 'bundle_lid': bundle_lid}
         if args.extra_file_info:
-            xml_results = {**{ele: extras[ele] for ele in args.extra_file_info},
-                           **xml_results}
+            label_results = {**{ele: extras[ele] for ele in args.extra_file_info},
+                           **label_results}
 
-        result_dict = {'Results': xml_results}
+        result_dict = {'Results': label_results}
         all_results.append(result_dict)
 
     if args.output_file:
