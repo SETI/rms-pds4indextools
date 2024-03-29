@@ -266,30 +266,17 @@ def renumber_xpaths(xpaths):
 
     xpath_map = {}
 
-    # split_xpaths is a list containing tuples of
-    #   (full_xpath, parent, child, prefix_of_parent, num_of_parent)
-    # If there is no child, child is None
-    # If there is no number in [n], num_of_parent is None
     split_xpaths = [split_xpath_prefix_and_num(x) for x in xpaths]
 
     # Group split_xpaths by prefix
     for prefix, prefix_group in groupby(split_xpaths, lambda x: x.prefix):
         prefix_group_list = list(prefix_group)
 
-        # The parents in the resulting group may have unique IDs.
-        # We collect those IDs and create a mapping from the original numbers
-        # to a new set of suffixes of the form "[<n>]" where <n> is sequentially
-        # increasing starting at 1. We also add a special entry for the empty
-        # suffix when there is no number.
         unique_nums = sorted(list(set(x.num for x in prefix_group_list
                                             if x.num is not None)))
         renumber_map = {x: f'[{i+1}]' for i, x in enumerate(unique_nums)}
         renumber_map[None] = ''
 
-        # We further group these by unique parent (including the number)
-        # and recursively process all children for each unique parent.
-        # When the child map is returned, we update our map using the number
-        # remapping for the current parent combined with the child map.
         for parent, parent_group in groupby(prefix_group_list,
                                             lambda x: x.parent):
             parent_group_list = list(parent_group)
