@@ -1,5 +1,6 @@
 """
 XML Bundle Scraper
+
 This script scrapes XML files within specified directories, extracts information from
 user-defined XML elements, and generates a CSV index file. The script provides options
 for customizing the extraction process, such as specifying XPath headers, limiting
@@ -8,7 +9,7 @@ search levels, and selecting elements to scrape.
 Usage:
     python xml_bundle_scraper.py <directorypath> <pattern>
         [--elements-file ELEMENTS_FILE]
-        [--disambiguate-xpaths]
+        [--simplify-xpaths]
         [--output-file OUTPUT_FILE]
         [--verbose]
         [--sort-by SORT_BY] 
@@ -24,8 +25,7 @@ Arguments:
                          with quotes.
     --elements-file ELEMENTS_FILE
                          Optional text file containing elements to scrape.
-    --disambiguate-xpaths
-                         Replace unique XPath headers with shortened versions.
+    --simplify-xpaths    Replace unique XPath segments with shortened versions.
     --output-file OUTPUT_FILE
                          The output path and filename for the resulting index file.
     --verbose            Activate verbose printed statements during runtime.
@@ -61,7 +61,12 @@ SplitXPath = namedtuple('SplitXPath',
 
 
 def convert_header_to_xpath(root, xpath_find, namespaces):
-    """Convert an XML header path to an XPath expression.
+    """Replace hierarchal components of XPath with attribute names and namespaces.
+
+    While the XPaths are accurate to the hierarchy of the elements referenced, they 
+    provide no information on their own without the attributed label file for reference.
+    This function replaces the asterisks with the respective names of the elements and 
+    attributes they represent.
 
     Inputs:
         root           The root element of the XML document.
@@ -107,7 +112,7 @@ def default_value_for_nil(config, data_type, nil_value):
     return default
 
 
-def grab_elements(xpath):
+def split_into_elements(xpath):
     """Extract elements from an XPath in the order they appear.
 
     Inputs:
@@ -185,15 +190,11 @@ def process_schema_location(file_path):
     return xsd_urls
 
 
-def process_tags(label_results, key, root, namespaces, prefixes):
-    """Process XML tags based on the provided options.
+def process_headers(label_results, key, root, namespaces, prefixes):
+    """Process headers to have more readable contents. 
 
-    If the --xpaths command is used, the XPath is converted into a format that
-    contains the names and namespaces of all the parent elements of that element.
-    If the --xpaths command is not used, the XPath is converted into the
-    associated element tag of that element, and given its associated namespace. These
-    values then replace their old versions in the label_results dictionary.
-
+    Processes XPath headers by converting parts of the XPath into element tags,
+    replacing namespaces with prefixes, and updating the label_results dictionary.
 
     Inputs:
         label_results    A dictionary containing XML data to be processed.
@@ -228,16 +229,48 @@ def renumber_xpaths(xpaths):
     sorted such that the numbers at each level are in ascending order.
     Further, if there are multiple occurrences of a tag at a level, those
     occurrences must be next to each other with no other tags in between.
+    For example, these are not permitted:
+
+            /a[2]/b[1]
+            /a[1]/b[1]
+
+        or:
+
+            /a[1]/b[1]
+            /c[1]
+            /a[3]/b[1]
+
+    Renumbering example:
+
+        Original:
+            a
+            /b[5]/c[5]
+            /b[5]/c[7]
+            /b[5]/c[9]
+            /b[7]/c[5]
+            /b[7]/c[7]
+            /b[9]/c[9]
+
+        Renumbered:
+            a
+            /b[1]/c[1]
+            /b[1]/c[2]
+            /b[1]/c[3]
+            /b[2]/c[1]
+            /b[2]/c[2]
+            /b[3]/c[1]
 
     Input:
+
         xpaths      The list of XPaths or XPath fragments.
 
     Returns:
+
         A dictionary containing a mapping from the original XPaths to the
         renumbered XPaths.
     """
 
-    def split_xpath_prefix_and_num(xpath):
+    def split_xpath_prefix_and_num(s):
         """Convert an XPath into a SplitXPath namedtuple.
 
         Each XPath is of the form:
@@ -250,33 +283,40 @@ def renumber_xpaths(xpaths):
 
         If there is no <child>, None is used. If there is no [<num>], None is
         used.
-
-        Inputs:
-            xpath    The XPath to be converted
-
-        Returns:
-            a SplitXPath namedtuple
         """
-        parent, child, *_ = xpath.split('/', 1) + [None]
+        parent, child, *_ = s.split('/', 1) + [None]
         try:
             idx = parent.index('[')
         except ValueError:
-            return SplitXPath(xpath, parent, child, parent, None)
-        return SplitXPath(xpath, parent, child, parent[:idx], int(parent[idx+1:-1]))
+            return SplitXPath(s, parent, child, parent, None)
+        return SplitXPath(s, parent, child, parent[:idx], int(parent[idx+1:-1]))
 
     xpath_map = {}
 
+    # split_xpaths is a list containing tuples of
+    #   (full_xpath, parent, child, prefix_of_parent, num_of_parent)
+    # If there is no child, child is None
+    # If there is no number in [n], num_of_parent is None
     split_xpaths = [split_xpath_prefix_and_num(x) for x in xpaths]
 
     # Group split_xpaths by prefix
     for prefix, prefix_group in groupby(split_xpaths, lambda x: x.prefix):
         prefix_group_list = list(prefix_group)
 
+        # The parents in the resulting group may have unique IDs.
+        # We collect those IDs and create a mapping from the original numbers
+        # to a new set of suffixes of the form "[<n>]" where <n> is sequentially
+        # increasing starting at 1. We also add a special entry for the empty
+        # suffix when there is no number.
         unique_nums = sorted(list(set(x.num for x in prefix_group_list
                                             if x.num is not None)))
         renumber_map = {x: f'[{i+1}]' for i, x in enumerate(unique_nums)}
         renumber_map[None] = ''
 
+        # We further group these by unique parent (including the number)
+        # and recursively process all children for each unique parent.
+        # When the child map is returned, we update our map using the number
+        # remapping for the current parent combined with the child map.
         for parent, parent_group in groupby(prefix_group_list,
                                             lambda x: x.parent):
             parent_group_list = list(parent_group)
@@ -457,7 +497,7 @@ def main():
                              'specified, all elements found in the XML files are '
                              'included.')
 
-    parser.add_argument('--disambiguate-xpaths', action='store_true',
+    parser.add_argument('--simplify-xpaths', action='store_true',
                         help='If specified, uses tags of unique XPaths. Any values with '
                              'duplicate values will still use their full XPath.')
 
@@ -536,32 +576,31 @@ def main():
         traverse_and_store(root, tree, label_results, elements_to_scrape,
                            nillable_elements_info, config, file)
 
-        for key in list(label_results.keys()):
-            process_tags(label_results, key, root,
-                         namespaces, prefixes)
+        for key in label_results.keys():
+            process_headers(label_results, key, root, namespaces, prefixes)
             
-        new_xpaths = renumber_xpaths(label_results.keys())
-        for key, value in new_xpaths.items():
-            label_results[value] = label_results.pop(key)
+        xpath_map = renumber_xpaths(label_results.keys())
+        for old_xpath, new_xpath in xpath_map.items():
+            label_results[new_xpath] = label_results.pop(old_xpath)
 
-        if args.disambiguate_xpaths:
-                elements = ()
-                xpath_elements = []
-                tags = []
-                for key in list(label_results.keys()):
-                    xpath_elements.append(grab_elements(key))
-                
-                duplicates = [t for t in set(xpath_elements) if xpath_elements.count(t) > 1]
+        if args.simplify_xpaths:
+            elements = ()
+            xpath_elements = []
+            tags = []
+            for key in label_results.keys():
+                xpath_elements.append(split_into_elements(key))
+            
+            duplicates = [t for t in set(xpath_elements) if xpath_elements.count(t) > 1]
 
-                for key in list(label_results.keys()):
-                    elements = grab_elements(key)
-                    tag = elements[-1]
-                    if elements not in duplicates and elements[-1] not in tags:
-                        value = tag
-                        tags.append(tag)
-                    else:
-                        value = key
-                    label_results[value] = label_results.pop(key)
+            for key in list(label_results.keys()):
+                elements = split_into_elements(key)
+                tag = elements[-1]
+                if elements not in duplicates and elements[-1] not in tags:
+                    value = tag
+                    tags.append(tag)
+                else:
+                    value = key
+                label_results[value] = label_results.pop(key)
                     
 
         lid = label_results.get('pds:logical_identifier', 'Missing_LID')
