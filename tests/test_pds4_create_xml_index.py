@@ -8,31 +8,76 @@ import pds4_create_xml_index as tools
 import tempfile
 
 
-def test_elements_file():
-    # Get the path to the test_files directory
-    root_dir = Path(__file__).resolve().parent.parent
-    test_files_dir = root_dir / 'test_files'
-    # THE PATH TO THE GOLDEN COPY
-    golden_file = str(test_files_dir / 'elements_file_success.csv')
-    new_file = 'elements_file.csv'
+# These two variables are the same for all tests, so we can either declare them as  
+# global variables, or get the root_dir at the setup stage before running each test 
+root_dir = Path(__file__).resolve().parent.parent
+test_files_dir = root_dir / 'test_files'
 
+# Set parameters values that you would like to pass into test_elements_file,
+# in this case, I assume we are running the same test with different sets of
+# golden_file new_file, and cmd_line.
+@pytest.mark.parametrize(
+        'golden_file,new_file,cmd_line',
+        [
+            # simple test cases
+            (str(test_files_dir / 'elements_file_success.csv'),
+             'elements_file.csv',
+             [
+                str(test_files_dir),
+                'tester_label_1.xml',
+                '--elements-file',
+                str(root_dir / 'samples/sample_elements.txt'),  
+                '--output-file',     
+             ]
+            ),
+            (str(test_files_dir / 'elements_file_success_2.csv'),
+             'elements_file_2.csv',
+             [
+                str(test_files_dir),
+                'tester_label_1.xml',
+                'tester_label_2.xml',
+                '--elements-file',
+                str(root_dir / 'samples/sample_elements.txt'),  
+                '--output-file',     
+             ]
+            ),
+            (str(test_files_dir / 'elements_file_success_3.csv'),
+             'elements_file_3.csv',
+             [
+                str(test_files_dir),
+                'tester_label_1.xml',
+                'tester_label_2.xml',
+                'tester_label_3.xml',
+                '--elements-file',
+                str(root_dir / 'samples/sample_elements.txt'),  
+                '--output-file',     
+             ]
+            ),
+
+            # complicated test cases
+            (str(test_files_dir / 'elements_file_success_4.csv'),
+            'elements_file_4.csv',
+             [
+                str(test_files_dir),
+                'tester_label_2.xml',
+                'tester_label_3.xml',
+                '--elements-file',
+                str(root_dir / 'test_files/elements_list_tester.txt'),  
+                '--output-file',     
+             ]
+            )
+        ]
+                        )
+                    
+def test_elements_file(golden_file, new_file, cmd_line):
     # Create a temporary directory in the same location as the test_files directory
     with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
         temp_dir_path = Path(temp_dir)
         
         # THE PATH TO THE NEW FILE
         path_to_file = temp_dir_path / new_file
-
-        cmd_line = [
-            str(test_files_dir),
-            'tester_label_1.xml',
-            '--elements-file',
-            str(root_dir / 'samples/sample_elements.txt'),  
-            '--output-file',
-            str(path_to_file)
-        ]
-
         # Call main() function with the simulated command line arguments
+        cmd_line.append(str(path_to_file))
         tools.main(cmd_line)
 
         # Assert that the file now exists
