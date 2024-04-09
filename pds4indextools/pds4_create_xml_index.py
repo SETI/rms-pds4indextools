@@ -48,6 +48,7 @@ python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
 import argparse
 from collections import namedtuple
 import configparser
+import functools
 from itertools import groupby
 from lxml import etree
 import pandas as pd
@@ -176,8 +177,11 @@ def process_schema_location(file_path):
         List of XSD URLs extracted from the schema location.
     """
     # Load and parse the XML file
-    tree = etree.parse(file_path)
-    root = tree.getroot()
+    try:
+        tree = etree.parse(file_path)
+        root = tree.getroot()
+    except OSError:
+        print('Given file does not exist')
 
     # Extract the xsi:schemaLocation attribute value
     schema_location_values = root.get(
@@ -405,6 +409,10 @@ def traverse_and_store(element, tree, results_dict, elements_to_scrape,
                            nillable_elements_info, config, label)
 
 
+@functools.cache
+def download_xsd_file(xsd_file):
+    return etree.fromstring(requests.get(xsd_file).content)
+
 def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
     """Store all nillable elements and their data types in a dictionary.
 
@@ -412,7 +420,7 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
         xsd file                  An XML Schema Definition file.
         nillable_elements_info    A dictionary containing nillable element information.
     """
-    tree = etree.fromstring(requests.get(xsd_file).content)
+    tree = download_xsd_file(xsd_file)
     namespace = {'xs': 'http://www.w3.org/2001/XMLSchema'}
 
     elements_with_nillable = tree.xpath('//xs:element[@nillable="true"]',
@@ -480,7 +488,7 @@ def write_results_to_csv(results_list, args, output_csv_path):
     df.to_csv(output_csv_path, index=False, na_rep='NaN')
 
 
-def main():
+def main(cmd_line=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('directorypath', type=str,
                         help='The path to the directory containing the bundleset, bundle, '
@@ -525,7 +533,10 @@ def main():
                         help='Read a user-specified configuration file.. File must be a '
                              '.ini file.')
 
-    args = parser.parse_args()
+    if cmd_line is None:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args(cmd_line)
 
     verboseprint = print if args.verbose else lambda *a, **k: None
 
@@ -576,7 +587,7 @@ def main():
         traverse_and_store(root, tree, label_results, elements_to_scrape,
                            nillable_elements_info, config, file)
 
-        for key in label_results.keys():
+        for key in list(label_results.keys()):
             process_headers(label_results, key, root, namespaces, prefixes)
             
         xpath_map = renumber_xpaths(label_results.keys())
