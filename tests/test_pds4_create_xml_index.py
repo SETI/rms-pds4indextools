@@ -30,39 +30,38 @@ test_files_dir = root_dir / 'test_files'
                 '--output-file',     
              ]
             ),
+            # Okay, basic capture
             (str(test_files_dir / 'elements_file_success_2.csv'),
              'elements_file_2.csv',
              [
                 str(test_files_dir),
-                'tester_label_1.xml',
                 'tester_label_2.xml',
                 '--elements-file',
-                str(root_dir / 'samples/sample_elements.txt'),  
+                str(root_dir / 'samples/element_2.txt'),  
                 '--output-file',     
              ]
             ),
+            # Multiple partial captures
             (str(test_files_dir / 'elements_file_success_3.csv'),
              'elements_file_3.csv',
              [
                 str(test_files_dir),
-                'tester_label_1.xml',
                 'tester_label_2.xml',
                 'tester_label_3.xml',
                 '--elements-file',
-                str(root_dir / 'samples/sample_elements.txt'),  
+                str(root_dir / 'samples/element_3.txt'),  
                 '--output-file',     
              ]
             ),
 
-            # complicated test cases
+            # exclusion test
             (str(test_files_dir / 'elements_file_success_4.csv'),
             'elements_file_4.csv',
              [
                 str(test_files_dir),
-                'tester_label_2.xml',
-                'tester_label_3.xml',
+                'tester_label_*.xml',
                 '--elements-file',
-                str(root_dir / 'test_files/elements_list_tester.txt'),  
+                str(root_dir / 'test_files/elements_4.txt'),  
                 '--output-file',     
              ]
             )
