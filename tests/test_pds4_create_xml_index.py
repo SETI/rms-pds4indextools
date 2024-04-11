@@ -13,84 +13,6 @@ import tempfile
 root_dir = Path(__file__).resolve().parent.parent
 test_files_dir = root_dir / 'test_files'
 
-# Set parameters values that you would like to pass into test_elements_file,
-# in this case, I assume we are running the same test with different sets of
-# golden_file new_file, and cmd_line.
-@pytest.mark.parametrize(
-        'golden_file,new_file,cmd_line',
-        [
-            # simple test cases
-            (str(test_files_dir / 'elements_file_success.csv'),
-             'elements_file.csv',
-             [
-                str(test_files_dir),
-                'tester_label_1.xml',
-                '--elements-file',
-                str(root_dir / 'samples/sample_elements.txt'),  
-                '--output-file',     
-             ]
-            ),
-            # Okay, basic capture
-            (str(test_files_dir / 'elements_file_success_2.csv'),
-             'elements_file_2.csv',
-             [
-                str(test_files_dir),
-                'tester_label_2.xml',
-                '--elements-file',
-                str(root_dir / 'samples/element_2.txt'),  
-                '--output-file',     
-             ]
-            ),
-            # Multiple partial captures
-            (str(test_files_dir / 'elements_file_success_3.csv'),
-             'elements_file_3.csv',
-             [
-                str(test_files_dir),
-                'tester_label_2.xml',
-                'tester_label_3.xml',
-                '--elements-file',
-                str(root_dir / 'samples/element_3.txt'),  
-                '--output-file',     
-             ]
-            ),
-
-            # exclusion test
-            (str(test_files_dir / 'elements_file_success_4.csv'),
-            'elements_file_4.csv',
-             [
-                str(test_files_dir),
-                'tester_label_*.xml',
-                '--elements-file',
-                str(root_dir / 'test_files/elements_4.txt'),  
-                '--output-file',     
-             ]
-            )
-        ]
-                        )
-                    
-def test_elements_file(golden_file, new_file, cmd_line):
-    # Create a temporary directory in the same location as the test_files directory
-    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
-        temp_dir_path = Path(temp_dir)
-        
-        # THE PATH TO THE NEW FILE
-        path_to_file = temp_dir_path / new_file
-        # Call main() function with the simulated command line arguments
-        cmd_line.append(str(path_to_file))
-        tools.main(cmd_line)
-
-        # Assert that the file now exists
-        assert os.path.isfile(path_to_file)
-
-        # Open and compare the two files
-        with open(path_to_file, 'rb') as created:
-            formed = created.read()
-
-        with open(golden_file, 'rb') as new:
-            expected = new.read()
-
-        assert formed == expected
-    
 
 def test_load_config_object():
     config_object = tools.load_config_file(None)
@@ -198,8 +120,257 @@ def test_process_schema_location():
     assert schema_files[2] == 'https://pds.nasa.gov/pds4/mission/cassini/v1/PDS4_CASSINI_1B00_1300.xsd'
 
 
+def test_extra_file_info():
+    pass
+
+
+# Set parameters values that you would like to pass into test_elements_file,
+# in this case, I assume we are running the same test with different sets of
+# golden_file new_file, and cmd_line.
+@pytest.mark.parametrize(
+        'golden_file,new_file,cmd_line',
+        [
+            # simple test cases
+            # (str(test_files_dir / 'elements_file_success.csv'),
+            #  'elements_file.csv',
+            #  [
+            #     str(test_files_dir),
+            #     'tester_label_1.xml',
+            #     '--elements-file',
+            #     str(root_dir / 'samples/sample_elements.txt'),  
+            #     '--output-file',     
+            #  ]
+            # ),
+            # # Okay, basic capture
+            # (str(test_files_dir / 'elements_file_success_2.csv'),
+            #  'elements_file_2.csv',
+            #  [
+            #     str(test_files_dir),
+            #     'tester_label_2.xml',
+            #     '--elements-file',
+            #     str(root_dir / 'samples/element_2.txt'),  
+            #     '--output-file',     
+            #  ]
+            # ),
+            # # Multiple partial captures
+            # (str(test_files_dir / 'elements_file_success_3.csv'),
+            #  'elements_file_3.csv',
+            #  [
+            #     str(test_files_dir),
+            #     'tester_label_2.xml',
+            #     'tester_label_3.xml',
+            #     '--elements-file',
+            #     str(root_dir / 'samples/element_3.txt'),  
+            #     '--output-file',     
+            #  ]
+            # ),
+
+            # # exclusion test
+            # (str(test_files_dir / 'elements_file_success_4.csv'),
+            # 'elements_file_4.csv',
+            #  [
+            #     str(test_files_dir),
+            #     'tester_label_*.xml',
+            #     '--elements-file',
+            #     str(root_dir / 'test_files/element_4.txt'),  
+            #     '--output-file',     
+            #  ]
+            # )
+
+
+        ]
+                        )
+                    
+def test_elements_file(golden_file, new_file, cmd_line):
+    # Create a temporary directory in the same location as the test_files directory
+    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
+        temp_dir_path = Path(temp_dir)
+        
+        # THE PATH TO THE NEW FILE
+        path_to_file = temp_dir_path / new_file
+        # Call main() function with the simulated command line arguments
+        cmd_line.append(str(path_to_file))
+        tools.main(cmd_line)
+
+        # Assert that the file now exists
+        assert os.path.isfile(path_to_file)
+
+        # Open and compare the two files
+        with open(path_to_file, 'rb') as created:
+            formed = created.read()
+
+        with open(golden_file, 'rb') as new:
+            expected = new.read()
+
+        assert formed == expected
 
 
 
-# root_dir = Path(__file__).resolve().parent.parent
-# print(root_dir)
+# Set parameters values that you would like to pass into test_elements_file,
+# in this case, I assume we are running the same test with different sets of
+# golden_file new_file, and cmd_line.
+@pytest.mark.parametrize(
+        'golden_file,new_file,cmd_line',
+        [
+            (str(test_files_dir / 'simplify_xpaths_success_1.csv'),
+             'simplify_xpaths_1.csv',
+             [
+                str(test_files_dir),
+                'tester_label_1.xml',
+                '--simplify-xpaths',
+                '--output-file',     
+             ]
+            ),
+
+            (str(test_files_dir / 'simplify_xpaths_success_2.csv'),
+             'simplify_xpaths_2.csv',
+             [
+                str(test_files_dir),
+                'tester_label_*.xml',
+                '--simplify-xpaths',
+                '--elements-file',
+                str(root_dir / 'samples/elements_xpath_simplify.txt'),
+                '--output-file',     
+             ]
+            )
+
+        ]
+                        )
+
+def test_simplify_xpaths(golden_file, new_file, cmd_line):
+    # Create a temporary directory in the same location as the test_files directory
+    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
+        temp_dir_path = Path(temp_dir)
+        
+        # THE PATH TO THE NEW FILE
+        path_to_file = temp_dir_path / new_file
+        # Call main() function with the simulated command line arguments
+        cmd_line.append(str(path_to_file))
+        tools.main(cmd_line)
+
+        # Assert that the file now exists
+        assert os.path.isfile(path_to_file)
+
+        # Open and compare the two files
+        with open(path_to_file, 'rb') as created:
+            formed = created.read()
+
+        with open(golden_file, 'rb') as new:
+            expected = new.read()
+
+        assert formed == expected
+
+
+
+# Set parameters values that you would like to pass into test_elements_file,
+# in this case, I assume we are running the same test with different sets of
+# golden_file new_file, and cmd_line.
+@pytest.mark.parametrize(
+        'golden_file,new_file,cmd_line',
+        [
+            (str(test_files_dir / 'extra_file_info_success_1.csv'),
+             'extra_file_info_1.csv',
+             [
+                str(test_files_dir),
+                'tester_label_2.xml',
+                '--extra-file-info',
+                'filename',
+                'filepath',
+                '--output-file',     
+             ]
+            ),
+
+            (str(test_files_dir / 'extra_file_info_success_2.csv'),
+             'extra_file_info_2.csv',
+             [
+                str(test_files_dir),
+                'tester_label_*.xml',
+                '--elements-file',
+                str(root_dir / 'samples/element_extra_file_info.txt'),
+                '--extra-file-info',
+                'filename',
+                '--output-file',     
+             ]
+            )
+
+        ]
+                        )
+
+def test_extra_file_info(golden_file, new_file, cmd_line):
+    # Create a temporary directory in the same location as the test_files directory
+    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
+        temp_dir_path = Path(temp_dir)
+        
+        # THE PATH TO THE NEW FILE
+        path_to_file = temp_dir_path / new_file
+        # Call main() function with the simulated command line arguments
+        cmd_line.append(str(path_to_file))
+        tools.main(cmd_line)
+
+        # Assert that the file now exists
+        assert os.path.isfile(path_to_file)
+
+        # Open and compare the two files
+        with open(path_to_file, 'rb') as created:
+            formed = created.read()
+
+        with open(golden_file, 'rb') as new:
+            expected = new.read()
+
+        assert formed == expected
+
+
+
+# in this case, I assume we are running the same test with different sets of
+# golden_file new_file, and cmd_line.
+@pytest.mark.parametrize(
+        'golden_file,new_file,cmd_line',
+        [
+            (str(test_files_dir / 'clean_header_field_names_success_1.csv'),
+             'clean_header_field_names_1.csv',
+             [
+                str(test_files_dir),
+                'tester_label_1.xml',
+                '--clean-header-field-names',
+                '--output-file',     
+             ]
+            ),
+
+            (str(test_files_dir / 'clean_header_field_names_success_2.csv'),
+             'clean_header_field_names_2.csv',
+             [
+                str(test_files_dir),
+                'tester_label_1.xml',
+                'tester_label_2.xml',   
+                '--elements-file',
+                str(root_dir / 'samples/elements_clean_header_field_names.txt'),
+                '--clean-header-field-names',
+                '--output-file',     
+             ]
+            ),
+
+        ]
+                        )
+
+def test_clean_header_field_names(golden_file, new_file, cmd_line):
+    # Create a temporary directory in the same location as the test_files directory
+    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
+        temp_dir_path = Path(temp_dir)
+        
+        # THE PATH TO THE NEW FILE
+        path_to_file = temp_dir_path / new_file
+        # Call main() function with the simulated command line arguments
+        cmd_line.append(str(path_to_file))
+        tools.main(cmd_line)
+
+        # Assert that the file now exists
+        assert os.path.isfile(path_to_file)
+
+        # Open and compare the two files
+        with open(path_to_file, 'rb') as created:
+            formed = created.read()
+
+        with open(golden_file, 'rb') as new:
+            expected = new.read()
+
+        assert formed == expected
