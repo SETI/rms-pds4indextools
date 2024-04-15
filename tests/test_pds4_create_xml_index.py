@@ -120,9 +120,12 @@ def test_process_schema_location():
     assert schema_files[2] == 'https://pds.nasa.gov/pds4/mission/cassini/v1/PDS4_CASSINI_1B00_1300.xsd'
 
 
-# Set parameters values that you would like to pass into test_elements_file,
-# in this case, I assume we are running the same test with different sets of
-# golden_file new_file, and cmd_line.
+# Set parameters values that you would like to pass into test_elements_file.
+# In this case, we are running the same test with different sets of
+# golden_file, new_file, and cmd_line.
+    
+# Currently, element_file unit tests are commented out due to the current code not
+# creating intended results.
 @pytest.mark.parametrize(
         'golden_file,new_file,cmd_line',
         [
@@ -202,9 +205,9 @@ def test_elements_file(golden_file, new_file, cmd_line):
 
 
 
-# Set parameters values that you would like to pass into test_elements_file,
-# in this case, I assume we are running the same test with different sets of
-# golden_file new_file, and cmd_line.
+# Set parameters values that you would like to pass into test_simplify_xpaths.
+# In this case, we are running the same test with different sets of
+# golden_file, new_file, and cmd_line.
 @pytest.mark.parametrize(
         'golden_file,new_file,cmd_line',
         [
@@ -258,9 +261,9 @@ def test_simplify_xpaths(golden_file, new_file, cmd_line):
 
 
 
-# Set parameters values that you would like to pass into test_elements_file,
-# in this case, I assume we are running the same test with different sets of
-# golden_file new_file, and cmd_line.
+# Set parameters values that you would like to pass into test_extra_file_info.
+# In this case, I assume we are running the same test with different sets of
+# golden_file, new_file, and cmd_line.
 @pytest.mark.parametrize(
         'golden_file,new_file,cmd_line',
         [
@@ -316,9 +319,9 @@ def test_extra_file_info(golden_file, new_file, cmd_line):
         assert formed == expected
 
 
-
-# in this case, I assume we are running the same test with different sets of
-# golden_file new_file, and cmd_line.
+# Set parameters values that you would like to pass into test_clean_header_field_names.
+# In this case, I assume we are running the same test with different sets of
+# golden_file, new_file, and cmd_line.
 @pytest.mark.parametrize(
         'golden_file,new_file,cmd_line',
         [
@@ -373,8 +376,9 @@ def test_clean_header_field_names(golden_file, new_file, cmd_line):
 
 
 
-        # in this case, I assume we are running the same test with different sets of
-# golden_file new_file, and cmd_line.
+# Set parameters values that you would like to pass into test_sort_by.
+# In this case, I assume we are running the same test with different sets of
+# golden_file, new_file, and cmd_line.
 @pytest.mark.parametrize(
     'golden_file,new_file,cmd_line',
     [
