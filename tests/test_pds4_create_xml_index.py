@@ -120,10 +120,6 @@ def test_process_schema_location():
     assert schema_files[2] == 'https://pds.nasa.gov/pds4/mission/cassini/v1/PDS4_CASSINI_1B00_1300.xsd'
 
 
-def test_extra_file_info():
-    pass
-
-
 # Set parameters values that you would like to pass into test_elements_file,
 # in this case, I assume we are running the same test with different sets of
 # golden_file new_file, and cmd_line.
@@ -353,6 +349,67 @@ def test_extra_file_info(golden_file, new_file, cmd_line):
                         )
 
 def test_clean_header_field_names(golden_file, new_file, cmd_line):
+    # Create a temporary directory in the same location as the test_files directory
+    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
+        temp_dir_path = Path(temp_dir)
+        
+        # THE PATH TO THE NEW FILE
+        path_to_file = temp_dir_path / new_file
+        # Call main() function with the simulated command line arguments
+        cmd_line.append(str(path_to_file))
+        tools.main(cmd_line)
+
+        # Assert that the file now exists
+        assert os.path.isfile(path_to_file)
+
+        # Open and compare the two files
+        with open(path_to_file, 'rb') as created:
+            formed = created.read()
+
+        with open(golden_file, 'rb') as new:
+            expected = new.read()
+
+        assert formed == expected
+
+
+
+        # in this case, I assume we are running the same test with different sets of
+# golden_file new_file, and cmd_line.
+@pytest.mark.parametrize(
+    'golden_file,new_file,cmd_line',
+    [
+        (
+            str(test_files_dir / 'sort_by_success.csv'),
+            'sort_by_1.csv',
+            [
+                str(test_files_dir),
+                'tester_label_*.xml',
+                '--elements-file',
+                str(root_dir / 'samples/elements_clean_header_field_names.txt'),
+                '--sort-by',
+                '/pds:Product_Observational/pds:Identification_Area[1]/pds:logical_identifier[1]',
+                '--output-file', 
+            ]
+        ),
+        
+        (
+            str(test_files_dir / 'sort_by_success_2.csv'),
+            'sort_by_2.csv',
+            [
+                str(test_files_dir),
+                'tester_label_*.xml',
+                '--elements-file',
+                str(root_dir / 'samples/elements_clean_header_field_names.txt'),
+                '--sort-by',
+                '/pds:Product_Observational/pds:Identification_Area[1]/pds:logical_identifier[1]',
+                '/pds:Product_Observational/pds:Observation_Area[1]/pds:Time_Coordinates[1]/pds:start_date_time[1]',
+                '--output-file', 
+            ]
+        )
+    ]
+)
+
+def test_sort_by(golden_file, new_file, cmd_line):
     # Create a temporary directory in the same location as the test_files directory
     with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
         temp_dir_path = Path(temp_dir)
