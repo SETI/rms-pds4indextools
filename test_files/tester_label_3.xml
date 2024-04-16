@@ -23,13 +23,6 @@
         <title>Cassini ISS Image 1357539630n.img</title>
         <information_model_version>1.11.0.0</information_model_version>
         <product_class>Product_Observational</product_class>
-        <Modification_History>
-            <Modification_Detail>
-                <modification_date>2020-03-31</modification_date>
-                <version_id>1.0</version_id>
-                <description>Initial PDS4 Version. Migrated from the PDS3 data product.</description>
-            </Modification_Detail>
-        </Modification_History>
     </Identification_Area>
     <Observation_Area>
         <comment>
@@ -216,17 +209,6 @@
                 of this image.
             </comment>
         </Internal_Reference>
-        <Source_Product_External>
-            <external_source_product_identifier>
-                CO-E/V/J-ISSNA/ISSWA-2-EDR-V1.0:COISS_1004:data/1357539422_1357559280:N1357539630_1.IMG
-            </external_source_product_identifier>
-            <reference_type>data_to_raw_source_product</reference_type>
-            <curating_facility>PDS RMS Node</curating_facility>
-            <description>
-                The original PDS3 version of this product. The form of the reference is
-                dataset_id:volume_id:directory_path:file_name.
-            </description>
-        </Source_Product_External>
     </Reference_List>
 
     <File_Area_Observational>

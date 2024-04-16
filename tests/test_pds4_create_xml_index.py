@@ -1,4 +1,3 @@
-import pandas as pd
 from pathlib import Path
 import pytest
 import os
@@ -171,7 +170,7 @@ def test_process_schema_location():
             #     str(test_files_dir),
             #     'tester_label_*.xml',
             #     '--elements-file',
-            #     str(root_dir / 'test_files/element_4.txt'),  
+            #     str(root_dir / 'samples/element_4.txt'),  
             #     '--output-file',     
             #  ]
             # )
@@ -232,6 +231,31 @@ def test_elements_file(golden_file, new_file, cmd_line):
                 '--output-file',     
              ]
             )
+            # Test commented out until main code is fixed
+            # (str(test_files_dir / 'simplify_xpaths_success_3.csv'),
+            #  'simplify_xpaths_3.csv',
+            #  [
+            #     str(test_files_dir),
+            #     'tester_label_2.xml',
+            #     '--simplify-xpaths',
+            #     '--elements-file',
+            #     str(root_dir / 'samples/elements_xpath_simplify_2.txt'),
+            #     '--output-file',     
+            #  ]
+            # )
+
+            # Test commented out until main code is fixed
+            # (str(test_files_dir / 'simplify_xpaths_success_4.csv'),
+            #  'simplify_xpaths_3.csv',
+            #  [
+            #     str(test_files_dir),
+            #     'tester_label_3.xml',
+            #     '--simplify-xpaths',
+            #     '--elements-file',
+            #     str(root_dir / 'samples/elements_xpath_simplify_3.txt'),
+            #     '--output-file',     
+            #  ]
+            # )
 
         ]
                         )
