@@ -1,5 +1,5 @@
-logical_identifier
-version_id
-start_date_time
-stop_date_time
-wavelength_range
+**/pds:logical_identifier<*>
+**/pds:version_id<*>
+**/pds:start_date_time<*>
+**/pds:stop_date_time<*>
+**/pds:wavelength_range<*>

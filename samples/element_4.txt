@@ -1,2 +1,2 @@
-!**/pds:comment\[*\]
-!**/pds:description\[*\]
+!**/pds:comment<*>
+!**/pds:description<*>
