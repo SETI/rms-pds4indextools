@@ -48,6 +48,7 @@ python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
 import argparse
 from collections import namedtuple
 import configparser
+import fnmatch
 import functools
 from itertools import groupby
 from lxml import etree
@@ -113,24 +114,39 @@ def default_value_for_nil(config, data_type, nil_value):
     return default
 
 
-def split_into_elements(xpath):
-    """Extract elements from an XPath in the order they appear.
+def filter_dict_by_glob_patterns(input_dict, glob_patterns):
+    """Filter a dictionary based on a list of glob patterns matching for keys.
 
     Inputs:
-        xpath    The XPath of a scraped element
-
+        input_dict:       The dictionary to filter.
+        glob_patterns:    A list of glob patterns to match against dictionary keys.
+        
     Returns:
-        The tuple of elements the XPath is composed of.
+        Filtered dictionary with desired contents
     """
-    elements = ()
-    parts = xpath.split('/')
+    filtered_dict = {}
 
-    for part in parts:
-        if '[' in part:
-            part = part.split('[')
-            elements += (part[0],)
-    
-    return elements
+    if glob_patterns is not None:
+        if not all(pat.startswith('!') for pat in glob_patterns):
+            print('ye')
+            for key, value in input_dict.items():
+                if any(fnmatch.fnmatch(key, pat)
+                       for pat in glob_patterns) and 'cyfunction' not in key:
+                    filtered_dict[key] = value
+        else:
+            filtered_dict = dict(input_dict)
+            glob_patterns = [pat.replace('!', '')
+                             for pat in glob_patterns]
+            for key in list(filtered_dict.keys()):
+                if any(fnmatch.fnmatch(key, pat)
+                       for pat in glob_patterns) or 'cyfunction' in key:
+                    del filtered_dict[key]
+    else:
+        for key, value in input_dict.items():
+            if 'cyfunction' not in key:
+                filtered_dict[key] = value
+
+    return filtered_dict
 
 
 def load_config_file(specified_config_file):
@@ -199,6 +215,8 @@ def process_headers(label_results, key, root, namespaces, prefixes):
 
     Processes XPath headers by converting parts of the XPath into element tags,
     replacing namespaces with prefixes, and updating the label_results dictionary.
+    If a duplicate XPath is encountered, it appends an underscore and a number
+    to make the XPath unique.
 
     Inputs:
         label_results    A dictionary containing XML data to be processed.
@@ -212,7 +230,17 @@ def process_headers(label_results, key, root, namespaces, prefixes):
         if namespace in key_new:
             key_new = key_new.replace(
                 '{'+namespace+'}', prefixes[namespace]+':')
+    if key_new in label_results:
+        # If the XPath already exists, append an underscore and a number
+        i = 1
+        while True:
+            new_key = f"{key_new}_{i}"
+            if new_key not in label_results:
+                key_new = new_key
+                break
+            i += 1
     label_results[key_new] = label_results.pop(key)
+
 
 
 def renumber_xpaths(xpaths):
@@ -290,7 +318,7 @@ def renumber_xpaths(xpaths):
         """
         parent, child, *_ = s.split('/', 1) + [None]
         try:
-            idx = parent.index('[')
+            idx = parent.index('<')
         except ValueError:
             return SplitXPath(s, parent, child, parent, None)
         return SplitXPath(s, parent, child, parent[:idx], int(parent[idx+1:-1]))
@@ -314,7 +342,7 @@ def renumber_xpaths(xpaths):
         # suffix when there is no number.
         unique_nums = sorted(list(set(x.num for x in prefix_group_list
                                             if x.num is not None)))
-        renumber_map = {x: f'[{i+1}]' for i, x in enumerate(unique_nums)}
+        renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
         renumber_map[None] = ''
 
         # We further group these by unique parent (including the number)
@@ -346,6 +374,26 @@ def renumber_xpaths(xpaths):
             )
 
     return xpath_map
+
+
+def split_into_elements(xpath):
+    """Extract elements from an XPath in the order they appear.
+
+    Inputs:
+        xpath    The XPath of a scraped element
+
+    Returns:
+        The tuple of elements the XPath is composed of.
+    """
+    elements = ()
+    parts = xpath.split('/')
+
+    for part in parts:
+        if '<' in part:
+            part = part.split('<')
+            elements += (part[0],)
+    
+    return elements
 
 
 def store_element_text(element, tree, results_dict, nillable_elements_info, config, label):
@@ -385,7 +433,7 @@ def store_element_text(element, tree, results_dict, nillable_elements_info, conf
                 print(f'Non-nillable element in {label} has no associated text: {tag}')
                 
 
-def traverse_and_store(element, tree, results_dict, elements_to_scrape,
+def traverse_and_store(element, tree, results_dict,
                        nillable_elements_info, config, label):
     """Traverse an XML tree and store text content of specified elements in a dictionary.
 
@@ -393,19 +441,14 @@ def traverse_and_store(element, tree, results_dict, elements_to_scrape,
         element                   The current XML element.
         tree                      The XML tree.
         results_dict              Dictionary to store results.
-        prefixes                  Dictionary of XML namespace prefixes.
-        elements_to_scrape        Optional list of elements to scrape.
         nillable_elements_info    A dictionary containing nillable element information.
         config                    The configuration data.
         label                     The name of the label file.
     """
-    tag = str(element.tag)
-    if elements_to_scrape is None or any(tag.endswith("}" + elem)
-                                         for elem in elements_to_scrape):
-        store_element_text(element, tree, results_dict,
+    store_element_text(element, tree, results_dict,
                            nillable_elements_info, config, label)
     for child in element:
-        traverse_and_store(child, tree, results_dict, elements_to_scrape,
+        traverse_and_store(child, tree, results_dict,
                            nillable_elements_info, config, label)
 
 
@@ -584,11 +627,31 @@ def main(cmd_line=None):
         prefixes = {v: k for k, v in namespaces.items()}
 
         label_results = {}
-        traverse_and_store(root, tree, label_results, elements_to_scrape,
+        traverse_and_store(root, tree, label_results,
                            nillable_elements_info, config, file)
 
         for key in list(label_results.keys()):
             process_headers(label_results, key, root, namespaces, prefixes)
+            
+        for key in list(label_results.keys()):
+            key_new = key.replace('[', '<')
+            key_new = key_new.replace(']', '>')
+            label_results[key_new] = label_results.pop(key)
+
+        label_results = filter_dict_by_glob_patterns(label_results, elements_to_scrape)
+
+        for key in list(label_results.keys()):
+            parts = key.split('/')
+            new_parts = []
+            for part in parts:
+                if not part.endswith('>') and parts.index(part) != 1:
+                    part = part+'<1>'
+                    new_parts.append(part)
+                else:
+                    new_parts.append(part)
+            key_new = '/'.join(new_parts[1:])
+            label_results[key_new] = label_results.pop(key)
+        
             
         xpath_map = renumber_xpaths(label_results.keys())
         for old_xpath, new_xpath in xpath_map.items():
@@ -599,6 +662,7 @@ def main(cmd_line=None):
             xpath_elements = []
             tags = []
             for key in label_results.keys():
+                stuff = split_into_elements(key)
                 xpath_elements.append(split_into_elements(key))
             
             duplicates = [t for t in set(xpath_elements) if xpath_elements.count(t) > 1]

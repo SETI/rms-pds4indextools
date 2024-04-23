@@ -104,7 +104,7 @@ def test_default_value_for_nil():
 
 
 def test_split_into_elements():
-    xpath = '/pds:Product_Observational/pds:Observation_Area[1]/pds:Observing_System[1]/pds:name[1]'
+    xpath = '/pds:Product_Observational/pds:Observation_Area<1>/pds:Observing_System<1>/pds:name<1>'
     pieces = tools.split_into_elements(xpath)
     assert pieces == ('pds:Observation_Area', 'pds:Observing_System', 'pds:name')
 
@@ -129,51 +129,51 @@ def test_process_schema_location():
         'golden_file,new_file,cmd_line',
         [
             # simple test cases
-            # (str(test_files_dir / 'elements_file_success.csv'),
-            #  'elements_file.csv',
-            #  [
-            #     str(test_files_dir),
-            #     'tester_label_1.xml',
-            #     '--elements-file',
-            #     str(root_dir / 'samples/sample_elements.txt'),  
-            #     '--output-file',     
-            #  ]
-            # ),
-            # # Okay, basic capture
-            # (str(test_files_dir / 'elements_file_success_2.csv'),
-            #  'elements_file_2.csv',
-            #  [
-            #     str(test_files_dir),
-            #     'tester_label_2.xml',
-            #     '--elements-file',
-            #     str(root_dir / 'samples/element_2.txt'),  
-            #     '--output-file',     
-            #  ]
-            # ),
-            # # Multiple partial captures
-            # (str(test_files_dir / 'elements_file_success_3.csv'),
-            #  'elements_file_3.csv',
-            #  [
-            #     str(test_files_dir),
-            #     'tester_label_2.xml',
-            #     'tester_label_3.xml',
-            #     '--elements-file',
-            #     str(root_dir / 'samples/element_3.txt'),  
-            #     '--output-file',     
-            #  ]
-            # ),
+            (str(test_files_dir / 'elements_file_success.csv'),
+             'elements_file.csv',
+             [
+                str(test_files_dir),
+                'tester_label_1.xml',
+                '--elements-file',
+                str(root_dir / 'samples/sample_elements.txt'),  
+                '--output-file',     
+             ]
+            ),
+            # Okay, basic capture
+            (str(test_files_dir / 'elements_file_success_2.csv'),
+             'elements_file_2.csv',
+             [
+                str(test_files_dir),
+                'tester_label_2.xml',
+                '--elements-file',
+                str(root_dir / 'samples/element_2.txt'),  
+                '--output-file',     
+             ]
+            ),
+            # Multiple partial captures
+            (str(test_files_dir / 'elements_file_success_3.csv'),
+             'elements_file_3.csv',
+             [
+                str(test_files_dir),
+                'tester_label_2.xml',
+                'tester_label_3.xml',
+                '--elements-file',
+                str(root_dir / 'samples/element_3.txt'),  
+                '--output-file',     
+             ]
+            ),
 
-            # # exclusion test
-            # (str(test_files_dir / 'elements_file_success_4.csv'),
-            # 'elements_file_4.csv',
-            #  [
-            #     str(test_files_dir),
-            #     'tester_label_*.xml',
-            #     '--elements-file',
-            #     str(root_dir / 'samples/element_4.txt'),  
-            #     '--output-file',     
-            #  ]
-            # )
+            # exclusion test
+            (str(test_files_dir / 'elements_file_success_4.csv'),
+            'elements_file_4.csv',
+             [
+                str(test_files_dir),
+                'tester_label_*.xml',
+                '--elements-file',
+                str(root_dir / 'samples/element_4.txt'),  
+                '--output-file',     
+             ]
+            )
 
 
         ]
@@ -230,32 +230,31 @@ def test_elements_file(golden_file, new_file, cmd_line):
                 str(root_dir / 'samples/elements_xpath_simplify.txt'),
                 '--output-file',     
              ]
-            )
-            # Test commented out until main code is fixed
-            # (str(test_files_dir / 'simplify_xpaths_success_3.csv'),
-            #  'simplify_xpaths_3.csv',
-            #  [
-            #     str(test_files_dir),
-            #     'tester_label_2.xml',
-            #     '--simplify-xpaths',
-            #     '--elements-file',
-            #     str(root_dir / 'samples/elements_xpath_simplify_2.txt'),
-            #     '--output-file',     
-            #  ]
-            # )
+            ),
 
-            # Test commented out until main code is fixed
-            # (str(test_files_dir / 'simplify_xpaths_success_4.csv'),
-            #  'simplify_xpaths_3.csv',
-            #  [
-            #     str(test_files_dir),
-            #     'tester_label_3.xml',
-            #     '--simplify-xpaths',
-            #     '--elements-file',
-            #     str(root_dir / 'samples/elements_xpath_simplify_3.txt'),
-            #     '--output-file',     
-            #  ]
-            # )
+            (str(test_files_dir / 'simplify_xpaths_success_3.csv'),
+             'simplify_xpaths_3.csv',
+             [
+                str(test_files_dir),
+                'tester_label_2.xml',
+                '--simplify-xpaths',
+                '--elements-file',
+                str(root_dir / 'samples/elements_xpath_simplify_2.txt'),
+                '--output-file',     
+             ]
+            ),
+
+            (str(test_files_dir / 'simplify_xpaths_success_4.csv'),
+             'simplify_xpaths_3.csv',
+             [
+                str(test_files_dir),
+                'tester_label_3.xml',
+                '--simplify-xpaths',
+                '--elements-file',
+                str(root_dir / 'samples/elements_xpath_simplify_3.txt'),
+                '--output-file',     
+             ]
+            )
 
         ]
                         )
@@ -415,7 +414,7 @@ def test_clean_header_field_names(golden_file, new_file, cmd_line):
                 '--elements-file',
                 str(root_dir / 'samples/elements_clean_header_field_names.txt'),
                 '--sort-by',
-                '/pds:Product_Observational/pds:Identification_Area[1]/pds:logical_identifier[1]',
+                'pds:Product_Observational/pds:Identification_Area<1>/pds:logical_identifier<1>',
                 '--output-file', 
             ]
         ),
@@ -429,8 +428,8 @@ def test_clean_header_field_names(golden_file, new_file, cmd_line):
                 '--elements-file',
                 str(root_dir / 'samples/elements_clean_header_field_names.txt'),
                 '--sort-by',
-                '/pds:Product_Observational/pds:Identification_Area[1]/pds:logical_identifier[1]',
-                '/pds:Product_Observational/pds:Observation_Area[1]/pds:Time_Coordinates[1]/pds:start_date_time[1]',
+                'pds:Product_Observational/pds:Identification_Area<1>/pds:logical_identifier<1>',
+                'pds:Product_Observational/pds:Observation_Area<1>/pds:Time_Coordinates<1>/pds:start_date_time<1>',
                 '--output-file', 
             ]
         )

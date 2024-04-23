@@ -1,2 +1,2 @@
-**/pds:logical_identifier<*>
-**/pds:version_id<*>
+**/pds:logical_identifier*
+**/pds:version_id*

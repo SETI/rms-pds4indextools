@@ -103,9 +103,9 @@
                     <cassini:electronics_bias>112</cassini:electronics_bias>
                     <cassini:earth_received_start_time>2001-007T19:58:04.616</cassini:earth_received_start_time>
                     <cassini:earth_received_stop_time>2001-007T19:58:32.295</cassini:earth_received_stop_time>
-                    <cassini:expected_maximum_full_well>-1</cassini:expected_maximum_full_well>  <!-- Unknown -->
-                    <cassini:expected_maximum_DN_sat>-1</cassini:expected_maximum_DN_sat>  <!-- Unknown -->
-                    <cassini:expected_packets>-1</cassini:expected_packets>  <!-- Unknown -->
+                    <cassini:expected_maximum_full_well>-1</cassini:expected_maximum_full_well>  
+                    <cassini:expected_maximum_DN_sat>-1</cassini:expected_maximum_DN_sat>  
+                    <cassini:expected_packets>-1</cassini:expected_packets>  
                     <cassini:exposure_duration unit="ms">220.</cassini:exposure_duration>
                     <cassini:filter_name_1>P0</cassini:filter_name_1>
                     <cassini:filter_name_2>GRN</cassini:filter_name_2>
@@ -120,12 +120,12 @@
                     <cassini:instrument_data_rate>182.783997</cassini:instrument_data_rate>
                     <cassini:instrument_mode_id>FULL</cassini:instrument_mode_id>
                     <cassini:inst_cmprs_type>LOSSLESS</cassini:inst_cmprs_type>
-                    <cassini:inst_cmprs_param_malgo>999</cassini:inst_cmprs_param_malgo>  <!-- Not applicable -->
-                    <cassini:inst_cmprs_param_tb>999</cassini:inst_cmprs_param_tb>  <!-- Not applicable -->
-                    <cassini:inst_cmprs_param_blocks>999</cassini:inst_cmprs_param_blocks>  <!-- Not applicable -->
-                    <cassini:inst_cmprs_param_quant>999</cassini:inst_cmprs_param_quant>  <!-- Not applicable -->
-                    <cassini:inst_cmprs_rate_expected_bits>-1.</cassini:inst_cmprs_rate_expected_bits>  <!-- Unknown -->
-                    <cassini:inst_cmprs_rate_actual_bits>-1.</cassini:inst_cmprs_rate_actual_bits>  <!-- Unknown -->
+                    <cassini:inst_cmprs_param_malgo>999</cassini:inst_cmprs_param_malgo>  
+                    <cassini:inst_cmprs_param_tb>999</cassini:inst_cmprs_param_tb>  
+                    <cassini:inst_cmprs_param_blocks>999</cassini:inst_cmprs_param_blocks>  
+                    <cassini:inst_cmprs_param_quant>999</cassini:inst_cmprs_param_quant>  
+                    <cassini:inst_cmprs_rate_expected_bits>-1.</cassini:inst_cmprs_rate_expected_bits>  
+                    <cassini:inst_cmprs_rate_actual_bits>-1.</cassini:inst_cmprs_rate_actual_bits>  
                     <cassini:inst_cmprs_ratio>3.150372</cassini:inst_cmprs_ratio>
                     <cassini:light_flood_state_flag>ON</cassini:light_flood_state_flag>
                     <cassini:method_description>Information not provided</cassini:method_description>
@@ -134,7 +134,7 @@
                     <cassini:observation_id>UVIS_C23ST_OCCULT001_PRIME_C</cassini:observation_id>
                     <cassini:optics_temperature_front unit="degC">0.71269</cassini:optics_temperature_front>
                     <cassini:optics_temperature_back unit="degC">-999.</cassini:optics_temperature_back>
-                    <cassini:order_number>-999</cassini:order_number>  <!-- Unknown -->
+                    <cassini:order_number>-999</cassini:order_number>  
                     <cassini:parallel_clock_voltage_index>9</cassini:parallel_clock_voltage_index>
                     <cassini:pds3_product_creation_time>2001-008T10:55:49.000</cassini:pds3_product_creation_time>
                     <cassini:pds3_product_version_type>FINAL</cassini:pds3_product_version_type>
@@ -144,18 +144,18 @@
                     <cassini:pre-pds_version_number>1</cassini:pre-pds_version_number>
                     <cassini:prepare_cycle_index>0</cassini:prepare_cycle_index>
                     <cassini:readout_cycle_index>11</cassini:readout_cycle_index>
-                    <cassini:received_packets>-1</cassini:received_packets>  <!-- Unknown -->
+                    <cassini:received_packets>-1</cassini:received_packets>  
                     <cassini:sensor_head_electronics_temperature unit="degC">1.633024</cassini:sensor_head_electronics_temperature>
                     <cassini:sequence_id>C23</cassini:sequence_id>
-                    <cassini:sequence_number>-1</cassini:sequence_number>  <!-- Unknown -->
+                    <cassini:sequence_number>-1</cassini:sequence_number>  
                     <cassini:sequence_title>ISS_C23ST_OCCULT001_UVIS</cassini:sequence_title>
                     <cassini:shutter_mode_id>NACONLY</cassini:shutter_mode_id>
                     <cassini:shutter_state_id>ENABLED</cassini:shutter_state_id>
                     <cassini:start_time_doy>2001-007T06:08:47.793</cassini:start_time_doy>
                     <cassini:stop_time_doy>2001-007T06:08:48.013</cassini:stop_time_doy>
                     <cassini:telemetry_format_id>Information not provided</cassini:telemetry_format_id>
-                    <cassini:valid_maximum_full_well>-1</cassini:valid_maximum_full_well>  <!-- Unknown -->
-                    <cassini:valid_maximum_DN_sat>-1</cassini:valid_maximum_DN_sat>  <!-- Unknown -->
+                    <cassini:valid_maximum_full_well>-1</cassini:valid_maximum_full_well>  
+                    <cassini:valid_maximum_DN_sat>-1</cassini:valid_maximum_DN_sat>  
                 </cassini:ISS_Specific_Attributes>
             </cassini:Cassini>
         </Mission_Area>
@@ -218,7 +218,7 @@
             <md5_checksum>a468693f67593587d224116c5ade995a</md5_checksum>
         </File>
 
-<!-- The internal VICAR header -->
+
 
         <Header>
             <offset unit="byte">0</offset>
@@ -226,7 +226,7 @@
             <parsing_standard_id>VICAR2</parsing_standard_id>
         </Header>
 
-<!-- Telemetry Table -->
+
 
         <Array>
             <local_identifier>telemetry-table</local_identifier>
