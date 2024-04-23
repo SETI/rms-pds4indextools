@@ -1,2 +1,2 @@
-!**/pds:description*
-!**/pds:comment*
+**/*comment*
+!**/geom:comment*

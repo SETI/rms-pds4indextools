@@ -128,11 +128,22 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns):
 
     if glob_patterns is not None:
         if not all(pat.startswith('!') for pat in glob_patterns):
-            print('ye')
+            negated = []
+            positive = []
+            for pat in glob_patterns:
+                if pat.startswith('!'):
+                    pat = pat.replace('!', '')
+                    negated.append(pat)
+                else:
+                    positive.append(pat)
             for key, value in input_dict.items():
                 if any(fnmatch.fnmatch(key, pat)
-                       for pat in glob_patterns) and 'cyfunction' not in key:
+                       for pat in positive) and 'cyfunction' not in key:
                     filtered_dict[key] = value
+            for key, value in list(filtered_dict.items()):
+                if any(fnmatch.fnmatch(key, pat)
+                       for pat in negated) or 'cyfunction' in key:
+                    del filtered_dict[key]
         else:
             filtered_dict = dict(input_dict)
             glob_patterns = [pat.replace('!', '')
