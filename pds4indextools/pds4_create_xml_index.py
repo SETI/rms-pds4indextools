@@ -137,24 +137,20 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns):
                 else:
                     positive.append(pat)
             for key, value in input_dict.items():
-                if any(fnmatch.fnmatch(key, pat)
-                       for pat in positive) and 'cyfunction' not in key:
+                if any(fnmatch.fnmatch(key, pat) for pat in positive):
                     filtered_dict[key] = value
             for key, value in list(filtered_dict.items()):
-                if any(fnmatch.fnmatch(key, pat)
-                       for pat in negated) or 'cyfunction' in key:
+                if any(fnmatch.fnmatch(key, pat) for pat in negated):
                     del filtered_dict[key]
         else:
             filtered_dict = dict(input_dict)
             glob_patterns = [pat.replace('!', '')
                              for pat in glob_patterns]
             for key in list(filtered_dict.keys()):
-                if any(fnmatch.fnmatch(key, pat)
-                       for pat in glob_patterns) or 'cyfunction' in key:
+                if any(fnmatch.fnmatch(key, pat) for pat in glob_patterns):
                     del filtered_dict[key]
     else:
         for key, value in input_dict.items():
-            if 'cyfunction' not in key:
                 filtered_dict[key] = value
 
     return filtered_dict
@@ -586,6 +582,10 @@ def main(cmd_line=None):
     parser.add_argument('--config-file', type=str,
                         help='Read a user-specified configuration file.. File must be a '
                              '.ini file.')
+    parser.add_argument('--dump-available-elements', action='store_true',
+                        help='Give a .txt file of all elements within given label '
+                             'file(s). This file can be used as a base file for '
+                             '--elements-file.')
 
     if cmd_line is None:
         args = parser.parse_args()
@@ -649,8 +649,6 @@ def main(cmd_line=None):
             key_new = key_new.replace(']', '>')
             label_results[key_new] = label_results.pop(key)
 
-        label_results = filter_dict_by_glob_patterns(label_results, elements_to_scrape)
-
         for key in list(label_results.keys()):
             parts = key.split('/')
             new_parts = []
@@ -663,10 +661,15 @@ def main(cmd_line=None):
             key_new = '/'.join(new_parts[1:])
             label_results[key_new] = label_results.pop(key)
         
-            
+        for key in list(label_results.keys()):
+            if 'cyfunction' in key:
+                del label_results[key]
+
         xpath_map = renumber_xpaths(label_results.keys())
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
+
+        label_results = filter_dict_by_glob_patterns(label_results, elements_to_scrape)
 
         if args.simplify_xpaths:
             elements = ()
@@ -708,8 +711,21 @@ def main(cmd_line=None):
     else:
         output_path = args.directorypath / Path('index_file.csv')
 
-    verboseprint(f'Output file generated at {output_path}')
-    write_results_to_csv(all_results, args, output_path)
+
+    if args.dump_available_elements:
+        verboseprint(f'Elements file generated at {output_path}')
+        elements = []
+        for label in all_results:
+            for values in label.values():
+                for x in values.keys():
+                    elements.append(x)
+        with open(output_path, 'w') as file:
+            for item in elements:
+                file.write("%s\n" % item) 
+    else:
+
+        verboseprint(f'Index file generated at {output_path}')
+        write_results_to_csv(all_results, args, output_path)
 
 
 if __name__ == '__main__':
