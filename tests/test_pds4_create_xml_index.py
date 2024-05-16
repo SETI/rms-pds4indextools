@@ -8,436 +8,247 @@ import tempfile
 
 
 # These two variables are the same for all tests, so we can either declare them as  
-# global variables, or get the root_dir at the setup stage before running each test 
-root_dir = Path(__file__).resolve().parent.parent
-test_files_dir = root_dir / 'test_files'
+# global variables, or get the ROOT_DIR at the setup stage before running each test 
+ROOT_DIR = Path(__file__).resolve().parent.parent
+test_files_dir = ROOT_DIR / 'test_files'
+samples_dir = test_files_dir / 'samples'
+expected_dir = test_files_dir / 'expected'
+labels_dir = test_files_dir / 'labels'
 
 
-def test_load_config_object():
-    config_object = tools.load_config_file(None)
-
-    assert config_object['pds:ASCII_Date_Time_YMD_UTC']['inapplicable'] == '0001-01-01T12:00Z'
-    assert config_object['pds:ASCII_Date_Time_YMD_UTC']['missing'] == '0002-01-01T12:00Z'
-    assert config_object['pds:ASCII_Date_Time_YMD_UTC']['unknown'] == '0003-01-01T12:00Z'
-    assert config_object['pds:ASCII_Date_Time_YMD_UTC']['anticipated'] == '0004-01-01T12:00Z'
-
-    assert config_object['pds:ASCII_Date_Time_YMD']['inapplicable'] == '0001-01-01T12:00'
-    assert config_object['pds:ASCII_Date_Time_YMD']['missing'] == '0002-01-01T12:00'
-    assert config_object['pds:ASCII_Date_Time_YMD']['unknown'] == '0003-01-01T12:00'
-    assert config_object['pds:ASCII_Date_Time_YMD']['anticipated'] == '0004-01-01T12:00'
-
-    assert config_object['pds:ASCII_Date_YMD']['inapplicable'] == '0001-01-01'
-    assert config_object['pds:ASCII_Date_YMD']['missing'] == '0002-01-01'
-    assert config_object['pds:ASCII_Date_YMD']['unknown'] == '0003-01-01'
-    assert config_object['pds:ASCII_Date_YMD']['anticipated'] == '0004-01-01'
-
-    assert config_object['pds:ASCII_Integer']['inapplicable'] == '-999'
-    assert config_object['pds:ASCII_Integer']['missing'] == '-998'
-    assert config_object['pds:ASCII_Integer']['unknown'] == '-997'
-    assert config_object['pds:ASCII_Integer']['anticipated'] == '-996'
-
-    assert config_object['pds:ASCII_Real']['inapplicable'] == '-999.0'
-    assert config_object['pds:ASCII_Real']['missing'] == '-998.0'
-    assert config_object['pds:ASCII_Real']['unknown'] == '-997.0'
-    assert config_object['pds:ASCII_Real']['anticipated'] == '-996.0'
-
-    assert config_object['pds:ASCII_Short_String_Collapsed']['inapplicable'] == 'inapplicable'
-    assert config_object['pds:ASCII_Short_String_Collapsed']['missing'] == 'missing'
-    assert config_object['pds:ASCII_Short_String_Collapsed']['unknown'] == 'unknown'
-    assert config_object['pds:ASCII_Short_String_Collapsed']['anticipated'] == 'anticipated'
-
-
-    # Tests that the config_object is loaded over. 
-    config_object = tools.load_config_file("../test_files/tester_config.ini")
-
-    assert config_object['pds:ASCII_Date_YMD']['inapplicable'] == '0001-01-01'
-    assert config_object['pds:ASCII_Date_YMD']['missing'] == '0002-01-01'
-    assert config_object['pds:ASCII_Date_YMD']['unknown'] == '0003-01-01'
-    assert config_object['pds:ASCII_Date_YMD']['anticipated'] == '0004-01-01'
-
-    assert config_object['pds:ASCII_Integer']['inapplicable'] == '-9999'
-    assert config_object['pds:ASCII_Integer']['missing'] == '-9988'
-    assert config_object['pds:ASCII_Integer']['unknown'] == '-9977'
-    assert config_object['pds:ASCII_Integer']['anticipated'] == '-9966'
-
-    assert config_object['pds:ASCII_Real']['inapplicable'] == '-9999.0'
-    assert config_object['pds:ASCII_Real']['missing'] == '-9988.0'
-    assert config_object['pds:ASCII_Real']['unknown'] == '-9977.0'
-    assert config_object['pds:ASCII_Real']['anticipated'] == '-9966.0'
-
-    assert config_object['pds:ASCII_Short_String_Collapsed']['inapplicable'] == 'inapplicable_alt'
-    assert config_object['pds:ASCII_Short_String_Collapsed']['missing'] == 'missing_alt'
-    assert config_object['pds:ASCII_Short_String_Collapsed']['unknown'] == 'unknown_alt'
-    assert config_object['pds:ASCII_Short_String_Collapsed']['anticipated'] == 'anticipated_alt'
-
-
-# now, a bad config file
-    with pytest.raises(SystemExit):
-        with pytest.raises(OSError):
-            tools.load_config_file("non_existent_file.ini")
-
-
-def test_default_value_for_nil():
-    config_object = tools.load_config_file(None)
-    integer = 'pds:ASCII_Integer'
-    double_float = 'pds:ASCII_Real'
-
-    assert config_object['pds:ASCII_Integer']['inapplicable'] == '-999'
-    assert tools.default_value_for_nil(config_object, integer, 'inapplicable') == -999
-    assert config_object['pds:ASCII_Integer']['missing'] == '-998'
-    assert tools.default_value_for_nil(config_object, integer, 'missing') == -998
-    assert config_object['pds:ASCII_Integer']['unknown'] == '-997'
-    assert tools.default_value_for_nil(config_object, integer, 'unknown') == -997
-    assert config_object['pds:ASCII_Integer']['anticipated'] == '-996'
-    assert tools.default_value_for_nil(config_object, integer, 'anticipated') == -996
-
-
-    assert config_object['pds:ASCII_Real']['inapplicable'] == '-999.0'
-    assert tools.default_value_for_nil(config_object, double_float, 'inapplicable') == -999.0
-    assert config_object['pds:ASCII_Real']['missing'] == '-998.0'
-    assert tools.default_value_for_nil(config_object, double_float, 'missing') == -998.0
-    assert config_object['pds:ASCII_Real']['unknown'] == '-997.0'
-    assert tools.default_value_for_nil(config_object, double_float, 'unknown') == -997.0
-    assert config_object['pds:ASCII_Real']['anticipated'] == '-996.0'
-    assert tools.default_value_for_nil(config_object, double_float, 'anticipated') == -996.0
-
-
-
-def test_split_into_elements():
-    xpath = '/pds:Product_Observational/pds:Observation_Area<1>/pds:Observing_System<1>/pds:name<1>'
-    pieces = tools.split_into_elements(xpath)
-    assert pieces == ('pds:Observation_Area', 'pds:Observing_System', 'pds:name')
-
-
-
-def test_process_schema_location():
-    test_files_dir = Path(__file__).resolve().parent.parent / 'test_files'
-    label_file = 'tester_label_1.xml'
-    schema_files = tools.process_schema_location(test_files_dir / label_file)
-    assert schema_files[0] == 'https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1B00.xsd'
-    assert schema_files[1] == 'https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1B00.xsd'
-    assert schema_files[2] == 'https://pds.nasa.gov/pds4/mission/cassini/v1/PDS4_CASSINI_1B00_1300.xsd'
-
-
-# Set parameters values that you would like to pass into test_elements_file.
-# In this case, we are running the same test with different sets of
-# golden_file, new_file, and cmd_line.
-    
-# Currently, element_file unit tests are commented out due to the current code not
-# creating intended results.
 @pytest.mark.parametrize(
         'golden_file,new_file,cmd_line',
         [
-            # simple test cases
-            (str(test_files_dir / 'elements_file_success.csv'),
-             'elements_file.csv',
+            # Testing --elements-file
+            (str(expected_dir / 'elements_file_success_1.txt'),
+             'elements_file.txt',
              [
                 str(test_files_dir),
-                'tester_label_1.xml',
+                'labels/tester_label_1.xml',
+                '--dump-available-elements',
                 '--elements-file',
-                str(root_dir / 'samples/sample_elements.txt'),  
-                '--output-file',     
-             ]
-            ),
-            # Okay, basic capture
-            (str(test_files_dir / 'elements_file_success_2.csv'),
-             'elements_file_2.csv',
-             [
-                str(test_files_dir),
-                'tester_label_2.xml',
-                '--elements-file',
-                str(root_dir / 'samples/element_2.txt'),  
-                '--output-file',     
-             ]
-            ),
-            # Multiple partial captures
-            (str(test_files_dir / 'elements_file_success_3.csv'),
-             'elements_file_3.csv',
-             [
-                str(test_files_dir),
-                'tester_label_2.xml',
-                'tester_label_3.xml',
-                '--elements-file',
-                str(root_dir / 'samples/element_3.txt'),  
-                '--output-file',     
+                str(samples_dir / 'element_1.txt'),
+                '--output-file'
              ]
             ),
 
-            # exclusion test
-            (str(test_files_dir / 'elements_file_success_4.csv'),
-            'elements_file_4.csv',
+            (str(expected_dir / 'elements_file_success_2.txt'),
+             'elements_file_2.txt',
              [
                 str(test_files_dir),
-                'tester_label_*.xml',
+                'labels/tester_label_2.xml',
+                '--dump-available-elements',
                 '--elements-file',
-                str(root_dir / 'samples/element_4.txt'),  
+                str(samples_dir / 'element_2.txt'),  
+                '--output-file',
+             ]
+            ),
+
+            (str(expected_dir / 'elements_file_success_3.txt'),
+             'elements_file_3.txt',
+             [
+                str(test_files_dir),
+                'labels/tester_label_2.xml',
+                'labels/tester_label_3.xml',
+                '--dump-available-elements',
+                '--elements-file',
+                str(samples_dir / 'element_3.txt'),  
                 '--output-file',     
              ]
-            )
+            ),
 
 
-        ]
-                        )
-                    
-def test_elements_file(golden_file, new_file, cmd_line):
-    # Create a temporary directory in the same location as the test_files directory
-    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
-        temp_dir_path = Path(temp_dir)
-        
-        # THE PATH TO THE NEW FILE
-        path_to_file = temp_dir_path / new_file
-        # Call main() function with the simulated command line arguments
-        cmd_line.append(str(path_to_file))
-        tools.main(cmd_line)
-
-        # Assert that the file now exists
-        assert os.path.isfile(path_to_file)
-
-        # Open and compare the two files
-        with open(path_to_file, 'rb') as created:
-            formed = created.read()
-
-        with open(golden_file, 'rb') as new:
-            expected = new.read()
-
-        assert formed == expected
-
-
-
-# Set parameters values that you would like to pass into test_simplify_xpaths.
-# In this case, we are running the same test with different sets of
-# golden_file, new_file, and cmd_line.
-@pytest.mark.parametrize(
-        'golden_file,new_file,cmd_line',
-        [
-            (str(test_files_dir / 'simplify_xpaths_success_1.csv'),
-             'simplify_xpaths_1.csv',
+            (str(expected_dir / 'elements_file_success_4.txt'),
+            'elements_file_4.txt',
              [
                 str(test_files_dir),
-                'tester_label_1.xml',
+                'labels/tester_label_*.xml',
+                '--dump-available-elements',
+                '--elements-file',
+                str(samples_dir / 'element_4.txt'),  
+                '--output-file',     
+             ]
+            ),
+             
+            # Testing --simplify-xpaths
+            (str(expected_dir / 'simplify_xpaths_success_1.txt'),
+            'simplify_xpaths_1.txt',
+            [
+                str(test_files_dir),
+                'labels/tester_label_1.xml',
+                '--dump-available-elements',
                 '--simplify-xpaths',
                 '--output-file',     
-             ]
+            ]
             ),
 
-            (str(test_files_dir / 'simplify_xpaths_success_2.csv'),
-             'simplify_xpaths_2.csv',
-             [
+            (str(expected_dir / 'simplify_xpaths_success_2.txt'),
+                'simplify_xpaths_2.txt',
+            [
                 str(test_files_dir),
-                'tester_label_*.xml',
+                'labels/tester_label_*.xml',
+                '--dump-available-elements',
                 '--simplify-xpaths',
                 '--elements-file',
-                str(root_dir / 'samples/elements_xpath_simplify.txt'),
+                str(samples_dir / 'elements_xpath_simplify_2.txt'),
                 '--output-file',     
-             ]
+            ]
             ),
 
-            (str(test_files_dir / 'simplify_xpaths_success_3.csv'),
-             'simplify_xpaths_3.csv',
-             [
+            (str(expected_dir / 'simplify_xpaths_success_3.txt'),
+                'simplify_xpaths_3.txt',
+            [
                 str(test_files_dir),
-                'tester_label_2.xml',
+                'labels/tester_label_2.xml',
+                '--dump-available-elements',
                 '--simplify-xpaths',
                 '--elements-file',
-                str(root_dir / 'samples/elements_xpath_simplify_2.txt'),
+                str(samples_dir / 'elements_xpath_simplify_3.txt'),
                 '--output-file',     
-             ]
+            ]
             ),
 
-            (str(test_files_dir / 'simplify_xpaths_success_4.csv'),
-             'simplify_xpaths_3.csv',
-             [
+            (str(expected_dir / 'simplify_xpaths_success_4.txt'),
+                'simplify_xpaths_4.txt',
+            [
                 str(test_files_dir),
-                'tester_label_3.xml',
+                'labels/tester_label_3.xml',
+                '--dump-available-elements',
                 '--simplify-xpaths',
                 '--elements-file',
-                str(root_dir / 'samples/elements_xpath_simplify_3.txt'),
-                '--output-file',     
-             ]
-            )
-
-        ]
-                        )
-
-def test_simplify_xpaths(golden_file, new_file, cmd_line):
-    # Create a temporary directory in the same location as the test_files directory
-    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
-        temp_dir_path = Path(temp_dir)
-        
-        # THE PATH TO THE NEW FILE
-        path_to_file = temp_dir_path / new_file
-        # Call main() function with the simulated command line arguments
-        cmd_line.append(str(path_to_file))
-        tools.main(cmd_line)
-
-        # Assert that the file now exists
-        assert os.path.isfile(path_to_file)
-
-        # Open and compare the two files
-        with open(path_to_file, 'rb') as created:
-            formed = created.read()
-
-        with open(golden_file, 'rb') as new:
-            expected = new.read()
-
-        assert formed == expected
-
-
-
-# Set parameters values that you would like to pass into test_extra_file_info.
-# In this case, I assume we are running the same test with different sets of
-# golden_file, new_file, and cmd_line.
-@pytest.mark.parametrize(
-        'golden_file,new_file,cmd_line',
-        [
-            (str(test_files_dir / 'extra_file_info_success_1.csv'),
-             'extra_file_info_1.csv',
-             [
+                str(samples_dir / 'elements_xpath_simplify_4.txt'),
+                '--output-file',
+            ]
+            ),
+            
+            # Testing --extra-file-info
+            (str(expected_dir / 'extra_file_info_success_1.csv'),
+                'extra_file_info_1.csv',
+            [
                 str(test_files_dir),
-                'tester_label_2.xml',
+                'labels/tester_label_2.xml',
+                '--elements-file',
+                str(samples_dir / 'element_1.txt'),
                 '--extra-file-info',
                 'filename',
                 'filepath',
                 '--output-file',     
-             ]
+            ]
             ),
 
-            (str(test_files_dir / 'extra_file_info_success_2.csv'),
-             'extra_file_info_2.csv',
-             [
+            (str(expected_dir / 'extra_file_info_success_2.csv'),
+                'extra_file_info_2.csv',
+            [
                 str(test_files_dir),
-                'tester_label_*.xml',
+                'labels/tester_label_*.xml',
                 '--elements-file',
-                str(root_dir / 'samples/element_extra_file_info.txt'),
+                str(samples_dir / 'element_extra_file_info_2.txt'),
                 '--extra-file-info',
                 'filename',
                 '--output-file',     
-             ]
-            )
-
-        ]
-                        )
-
-def test_extra_file_info(golden_file, new_file, cmd_line):
-    # Create a temporary directory in the same location as the test_files directory
-    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
-        temp_dir_path = Path(temp_dir)
-        
-        # THE PATH TO THE NEW FILE
-        path_to_file = temp_dir_path / new_file
-        # Call main() function with the simulated command line arguments
-        cmd_line.append(str(path_to_file))
-        tools.main(cmd_line)
-
-        # Assert that the file now exists
-        assert os.path.isfile(path_to_file)
-
-        # Open and compare the two files
-        with open(path_to_file, 'rb') as created:
-            formed = created.read()
-
-        with open(golden_file, 'rb') as new:
-            expected = new.read()
-
-        assert formed == expected
-
-
-# Set parameters values that you would like to pass into test_clean_header_field_names.
-# In this case, I assume we are running the same test with different sets of
-# golden_file, new_file, and cmd_line.
-@pytest.mark.parametrize(
-        'golden_file,new_file,cmd_line',
-        [
-            (str(test_files_dir / 'clean_header_field_names_success_1.csv'),
-             'clean_header_field_names_1.csv',
-             [
-                str(test_files_dir),
-                'tester_label_1.xml',
-                '--clean-header-field-names',
-                '--output-file',     
-             ]
+            ]
             ),
 
-            (str(test_files_dir / 'clean_header_field_names_success_2.csv'),
-             'clean_header_field_names_2.csv',
-             [
+            (str(expected_dir / 'extra_file_info_success_3.csv'),
+                'extra_file_info_3.csv',
+            [
                 str(test_files_dir),
-                'tester_label_1.xml',
-                'tester_label_2.xml',   
+                'labels/tester_label_*.xml',
                 '--elements-file',
-                str(root_dir / 'samples/elements_clean_header_field_names.txt'),
+                str(samples_dir / 'element_extra_file_info_2.txt'),
+                '--extra-file-info',
+                'filename',
+                'filepath',
+                'LID',
+                'bundle',
+                'bundle_lid',
+                '--output-file',     
+            ]
+            ),
+            
+            # Testing --clean-header-field-names
+            (str(expected_dir / 'clean_header_field_names_success_1.txt'),
+            'clean_header_field_names_1.txt',
+            [
+                str(test_files_dir),
+                'labels/tester_label_1.xml',
+                '--dump-available-elements',
                 '--clean-header-field-names',
                 '--output-file',     
-             ]
+            ]
             ),
 
-        ]
-                        )
+            (str(expected_dir / 'clean_header_field_names_success_2.txt'),
+                'clean_header_field_names_2.txt',
+            [
+                str(test_files_dir),
+                'labels/tester_label_1.xml',
+                'labels/tester_label_2.xml',
+                '--dump-available-elements',
+                '--elements-file',
+                str(samples_dir / 'elements_clean_header_field_names.txt'),
+                '--clean-header-field-names',
+                '--output-file',     
+            ]
+            ),
+                    (str(expected_dir / 'clean_header_field_names_success_1.txt'),
+            'clean_header_field_names_1.txt',
+            [
+                str(test_files_dir),
+                'labels/tester_label_1.xml',
+                '--dump-available-elements',
+                '--clean-header-field-names',
+                '--output-file',     
+            ]
+            ),
 
-def test_clean_header_field_names(golden_file, new_file, cmd_line):
-    # Create a temporary directory in the same location as the test_files directory
-    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
-        temp_dir_path = Path(temp_dir)
-        
-        # THE PATH TO THE NEW FILE
-        path_to_file = temp_dir_path / new_file
-        # Call main() function with the simulated command line arguments
-        cmd_line.append(str(path_to_file))
-        tools.main(cmd_line)
-
-        # Assert that the file now exists
-        assert os.path.isfile(path_to_file)
-
-        # Open and compare the two files
-        with open(path_to_file, 'rb') as created:
-            formed = created.read()
-
-        with open(golden_file, 'rb') as new:
-            expected = new.read()
-
-        assert formed == expected
-
-
-
-# Set parameters values that you would like to pass into test_sort_by.
-# In this case, I assume we are running the same test with different sets of
-# golden_file, new_file, and cmd_line.
-@pytest.mark.parametrize(
-    'golden_file,new_file,cmd_line',
-    [
-        (
-            str(test_files_dir / 'sort_by_success.csv'),
+            (str(expected_dir / 'clean_header_field_names_success_2.txt'),
+                'clean_header_field_names_2.txt',
+            [
+                str(test_files_dir),
+                'labels/tester_label_1.xml',
+                'labels/tester_label_2.xml',
+                '--dump-available-elements',
+                '--elements-file',
+                str(samples_dir / 'elements_clean_header_field_names.txt'),
+                '--clean-header-field-names',
+                '--output-file',     
+            ]
+            ),
+            
+            # Testing --sort by
+            (str(expected_dir / 'sort_by_success_1.csv'),
             'sort_by_1.csv',
             [
                 str(test_files_dir),
-                'tester_label_*.xml',
+                'labels/tester_label_*.xml',
                 '--elements-file',
-                str(root_dir / 'samples/elements_clean_header_field_names.txt'),
+                str(samples_dir / 'elements_clean_header_field_names.txt'),
                 '--sort-by',
                 'pds:Product_Observational/pds:Identification_Area<1>/pds:logical_identifier<1>',
                 '--output-file', 
             ]
-        ),
-        
-        (
-            str(test_files_dir / 'sort_by_success_2.csv'),
+            ),
+            
+            (str(expected_dir / 'sort_by_success_2.csv'),
             'sort_by_2.csv',
             [
                 str(test_files_dir),
-                'tester_label_*.xml',
+                'labels/tester_label_*.xml',
                 '--elements-file',
-                str(root_dir / 'samples/elements_clean_header_field_names.txt'),
+                str(samples_dir / 'elements_clean_header_field_names.txt'),
+                '--extra-file-info',
+                'bundle_lid',
+                'filepath',
                 '--sort-by',
-                'pds:Product_Observational/pds:Identification_Area<1>/pds:logical_identifier<1>',
-                'pds:Product_Observational/pds:Observation_Area<1>/pds:Time_Coordinates<1>/pds:start_date_time<1>',
+                'bundle_lid',
                 '--output-file', 
             ]
-        )
-    ]
-)
-
-def test_sort_by(golden_file, new_file, cmd_line):
-    # Create a temporary directory in the same location as the test_files directory
+            ),
+        ]
+                        )
+def test_success(golden_file, new_file, cmd_line):
+    # Create a temporary directory
     with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
         temp_dir_path = Path(temp_dir)
         
@@ -458,3 +269,44 @@ def test_sort_by(golden_file, new_file, cmd_line):
             expected = new.read()
 
         assert formed == expected
+
+
+
+
+# Testing --extra-file-info (failure case)
+@pytest.mark.parametrize(
+    'cmd_line',
+    [
+        (
+            str(test_files_dir),
+            'labels/tester_label_*.xml',
+            '--elements-file',
+            str(samples_dir / 'element_1.txt'),
+            '--extra-file-info',
+            'bad_element',
+            '--output-file',     
+        ),
+        (
+            str(test_files_dir),  # directory path
+            ' bad_directory/labels/tester_label_*.xml',  # non-existent directory
+            '--elements-file',
+            str(samples_dir / 'element_1.txt'),  # elements file
+            '--extra-file-info',  # extra file info
+            'filename',
+            '--output-file',     
+        ),
+        (
+            str(test_files_dir),  # directory path
+            'labels/tester_label_*.xml',
+            '--elements-file',
+            str(samples_dir / 'element_empty.txt'),  # empty elements file
+            '--output-file',     
+        ),
+    ]
+)
+def test_failures(cmd_line):
+    # Call main() function with the simulated command line arguments
+    with pytest.raises(SystemExit) as e:
+        tools.main(cmd_line)
+    assert e.type == SystemExit
+    assert e.value.code != 0  # Check that the exit code indicates failure

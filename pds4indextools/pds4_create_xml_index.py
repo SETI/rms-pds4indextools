@@ -114,7 +114,28 @@ def default_value_for_nil(config, data_type, nil_value):
     return default
 
 
-def filter_dict_by_glob_patterns(input_dict, glob_patterns):
+def extract_logical_identifier(tree):
+    """Extract the logical_identifier element from an XML tree.
+
+    Inputs:
+        tree: The XML tree.
+
+    Returns:
+        The text content of the logical_identifier element, or None if not found.
+    """
+    # Define namespace mapping
+    namespaces = {'pds': 'http://pds.nasa.gov/pds4/pds/v1'}
+
+    # Find logical_identifier element within Identification_Area
+    logical_identifier = tree.find('.//pds:Identification_Area/pds:logical_identifier', namespaces=namespaces)
+
+    if logical_identifier is not None:
+        return logical_identifier.text.strip()
+    else:
+        return None
+
+
+def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
     """Filter a dictionary based on a list of glob patterns matching for keys.
 
     Inputs:
@@ -126,34 +147,27 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns):
     """
     filtered_dict = {}
 
-    if glob_patterns is not None:
-        if not all(pat.startswith('!') for pat in glob_patterns):
-            negated = []
-            positive = []
-            for pat in glob_patterns:
-                if pat.startswith('!'):
-                    pat = pat.replace('!', '')
-                    negated.append(pat)
-                else:
-                    positive.append(pat)
-            for key, value in input_dict.items():
-                if any(fnmatch.fnmatch(key, pat) for pat in positive):
-                    filtered_dict[key] = value
-            for key, value in list(filtered_dict.items()):
-                if any(fnmatch.fnmatch(key, pat) for pat in negated):
-                    del filtered_dict[key]
-        else:
-            filtered_dict = dict(input_dict)
-            glob_patterns = [pat.replace('!', '')
-                             for pat in glob_patterns]
-            for key in list(filtered_dict.keys()):
-                if any(fnmatch.fnmatch(key, pat) for pat in glob_patterns):
-                    del filtered_dict[key]
+    if glob_patterns is None:
+        return input_dict
+    
+    if glob_patterns == []:
+        print('Given elements file is empty.')
+        sys.exit(1)
     else:
-        for key, value in input_dict.items():
-                filtered_dict[key] = value
+        for pattern in glob_patterns:
+            if not pattern.startswith('!'):
+                verboseprint(f'Adding elements according to: {pattern}')
+                for key, value in input_dict.items():
+                    if fnmatch.fnmatch(key, pattern):
+                       filtered_dict[key] = value
+            else:
+                verboseprint(f'Removing elements according to: {pattern}')
+                pattern = pattern.replace('!', '')
+                for key, value in list(filtered_dict.items()):
+                    if fnmatch.fnmatch(key, pattern):
+                        del filtered_dict[key]
 
-    return filtered_dict
+        return filtered_dict
 
 
 def load_config_file(specified_config_file):
@@ -202,11 +216,11 @@ def process_schema_location(file_path):
     # Load and parse the XML file
     try:
         tree = etree.parse(file_path)
-        root = tree.getroot()
     except OSError:
         print('Given file does not exist')
 
     # Extract the xsi:schemaLocation attribute value
+    root = tree.getroot()
     schema_location_values = root.get(
         '{http://www.w3.org/2001/XMLSchema-instance}schemaLocation'
     ).split()
@@ -247,7 +261,6 @@ def process_headers(label_results, key, root, namespaces, prefixes):
                 break
             i += 1
     label_results[key_new] = label_results.pop(key)
-
 
 
 def renumber_xpaths(xpaths):
@@ -392,13 +405,13 @@ def split_into_elements(xpath):
     Returns:
         The tuple of elements the XPath is composed of.
     """
-    elements = ()
+    elements = []
     parts = xpath.split('/')
 
     for part in parts:
         if '<' in part:
             part = part.split('<')
-            elements += (part[0],)
+            elements.append(part[0])
     
     return elements
 
@@ -528,12 +541,18 @@ def write_results_to_csv(results_list, args, output_csv_path):
 
     df = pd.DataFrame(rows)
 
+    for c in df.columns:
+        number = c.split('/')[-1].split('<')[0].split('_')[-1]
+        if number.isdigit():
+            c_new = c.replace('_'+number, '')
+            df.rename(columns={c: c_new}, inplace=True)
+
     if args.sort_by:
         df.sort_values(by=args.sort_by, inplace=True)
 
     if args.clean_header_field_names:
         df.rename(columns=lambda x: x.replace(
-            ':', '_').replace('/', '__'), inplace=True)
+            ':', '_').replace('/', '__').replace('<', '_').replace('>', ''), inplace=True)
 
     df.to_csv(output_csv_path, index=False, na_rep='NaN')
 
@@ -597,16 +616,19 @@ def main(cmd_line=None):
     config = load_config_file(args.config_file)
 
     directory_path = Path(args.directorypath)
+    verboseprint(f'Chosen directory path: {directory_path}')
     patterns = args.pattern
+    verboseprint(f'Chosen pattern(s): {patterns}')
 
     nillable_elements_info = {}
     label_files = []
     all_results = []
+    tags = []
     for pattern in patterns:
         files = directory_path.glob(f"{pattern}")
         label_files.extend(files)
 
-    verboseprint(f'{len(label_files)} matching files found')
+    verboseprint(f'{len(label_files)} matching file(s) found')
 
     if label_files == []:
         print(f'No files matching {pattern} found in directory: {directory_path}')
@@ -668,31 +690,41 @@ def main(cmd_line=None):
         xpath_map = renumber_xpaths(label_results.keys())
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
-
-        label_results = filter_dict_by_glob_patterns(label_results, elements_to_scrape)
+        
+        verboseprint('Now filtering label results according to given element file.')
+        label_results = filter_dict_by_glob_patterns(label_results, elements_to_scrape, verboseprint)
 
         if args.simplify_xpaths:
+            verboseprint('Simplifying XPath headers.')
             elements = ()
             xpath_elements = []
-            tags = []
+            names = []
             for key in label_results.keys():
                 stuff = split_into_elements(key)
-                xpath_elements.append(split_into_elements(key))
+                xpath_elements.append(stuff)
+                names.append(stuff[-1])
             
-            duplicates = [t for t in set(xpath_elements) if xpath_elements.count(t) > 1]
+            duplicates = [tuple(t) for t in set(map(tuple, xpath_elements))
+                          if xpath_elements.count(t) > 1]
+            
+            duplicate_names = {tag for tag in names if names.count(tag) > 1}
+
+            if duplicate_names:
+                verboseprint(f'Duplicate tags found: {duplicate_names}')
 
             for key in list(label_results.keys()):
                 elements = split_into_elements(key)
                 tag = elements[-1]
-                if elements not in duplicates and elements[-1] not in tags:
+                tags.append(tag)
+                if elements not in duplicates and elements[-1] not in duplicate_names:
                     value = tag
-                    tags.append(tag)
                 else:
                     value = key
                 label_results[value] = label_results.pop(key)
                     
-
-        lid = label_results.get('pds:logical_identifier', 'Missing_LID')
+        lid = extract_logical_identifier(tree)
+        if lid is None:
+            lid = label_results.get('pds:logical_identifier', 'Missing_LID')
 
         # Attach extra columns if asked for.
         bundle_lid = ':'.join(lid.split(':')[:4])
@@ -700,6 +732,8 @@ def main(cmd_line=None):
         extras = {'LID': lid, 'filepath': filepath, 'filename': file.name,
                   'bundle': bundle, 'bundle_lid': bundle_lid}
         if args.extra_file_info:
+            verboseprint( '--extra-file-info requested '
+                         f'for the following: {args.extra_file_info}')
             label_results = {**{ele: extras[ele] for ele in args.extra_file_info},
                            **label_results}
 
@@ -719,11 +753,23 @@ def main(cmd_line=None):
             for values in label.values():
                 for x in values.keys():
                     elements.append(x)
+        
+        for x in elements:
+            tag = x.split('/')[-1].split('<')[0]
+            number = x.split('/')[-1].split('<')[0].split('_')[-1]
+            if number.isdigit() and tag not in tags:
+                y = x.replace('_'+number, '')
+                elements[elements.index(x)] = y
+
         with open(output_path, 'w') as file:
             for item in elements:
-                file.write("%s\n" % item) 
-    else:
+                if args.clean_header_field_names:
+                    verboseprint('--clean-header-field-names chosen. Headers reformatted.')
+                    item = item.replace(
+                        ':', '_').replace('/', '__').replace('<', '_').replace('>', '')
+                file.write("%s\n" % item)
 
+    else:
         verboseprint(f'Index file generated at {output_path}')
         write_results_to_csv(all_results, args, output_path)
 

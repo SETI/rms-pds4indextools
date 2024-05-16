@@ -1,0 +1,10 @@
+{
+    "/pds:Product_Ancillary/pds:Identification_Area[1]/pds:version_id[1]": "1.0",
+    "/pds:Product_Ancillary/pds:Identification_Area[1]/pds:title[1]": "Index file",
+    "/pds:Product_Ancillary/pds:Identification_Area[1]/pds:Citation_Information[1]/pds:author_list[1]": "Simpson, Emilie",
+    "/pds:Product_Ancillary/pds:Identification_Area[1]/pds:Citation_Information[1]/pds:editor_list[1]": "Simpson, Emilie",
+    "/pds:Product_Ancillary/pds:Identification_Area[1]/pds:Modification_History[1]/pds:Modification_Detail/pds:modification_date[1]": "2024-05-01T12:59:60",
+    "/pds:Product_Ancillary/pds:Identification_Area[1]/pds:Modification_History[1]/pds:Modification_Detail/pds:version_id[1]": "1.0",
+    "/pds:Product_Ancillary/pds:Identification_Area[1]/pds:Modification_History[1]/pds:Modification_Detail/pds:description[1]": "Initial version"
+
+}

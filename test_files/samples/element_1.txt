@@ -1,0 +1,3 @@
+pds:Product_Observational/pds:Identification_Area<1>/pds:logical_identifier<1>
+pds:Product_Observational/pds:Identification_Area<1>/pds:version_id<1>
+pds:Product_Observational/pds:Identification_Area<1>/pds:title<1>

@@ -1,0 +1,9 @@
+pds:logical_identifier
+pds:version_id
+pds:title
+pds:information_model_version
+pds:Product_Observational/pds:Observing_System<1>/pds:name<1>
+pds:Product_Observational/pds:Observing_System<1>/pds:Observing_System_Component<1>/pds:name<1>
+pds:type
+pds:lid_reference
+pds:reference_type
