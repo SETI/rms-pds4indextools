@@ -12,7 +12,7 @@ Usage:
         [--simplify-xpaths]
         [--output-file OUTPUT_FILE]
         [--verbose]
-        [--sort-by SORT_BY] 
+        [--sort-by SORT_BY]
         [--clean-header-field-names]
         [--extra-file-info EXTRA_FILE_INFO]
         [--config-file CONFIG_FILE]
@@ -32,7 +32,7 @@ Arguments:
     --sort-by SORT_BY    Sort the index file by a chosen set of columns.
     --clean-header-field-names
                          Replace the ":" and "/" with Windows-friendly characters.
-    --extra-file-info EXTRA_FILE_INFO  
+    --extra-file-info EXTRA_FILE_INFO
                          Add additional column(s) to the index file containing file or
                          bundle information. Possible values are: "LID", "filename",
                          "filepath", "bundle", and "bundle_lid". Multiple values may be
@@ -41,7 +41,7 @@ Arguments:
                          An optional .ini configuration file for further customization.
 
 Example:
-python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2" 
+python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
 --output_file <outputfile> --elements-file sample_elements.txt --verbose
 """
 
@@ -65,9 +65,9 @@ SplitXPath = namedtuple('SplitXPath',
 def convert_header_to_xpath(root, xpath_find, namespaces):
     """Replace hierarchal components of XPath with attribute names and namespaces.
 
-    While the XPaths are accurate to the hierarchy of the elements referenced, they 
+    While the XPaths are accurate to the hierarchy of the elements referenced, they
     provide no information on their own without the attributed label file for reference.
-    This function replaces the asterisks with the respective names of the elements and 
+    This function replaces the asterisks with the respective names of the elements and
     attributes they represent.
 
     Inputs:
@@ -141,7 +141,7 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
     Inputs:
         input_dict:       The dictionary to filter.
         glob_patterns:    A list of glob patterns to match against dictionary keys.
-        
+
     Returns:
         Filtered dictionary with desired contents
     """
@@ -149,7 +149,7 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
 
     if glob_patterns is None:
         return input_dict
-    
+
     if glob_patterns == []:
         print('Given elements file is empty.')
         sys.exit(1)
@@ -200,7 +200,7 @@ def load_config_file(specified_config_file):
         except OSError:
             print(f'Unable to read configuration file: {specified_config_file}')
             sys.exit(1)
-    
+
     return config
 
 
@@ -232,7 +232,7 @@ def process_schema_location(file_path):
 
 
 def process_headers(label_results, key, root, namespaces, prefixes):
-    """Process headers to have more readable contents. 
+    """Process headers to have more readable contents.
 
     Processes XPath headers by converting parts of the XPath into element tags,
     replacing namespaces with prefixes, and updating the label_results dictionary.
@@ -412,7 +412,7 @@ def split_into_elements(xpath):
         if '<' in part:
             part = part.split('<')
             elements.append(part[0])
-    
+
     return elements
 
 
@@ -451,7 +451,7 @@ def store_element_text(element, tree, results_dict, nillable_elements_info, conf
             parent_check = len(element)
             if not parent_check:
                 print(f'Non-nillable element in {label} has no associated text: {tag}')
-                
+
 
 def traverse_and_store(element, tree, results_dict,
                        nillable_elements_info, config, label):
@@ -472,7 +472,7 @@ def traverse_and_store(element, tree, results_dict,
                            nillable_elements_info, config, label)
 
 
-@functools.cache
+@functools.lru_cache(maxsize=None)
 def download_xsd_file(xsd_file):
     return etree.fromstring(requests.get(xsd_file).content)
 
@@ -665,7 +665,7 @@ def main(cmd_line=None):
 
         for key in list(label_results.keys()):
             process_headers(label_results, key, root, namespaces, prefixes)
-            
+
         for key in list(label_results.keys()):
             key_new = key.replace('[', '<')
             key_new = key_new.replace(']', '>')
@@ -682,7 +682,7 @@ def main(cmd_line=None):
                     new_parts.append(part)
             key_new = '/'.join(new_parts[1:])
             label_results[key_new] = label_results.pop(key)
-        
+
         for key in list(label_results.keys()):
             if 'cyfunction' in key:
                 del label_results[key]
@@ -690,7 +690,7 @@ def main(cmd_line=None):
         xpath_map = renumber_xpaths(label_results.keys())
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
-        
+
         verboseprint('Now filtering label results according to given element file.')
         label_results = filter_dict_by_glob_patterns(label_results, elements_to_scrape, verboseprint)
 
@@ -703,10 +703,10 @@ def main(cmd_line=None):
                 stuff = split_into_elements(key)
                 xpath_elements.append(stuff)
                 names.append(stuff[-1])
-            
+
             duplicates = [tuple(t) for t in set(map(tuple, xpath_elements))
                           if xpath_elements.count(t) > 1]
-            
+
             duplicate_names = {tag for tag in names if names.count(tag) > 1}
 
             if duplicate_names:
@@ -721,7 +721,7 @@ def main(cmd_line=None):
                 else:
                     value = key
                 label_results[value] = label_results.pop(key)
-                    
+
         lid = extract_logical_identifier(tree)
         if lid is None:
             lid = label_results.get('pds:logical_identifier', 'Missing_LID')
@@ -753,7 +753,7 @@ def main(cmd_line=None):
             for values in label.values():
                 for x in values.keys():
                     elements.append(x)
-        
+
         for x in elements:
             tag = x.split('/')[-1].split('<')[0]
             number = x.split('/')[-1].split('<')[0].split('_')[-1]
