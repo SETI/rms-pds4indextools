@@ -546,6 +546,11 @@ def write_results_to_csv(results_list, args, output_csv_path):
     df = pd.DataFrame(rows)
 
     for c in df.columns:
+        c_new = c.replace('\\\\', '/')
+        df.rename(columns={c: c_new}, inplace=True)
+
+
+    for c in df.columns:
         number = c.split('/')[-1].split('<')[0].split('_')[-1]
         if number.isdigit():
             c_new = c.replace('_'+number, '')
