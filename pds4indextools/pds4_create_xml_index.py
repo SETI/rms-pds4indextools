@@ -474,7 +474,11 @@ def traverse_and_store(element, tree, results_dict,
 
 @functools.lru_cache(maxsize=None)
 def download_xsd_file(xsd_file):
-    return etree.fromstring(requests.get(xsd_file).content)
+    try:
+        return etree.fromstring(requests.get(xsd_file).content)
+    except etree.XMLSyntaxError:
+        print(f'The dictionary file {xsd_file} could not be loaded.')
+        sys.exit(1)
 
 def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
     """Store all nillable elements and their data types in a dictionary.
