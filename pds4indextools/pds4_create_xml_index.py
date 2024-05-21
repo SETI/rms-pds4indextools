@@ -544,13 +544,6 @@ def write_results_to_csv(results_list, args, output_csv_path):
         rows.append(result_dict['Results'])
 
     df = pd.DataFrame(rows)
-
-    for c in df.columns:
-        c = repr(str(c))
-        c_new = c.replace('\\\\', '/')
-        df.rename(columns={c: c_new}, inplace=True)
-
-
     for c in df.columns:
         number = c.split('/')[-1].split('<')[0].split('_')[-1]
         if number.isdigit():
@@ -663,7 +656,8 @@ def main(cmd_line=None):
         for url in xml_urls:
             update_nillable_elements_from_xsd_file(url, nillable_elements_info)
 
-        filepath = file.relative_to(args.directorypath)
+        filepath = repr(str(file.relative_to(args.directorypath)))
+        filepath = filepath.replace('\\\\', '/')
 
         namespaces = root.nsmap
         namespaces['pds'] = namespaces.pop(None)
