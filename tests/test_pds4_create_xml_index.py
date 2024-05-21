@@ -23,8 +23,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'elements_file_success_1.txt'),
              'elements_file.txt',
              [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_1.xml')),
+                str(labels_dir),
+                'tester_label_1.xml',
                 '--dump-available-elements',
                 '--elements-file',
                 str(samples_dir / 'element_1.txt'),
@@ -35,8 +35,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'elements_file_success_2.txt'),
              'elements_file_2.txt',
              [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_2.xml')),
+                str(labels_dir),
+                'tester_label_2.xml',
                 '--dump-available-elements',
                 '--elements-file',
                 str(samples_dir / 'element_2.txt'),  
@@ -47,9 +47,9 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'elements_file_success_3.txt'),
              'elements_file_3.txt',
              [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_2.xml')),
-                str(labels_dir.name / Path('tester_label_3.xml')),
+                str(labels_dir),
+                'tester_label_2.xml',
+                'tester_label_3.xml',
                 '--dump-available-elements',
                 '--elements-file',
                 str(samples_dir / 'element_3.txt'),  
@@ -61,8 +61,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'elements_file_success_4.txt'),
             'elements_file_4.txt',
              [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_*.xml')),
+                str(labels_dir),
+                'tester_label_*.xml',
                 '--dump-available-elements',
                 '--elements-file',
                 str(samples_dir / 'element_4.txt'),
@@ -74,8 +74,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'simplify_xpaths_success_1.txt'),
             'simplify_xpaths_1.txt',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_1.xml')),
+                str(labels_dir),
+                'tester_label_1.xml',
                 '--dump-available-elements',
                 '--simplify-xpaths',
                 '--output-file',     
@@ -85,8 +85,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'simplify_xpaths_success_2.txt'),
                 'simplify_xpaths_2.txt',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_*.xml')),
+                str(labels_dir),
+                'tester_label_*.xml',
                 '--dump-available-elements',
                 '--simplify-xpaths',
                 '--elements-file',
@@ -98,8 +98,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'simplify_xpaths_success_3.txt'),
                 'simplify_xpaths_3.txt',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_2.xml')),
+                str(labels_dir),
+                'tester_label_2.xml',
                 '--dump-available-elements',
                 '--simplify-xpaths',
                 '--elements-file',
@@ -111,8 +111,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'simplify_xpaths_success_4.txt'),
                 'simplify_xpaths_4.txt',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_3.xml')),
+                str(labels_dir),
+                'tester_label_3.xml',
                 '--dump-available-elements',
                 '--simplify-xpaths',
                 '--elements-file',
@@ -125,8 +125,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'extra_file_info_success_1.csv'),
                 'extra_file_info_1.csv',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_2.xml')),
+                str(labels_dir),
+                'tester_label_2.xml',
                 '--elements-file',
                 str(samples_dir / 'element_1.txt'),
                 '--extra-file-info',
@@ -139,8 +139,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'extra_file_info_success_2.csv'),
                 'extra_file_info_2.csv',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_*.xml')),
+                str(labels_dir),
+                'tester_label_*.xml',
                 '--elements-file',
                 str(samples_dir / 'element_extra_file_info_2.txt'),
                 '--extra-file-info',
@@ -154,8 +154,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'extra_file_info_success_3.csv'),
                 'extra_file_info_3.csv',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_*.xml')),
+                str(labels_dir),
+                'tester_label_*.xml',
                 '--elements-file',
                 str(samples_dir / 'element_extra_file_info_2.txt'),
                 '--extra-file-info',
@@ -174,8 +174,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'clean_header_field_names_success_1.txt'),
             'clean_header_field_names_1.txt',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_1.xml')),
+                str(labels_dir),
+                'tester_label_1.xml',
                 '--dump-available-elements',
                 '--clean-header-field-names',
                 '--output-file',     
@@ -185,9 +185,9 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'clean_header_field_names_success_2.txt'),
                 'clean_header_field_names_2.txt',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_1.xml')),
-                str(labels_dir.name / Path('tester_label_2.xml')),
+                str(labels_dir),
+                'tester_label_1.xml',
+                'tester_label_2.xml',
                 '--dump-available-elements',
                 '--elements-file',
                 str(samples_dir / 'elements_clean_header_field_names.txt'),
@@ -200,8 +200,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'sort_by_success_1.csv'),
             'sort_by_1.csv',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_*.xml')),
+                str(labels_dir),
+                'tester_label_*.xml',
                 '--elements-file',
                 str(samples_dir / 'elements_clean_header_field_names.txt'),
                 '--sort-by',
@@ -213,8 +213,8 @@ labels_dir = test_files_dir / 'labels'
             (str(expected_dir / 'sort_by_success_2.csv'),
             'sort_by_2.csv',
             [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_*.xml')),
+                str(labels_dir),
+                'tester_label_*.xml',
                 '--elements-file',
                 str(samples_dir / 'elements_clean_header_field_names.txt'),
                 '--extra-file-info',
@@ -258,8 +258,8 @@ def test_success(golden_file, new_file, cmd_line):
     'cmd_line',
     [
         (
-            str(test_files_dir),
-            str(labels_dir.name / Path('tester_label_*.xml')),
+            str(labels_dir),
+            'tester_label_*.xml',
             '--elements-file',
             str(samples_dir / 'element_1.txt'),
             '--extra-file-info',
@@ -267,7 +267,7 @@ def test_success(golden_file, new_file, cmd_line):
             '--output-file',     
         ),
         (
-            str(test_files_dir),  # directory path
+            str(labels_dir),  # directory path
             ' bad_directory/labels/tester_label_*.xml',  # non-existent directory
             '--elements-file',
             str(samples_dir / 'element_1.txt'),  # elements file
@@ -276,8 +276,8 @@ def test_success(golden_file, new_file, cmd_line):
             '--output-file',     
         ),
         (
-            str(test_files_dir),  # directory path
-            str(labels_dir.name / Path('tester_label_*.xml')),
+            str(labels_dir),  # directory path
+            'tester_label_*.xml',
             '--elements-file',
             str(samples_dir / 'element_empty.txt'),  # empty elements file
             '--output-file',     
