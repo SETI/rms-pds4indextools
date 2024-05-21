@@ -756,7 +756,8 @@ def main(cmd_line=None):
         for label in all_results:
             for values in label.values():
                 for x in values.keys():
-                    elements.append(x)
+                    if x not in elements:
+                        elements.append(x)
 
         for x in elements:
             tag = x.split('/')[-1].split('<')[0]

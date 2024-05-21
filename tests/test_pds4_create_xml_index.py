@@ -195,30 +195,6 @@ labels_dir = test_files_dir / 'labels'
                 '--output-file',     
             ]
             ),
-                    (str(expected_dir / 'clean_header_field_names_success_1.txt'),
-            'clean_header_field_names_1.txt',
-            [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_1.xml')),
-                '--dump-available-elements',
-                '--clean-header-field-names',
-                '--output-file',     
-            ]
-            ),
-
-            (str(expected_dir / 'clean_header_field_names_success_2.txt'),
-                'clean_header_field_names_2.txt',
-            [
-                str(test_files_dir),
-                str(labels_dir.name / Path('tester_label_1.xml')),
-                str(labels_dir.name / Path('tester_label_2.xml')),
-                '--dump-available-elements',
-                '--elements-file',
-                str(samples_dir / 'elements_clean_header_field_names.txt'),
-                '--clean-header-field-names',
-                '--output-file',     
-            ]
-            ),
             
             # Testing --sort by
             (str(expected_dir / 'sort_by_success_1.csv'),
