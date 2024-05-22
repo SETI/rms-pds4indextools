@@ -93,6 +93,33 @@ def convert_header_to_xpath(root, xpath_find, namespaces):
     return xpath_final
 
 
+def correct_duplicates(label_results):
+    """Correct numbering of XPaths to have correct predicates.
+
+    Some namespaces do not contain predicates, and as a result must be made artificially
+    unique via injected substrings. This function aids in the reformatting of these
+    strings so they match the syntax of the renumbering function. Note that this function
+    does not affect elements or attributes that natively contain the '_num' substring
+    (cassini:filter_name_1 and cassini:filter_name_2, for example).
+
+    Inputs:
+        label_results    The dictionary of XML results
+    """
+    element_names = []
+    for key in list(label_results.keys()):
+        tag = key.split('/')[-1].split('<')[0]
+        number = tag.split('_')[-1]
+        if number.isdigit():
+            cropped = tag.replace('_'+number, '')
+            if any(cropped == x for x in element_names):
+                key_new = key.replace(('_' +number+'<1>'),
+                                '<1>')
+                parent = key_new.split('/')[-2].split('<')[0]
+                key_new = key_new.replace(parent+'<1>', parent+'<'+str(int(number)+1)+'>')
+                label_results[key_new] = label_results.pop(key)
+        element_names.append(tag)
+
+
 def default_value_for_nil(config, data_type, nil_value):
     """Find the default value for a nilled element.
 
@@ -118,7 +145,7 @@ def extract_logical_identifier(tree):
     """Extract the logical_identifier element from an XML tree.
 
     Inputs:
-        tree: The XML tree.
+        tree    The XML tree.
 
     Returns:
         The text content of the logical_identifier element, or None if not found.
@@ -139,7 +166,7 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
     """Filter a dictionary based on a list of glob patterns matching for keys.
 
     Inputs:
-        input_dict:       The dictionary to filter.
+        input_dict        The dictionary to filter.
         glob_patterns:    A list of glob patterns to match against dictionary keys.
 
     Returns:
@@ -694,6 +721,8 @@ def main(cmd_line=None):
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
 
+        correct_duplicates(label_results)
+
         verboseprint('Now filtering label results according to given element file.')
         label_results = filter_dict_by_glob_patterns(label_results, elements_to_scrape, verboseprint)
 
@@ -724,6 +753,8 @@ def main(cmd_line=None):
                 else:
                     value = key
                 label_results[value] = label_results.pop(key)
+
+            correct_duplicates(label_results)
 
         lid = extract_logical_identifier(tree)
         if lid is None:
