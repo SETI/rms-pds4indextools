@@ -1,13 +1,16 @@
 """
-XML Bundle Scraper
+PDS4 Indexing Tool
 
-This script scrapes XML files within specified directories, extracts information from
-user-defined XML elements, and generates a CSV index file. The script provides options
-for customizing the extraction process, such as specifying XPath headers, limiting
-search levels, and selecting elements to scrape.
-
+This script scrapes label files within specified directories, extracts information from
+user-defined XPaths/elements, and generates either an index file or a .txt file containing
+the XPaths available to the user. The script provides options for customizing the 
+extraction process, such as:
+    - Specifying desired content by either limiting the results or requesting additional
+      file information.
+    - Sorting the resulting file by a user-specified value.
+    - Allowing for a user-made configuration file (.ini) for further custom content.
 Usage:
-    python xml_bundle_scraper.py <directorypath> <pattern>
+    python pds4_create_xml_index.py <directorypath> <pattern>
         [--elements-file ELEMENTS_FILE]
         [--simplify-xpaths]
         [--output-file OUTPUT_FILE]
@@ -16,6 +19,7 @@ Usage:
         [--clean-header-field-names]
         [--extra-file-info EXTRA_FILE_INFO]
         [--config-file CONFIG_FILE]
+        [--dump-available-xpaths]
 
 Arguments:
     directorypath        The path to the directory containing the bundle to scrape.
@@ -39,6 +43,10 @@ Arguments:
                          specified separated by spaces.
     --config-file CONFIG_FILE
                          An optional .ini configuration file for further customization.
+    --dump-available-xpaths
+                         Create a .txt file containing all available XPath headers for
+                         given label file(s). Can be modified and used as a file for
+                         --elements-file
 
 Example:
 python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
@@ -112,8 +120,7 @@ def correct_duplicates(label_results):
         if number.isdigit():
             cropped = tag.replace('_'+number, '')
             if any(cropped == x for x in element_names):
-                key_new = key.replace(('_' +number+'<1>'),
-                                '<1>')
+                key_new = key.replace(('_' +number+'<1>'),'<1>')
                 parent = key_new.split('/')[-2].split('<')[0]
                 key_new = key_new.replace(parent+'<1>', parent+'<'+str(int(number)+1)+'>')
                 label_results[key_new] = label_results.pop(key)
@@ -154,7 +161,8 @@ def extract_logical_identifier(tree):
     namespaces = {'pds': 'http://pds.nasa.gov/pds4/pds/v1'}
 
     # Find logical_identifier element within Identification_Area
-    logical_identifier = tree.find('.//pds:Identification_Area/pds:logical_identifier', namespaces=namespaces)
+    logical_identifier = tree.find(
+        './/pds:Identification_Area/pds:logical_identifier', namespaces=namespaces)
 
     if logical_identifier is not None:
         return logical_identifier.text.strip()
@@ -186,7 +194,7 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
                 verboseprint(f'Adding elements according to: {pattern}')
                 for key, value in input_dict.items():
                     if fnmatch.fnmatch(key, pattern):
-                       filtered_dict[key] = value
+                        filtered_dict[key] = value
             else:
                 verboseprint(f'Removing elements according to: {pattern}')
                 pattern = pattern.replace('!', '')
@@ -388,7 +396,7 @@ def renumber_xpaths(xpaths):
         # increasing starting at 1. We also add a special entry for the empty
         # suffix when there is no number.
         unique_nums = sorted(list(set(x.num for x in prefix_group_list
-                                            if x.num is not None)))
+                                      if x.num is not None)))
         renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
         renumber_map[None] = ''
 
@@ -493,7 +501,7 @@ def traverse_and_store(element, tree, results_dict,
         label                     The name of the label file.
     """
     store_element_text(element, tree, results_dict,
-                           nillable_elements_info, config, label)
+                       nillable_elements_info, config, label)
     for child in element:
         traverse_and_store(child, tree, results_dict,
                            nillable_elements_info, config, label)
@@ -506,6 +514,7 @@ def download_xsd_file(xsd_file):
     except etree.XMLSyntaxError:
         print(f'The dictionary file {xsd_file} could not be loaded.')
         sys.exit(1)
+
 
 def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
     """Store all nillable elements and their data types in a dictionary.
@@ -590,8 +599,8 @@ def write_results_to_csv(results_list, args, output_csv_path):
 def main(cmd_line=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('directorypath', type=str,
-                        help='The path to the directory containing the bundleset, bundle, '
-                             'or collection you wish to scrape')
+                        help='The path to the directory containing the bundleset, '
+                             'bundle, or collection you wish to scrape')
 
     parser.add_argument('pattern', type=str, nargs='+',
                         help='The glob pattern(s) for the files you wish to index. They '
@@ -723,8 +732,10 @@ def main(cmd_line=None):
 
         correct_duplicates(label_results)
 
-        verboseprint('Now filtering label results according to given element file.')
-        label_results = filter_dict_by_glob_patterns(label_results, elements_to_scrape, verboseprint)
+        verboseprint(
+            'Now filtering label results according to given element file.')
+        label_results = filter_dict_by_glob_patterns(
+            label_results, elements_to_scrape, verboseprint)
 
         if args.simplify_xpaths:
             verboseprint('Simplifying XPath headers.')
@@ -766,10 +777,10 @@ def main(cmd_line=None):
         extras = {'LID': lid, 'filepath': filepath, 'filename': file.name,
                   'bundle': bundle, 'bundle_lid': bundle_lid}
         if args.extra_file_info:
-            verboseprint( '--extra-file-info requested '
+            verboseprint('--extra-file-info requested '
                          f'for the following: {args.extra_file_info}')
             label_results = {**{ele: extras[ele] for ele in args.extra_file_info},
-                           **label_results}
+                             **label_results}
 
         result_dict = {'Results': label_results}
         all_results.append(result_dict)
@@ -778,7 +789,6 @@ def main(cmd_line=None):
         output_path = args.output_file
     else:
         output_path = args.directorypath / Path('index_file.csv')
-
 
     if args.dump_available_xpaths:
         verboseprint(f'XPaths file generated at {output_path}')
@@ -799,7 +809,8 @@ def main(cmd_line=None):
         with open(output_path, 'w') as file:
             for item in xpaths:
                 if args.clean_header_field_names:
-                    verboseprint('--clean-header-field-names chosen. Headers reformatted.')
+                    verboseprint(
+                        '--clean-header-field-names chosen. Headers reformatted.')
                     item = item.replace(
                         ':', '_').replace('/', '__').replace('<', '_').replace('>', '')
                 file.write("%s\n" % item)
