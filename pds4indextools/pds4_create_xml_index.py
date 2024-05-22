@@ -657,7 +657,7 @@ def main(cmd_line=None):
             update_nillable_elements_from_xsd_file(url, nillable_elements_info)
 
         filepath = str(file.relative_to(args.directorypath))
-        filepath = Path(filepath.replace('\\', '/'))
+        filepath = Path(filepath.replace('\\\\', '/'))
 
         namespaces = root.nsmap
         namespaces['pds'] = namespaces.pop(None)
