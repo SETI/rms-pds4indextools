@@ -604,8 +604,8 @@ def main(cmd_line=None):
     parser.add_argument('--config-file', type=str,
                         help='Read a user-specified configuration file.. File must be a '
                              '.ini file.')
-    parser.add_argument('--dump-available-elements', action='store_true',
-                        help='Give a .txt file of all elements within given label '
+    parser.add_argument('--dump-available-xpaths', action='store_true',
+                        help='Give a .txt file of all xpaths within given label '
                              'file(s). This file can be used as a base file for '
                              '--elements-file.')
 
@@ -656,8 +656,8 @@ def main(cmd_line=None):
         for url in xml_urls:
             update_nillable_elements_from_xsd_file(url, nillable_elements_info)
 
-        filepath = repr(str(file.relative_to(args.directorypath)))
-        filepath = filepath.replace('\\\\', '/')
+        filepath = str(file.relative_to(args.directorypath))
+        filepath = Path(filepath.replace('\\', '/'))
 
         namespaces = root.nsmap
         namespaces['pds'] = namespaces.pop(None)
@@ -750,24 +750,24 @@ def main(cmd_line=None):
         output_path = args.directorypath / Path('index_file.csv')
 
 
-    if args.dump_available_elements:
-        verboseprint(f'Elements file generated at {output_path}')
-        elements = []
+    if args.dump_available_xpaths:
+        verboseprint(f'XPaths file generated at {output_path}')
+        xpaths = []
         for label in all_results:
             for values in label.values():
                 for x in values.keys():
-                    if x not in elements:
-                        elements.append(x)
+                    if x not in xpaths:
+                        xpaths.append(x)
 
-        for x in elements:
+        for x in xpaths:
             tag = x.split('/')[-1].split('<')[0]
             number = x.split('/')[-1].split('<')[0].split('_')[-1]
             if number.isdigit() and tag not in tags:
                 y = x.replace('_'+number, '')
-                elements[elements.index(x)] = y
+                xpaths[xpaths.index(x)] = y
 
         with open(output_path, 'w') as file:
-            for item in elements:
+            for item in xpaths:
                 if args.clean_header_field_names:
                     verboseprint('--clean-header-field-names chosen. Headers reformatted.')
                     item = item.replace(
