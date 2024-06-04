@@ -9,6 +9,7 @@ extraction process, such as:
       file information.
     - Sorting the resulting file by a user-specified value.
     - Allowing for a user-made configuration file (.ini) for further custom content.
+
 Usage:
     python pds4_create_xml_index.py <directorypath> <pattern>
         [--elements-file ELEMENTS_FILE]
@@ -49,8 +50,8 @@ Arguments:
                          --elements-file
 
 Example:
-python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
---output_file <outputfile> --elements-file sample_elements.txt --verbose
+    python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
+    --output_file <outputfile> --elements-file sample_elements.txt --verbose
 """
 
 import argparse
@@ -71,20 +72,21 @@ SplitXPath = namedtuple('SplitXPath',
 
 
 def convert_header_to_xpath(root, xpath_find, namespaces):
-    """Replace hierarchal components of XPath with attribute names and namespaces.
+    """
+    Replace hierarchical components of XPath with attribute names and namespaces.
 
     While the XPaths are accurate to the hierarchy of the elements referenced, they
     provide no information on their own without the attributed label file for reference.
     This function replaces the asterisks with the respective names of the elements and
     attributes they represent.
 
-    Inputs:
-        root           The root element of the XML document.
-        xpath_find     Original XML header path.
-        namespaces     Dictionary of XML namespace mappings.
+    Args:
+        root (Element): The root element of the XML document.
+        xpath_find (str): Original XML header path.
+        namespaces (dict): Dictionary of XML namespace mappings.
 
     Returns:
-        Converted XPath expression.
+        str: Converted XPath expression.
     """
     sections = xpath_find.split('/')
     xpath_final = ''
@@ -102,7 +104,8 @@ def convert_header_to_xpath(root, xpath_find, namespaces):
 
 
 def correct_duplicates(label_results):
-    """Correct numbering of XPaths to have correct predicates.
+    """
+    Correct numbering of XPaths to have correct predicates.
 
     Some namespaces do not contain predicates, and as a result must be made artificially
     unique via injected substrings. This function aids in the reformatting of these
@@ -110,8 +113,8 @@ def correct_duplicates(label_results):
     does not affect elements or attributes that natively contain the '_num' substring
     (cassini:filter_name_1 and cassini:filter_name_2, for example).
 
-    Inputs:
-        label_results    The dictionary of XML results
+    Args:
+        label_results (dict): The dictionary of XML results.
     """
     element_names = []
     for key in list(label_results.keys()):
@@ -128,15 +131,16 @@ def correct_duplicates(label_results):
 
 
 def default_value_for_nil(config, data_type, nil_value):
-    """Find the default value for a nilled element.
+    """
+    Find the default value for a nilled element.
 
-    Inputs:
-        config       The configuration data.
-        data_type    The attribute describing the data type of the element.
-        nil_value    The associated value for nilReason.
+    Args:
+        config (dict): The configuration data.
+        data_type (str): The attribute describing the data type of the element.
+        nil_value (str): The associated value for nilReason.
 
     Returns:
-        Default replacement value of correct data type.
+        Any: Default replacement value of correct data type.
     """
     if data_type == 'pds:ASCII_Integer':
         default = config[data_type].getint(nil_value)
@@ -149,13 +153,15 @@ def default_value_for_nil(config, data_type, nil_value):
 
 
 def extract_logical_identifier(tree):
-    """Extract the logical_identifier element from an XML tree.
+    """
+    Extract the logical_identifier element from an XML tree.
 
-    Inputs:
-        tree    The XML tree.
+    Args:
+        tree (ElementTree.Element): The XML tree.
 
     Returns:
-        The text content of the logical_identifier element, or None if not found.
+        str or None: The text content of the logical_identifier element,
+                     or None if not found.
     """
     # Define namespace mapping
     namespaces = {'pds': 'http://pds.nasa.gov/pds4/pds/v1'}
@@ -171,14 +177,15 @@ def extract_logical_identifier(tree):
 
 
 def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
-    """Filter a dictionary based on a list of glob patterns matching for keys.
+    """
+    Filter a dictionary based on a list of glob patterns matching for keys.
 
-    Inputs:
-        input_dict        The dictionary to filter.
-        glob_patterns:    A list of glob patterns to match against dictionary keys.
+    Args:
+        input_dict (dict): The dictionary to filter.
+        glob_patterns (list): A list of glob patterns to match against dictionary keys.
 
     Returns:
-        Filtered dictionary with desired contents
+        dict: Filtered dictionary with desired contents.
     """
     filtered_dict = {}
 
@@ -206,17 +213,19 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
 
 
 def load_config_file(specified_config_file):
-    """Create a config object from a given configuration file.
+    """
+    Create a config object from a given configuration file.
 
     This will always load in the default configuration file 'pds4indextools.ini'. In the
     event a specified configuration file is given, the contents of that file will
     override what is in the default configuration file.
 
-    Inputs:
-        specified_config_file     Name of or path to a specified configuration file.
+    Args:
+        specified_config_file (str, optional): Name of or path to a specified
+                                               configuration file.
 
     Returns:
-        A ConfigParser object.
+        configparser.ConfigParser: A ConfigParser object.
     """
     config = configparser.ConfigParser()
     module_dir = Path(__file__).resolve().parent
@@ -240,13 +249,14 @@ def load_config_file(specified_config_file):
 
 
 def process_schema_location(file_path):
-    """Process schema location from an XML file.
+    """
+    Process schema location from an XML file.
 
-    Inputs:
-        file_path    Path to the XML file.
+    Args:
+        file_path (str): Path to the XML file.
 
     Returns:
-        List of XSD URLs extracted from the schema location.
+        list: List of XSD URLs extracted from the schema location.
     """
     # Load and parse the XML file
     try:
@@ -267,19 +277,20 @@ def process_schema_location(file_path):
 
 
 def process_headers(label_results, key, root, namespaces, prefixes):
-    """Process headers to have more readable contents.
+    """
+    Process headers to have more readable contents.
 
     Processes XPath headers by converting parts of the XPath into element tags,
     replacing namespaces with prefixes, and updating the label_results dictionary.
     If a duplicate XPath is encountered, it appends an underscore and a number
     to make the XPath unique.
 
-    Inputs:
-        label_results    A dictionary containing XML data to be processed.
-        key              The key representing the XML tag to be processed.
-        root             The root element of the XML tree.
-        namespaces       A dictionary containing XML namespace mappings.
-        prefixes         A dictionary containing XML namespace prefixes.
+    Args:
+        label_results (dict): A dictionary containing XML data to be processed.
+        key (str): The key representing the XML tag to be processed.
+        root (Element): The root element of the XML tree.
+        namespaces (dict): A dictionary containing XML namespace mappings.
+        prefixes (dict): A dictionary containing XML namespace prefixes.
     """
     key_new = convert_header_to_xpath(root, key, namespaces)
     for namespace in prefixes.keys():
@@ -299,10 +310,11 @@ def process_headers(label_results, key, root, namespaces, prefixes):
 
 
 def renumber_xpaths(xpaths):
-    """Renumber a list of XPaths to be sequential at each level.
+    """
+    Renumber a list of XPaths to be sequential at each level.
 
     lxml appends a unique ID in [] after each tag based on its physical position
-    in the XML hierarcy. For example:
+    in the XML hierarchy. For example:
 
         /pds:Product_Observational/pds:Observation_Area[2]/
         pds:Observing_System[4]/pds:name[1]
@@ -318,14 +330,14 @@ def renumber_xpaths(xpaths):
     occurrences must be next to each other with no other tags in between.
     For example, these are not permitted:
 
-            /a[2]/b[1]
-            /a[1]/b[1]
+        /a[2]/b[1]
+        /a[1]/b[1]
 
-        or:
+    or:
 
-            /a[1]/b[1]
-            /c[1]
-            /a[3]/b[1]
+        /a[1]/b[1]
+        /c[1]
+        /a[3]/b[1]
 
     Renumbering example:
 
@@ -347,18 +359,16 @@ def renumber_xpaths(xpaths):
             /b[2]/c[2]
             /b[3]/c[1]
 
-    Input:
-
-        xpaths      The list of XPaths or XPath fragments.
+    Args:
+        xpaths (list): The list of XPaths or XPath fragments.
 
     Returns:
-
-        A dictionary containing a mapping from the original XPaths to the
-        renumbered XPaths.
+        dict: A dictionary containing a mapping from the original XPaths to the renumbered XPaths.
     """
 
     def split_xpath_prefix_and_num(s):
-        """Convert an XPath into a SplitXPath namedtuple.
+        """
+        Convert an XPath into a SplitXPath namedtuple.
 
         Each XPath is of the form:
             <parent> or
@@ -370,6 +380,12 @@ def renumber_xpaths(xpaths):
 
         If there is no <child>, None is used. If there is no [<num>], None is
         used.
+
+        Args:
+            xpath (str): The XPath string to convert.
+
+        Returns:
+            SplitXPath: A namedtuple containing the parent, child, and num elements of the XPath.
         """
         parent, child, *_ = s.split('/', 1) + [None]
         try:
@@ -432,13 +448,14 @@ def renumber_xpaths(xpaths):
 
 
 def split_into_elements(xpath):
-    """Extract elements from an XPath in the order they appear.
+    """
+    Extract elements from an XPath in the order they appear.
 
-    Inputs:
-        xpath    The XPath of a scraped element
+    Args:
+        xpath (str): The XPath of a scraped element.
 
     Returns:
-        The tuple of elements the XPath is composed of.
+        tuple: The tuple of elements the XPath is composed of.
     """
     elements = []
     parts = xpath.split('/')
@@ -452,15 +469,16 @@ def split_into_elements(xpath):
 
 
 def store_element_text(element, tree, results_dict, nillable_elements_info, config, label):
-    """Store text content of an XML element in a results dictionary.
+    """
+    Store text content of an XML element in a results dictionary.
 
-    Inputs:
-        element                   The XML element.
-        tree                      The XML tree.
-        results_dict              Dictionary to store results.
-        nillable_elements_info    A dictionary containing nillable element information.
-        config                    The configuration data.
-        label                     The name of the label file.
+    Args:
+        element (Element): The XML element.
+        tree (ElementTree): The XML tree.
+        results_dict (dict): Dictionary to store results.
+        nillable_elements_info (dict): A dictionary containing nillable element information.
+        config (dict): The configuration data.
+        label (str): The name of the label file.
     """
     if element.text and element.text.strip():
         xpath = tree.getpath(element)
@@ -490,15 +508,16 @@ def store_element_text(element, tree, results_dict, nillable_elements_info, conf
 
 def traverse_and_store(element, tree, results_dict,
                        nillable_elements_info, config, label):
-    """Traverse an XML tree and store text content of specified elements in a dictionary.
+    """
+    Traverse an XML tree and store text content of specified elements in a dictionary.
 
-    Inputs:
-        element                   The current XML element.
-        tree                      The XML tree.
-        results_dict              Dictionary to store results.
-        nillable_elements_info    A dictionary containing nillable element information.
-        config                    The configuration data.
-        label                     The name of the label file.
+    Args:
+        element (Element): The current XML element.
+        tree (ElementTree): The XML tree.
+        results_dict (dict): Dictionary to store results.
+        nillable_elements_info (dict): A dictionary containing nillable element information.
+        config (dict): The configuration data.
+        label (str): The name of the label file.
     """
     store_element_text(element, tree, results_dict,
                        nillable_elements_info, config, label)
@@ -517,11 +536,12 @@ def download_xsd_file(xsd_file):
 
 
 def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
-    """Store all nillable elements and their data types in a dictionary.
+    """
+    Store all nillable elements and their data types in a dictionary.
 
-    Inputs:
-        xsd file                  An XML Schema Definition file.
-        nillable_elements_info    A dictionary containing nillable element information.
+    Args:
+        xsd_file (str): An XML Schema Definition file.
+        nillable_elements_info (dict): A dictionary containing nillable element information.
     """
     tree = download_xsd_file(xsd_file)
     namespace = {'xs': 'http://www.w3.org/2001/XMLSchema'}
@@ -569,11 +589,12 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
 
 
 def write_results_to_csv(results_list, args, output_csv_path):
-    """Write results from a list of dictionaries to a CSV file.
+    """
+    Write results from a list of dictionaries to a CSV file.
 
-    Inputs:
-        results_list          List of dictionaries containing results.
-        output_csv_path       The output directory and filename.
+    Args:
+        results_list (list): List of dictionaries containing results.
+        output_csv_path (str): The output directory and filename.
     """
     rows = []
     for result_dict in results_list:
