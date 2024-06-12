@@ -67,7 +67,6 @@ import pandas as pd
 from pathlib import Path
 import requests
 import sys
-import tabulate
 
 
 SplitXPath = namedtuple('SplitXPath',
@@ -527,11 +526,6 @@ def traverse_and_store(element, tree, results_dict,
     for child in element:
         traverse_and_store(child, tree, results_dict,
                            nillable_elements_info, config, label)
-        
-
-def tabulate_dataframe(dataframe, filepath):
-    content = tabulate(dataframe.values.tolist(), list(dataframe.columns), tablefmt="plain")
-    open(filepath, "w").write(content)
 
 
 @functools.lru_cache(maxsize=None)
