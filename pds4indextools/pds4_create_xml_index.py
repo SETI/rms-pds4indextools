@@ -21,6 +21,7 @@ Usage:
         [--extra-file-info EXTRA_FILE_INFO]
         [--config-file CONFIG_FILE]
         [--dump-available-xpaths]
+        [--fixed-width]
 
 Arguments:
     directorypath        The path to the directory containing the bundle to scrape.
@@ -48,6 +49,7 @@ Arguments:
                          Create a .txt file containing all available XPath headers for
                          given label file(s). Can be modified and used as a file for
                          --elements-file
+    --fixed-width        Create a fixed-width index file. 
 
 Example:
     python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
@@ -65,6 +67,7 @@ import pandas as pd
 from pathlib import Path
 import requests
 import sys
+import tabulate
 
 
 SplitXPath = namedtuple('SplitXPath',
@@ -524,6 +527,11 @@ def traverse_and_store(element, tree, results_dict,
     for child in element:
         traverse_and_store(child, tree, results_dict,
                            nillable_elements_info, config, label)
+        
+
+def tabulate_dataframe(dataframe, filepath):
+    content = tabulate(dataframe.values.tolist(), list(dataframe.columns), tablefmt="plain")
+    open(filepath, "w").write(content)
 
 
 @functools.lru_cache(maxsize=None)
@@ -596,6 +604,26 @@ def write_results_to_csv(results_list, args, output_csv_path):
         results_list (list): List of dictionaries containing results.
         output_csv_path (str): The output directory and filename.
     """
+
+    def pad_column_values_and_headers(df):
+        col_widths = {}
+
+        # Calculate max width for each column based on header and values
+        for col in df.columns:
+            max_width = max(df[col].astype(str).apply(len).max(), len(col))
+            col_widths[col] = max_width
+
+        # Create a new DataFrame with padded values
+        padded_df = df.copy()
+        for col in df.columns:
+            padded_df[col] = df[col].astype(str).apply(lambda x: x.ljust(col_widths[col]))
+
+        # Pad headers
+        padded_headers = {col: col.ljust(col_widths[col]) for col in df.columns}
+        padded_df = padded_df.rename(columns=padded_headers)
+
+        return padded_df
+
     rows = []
     for result_dict in results_list:
         rows.append(result_dict['Results'])
@@ -613,8 +641,13 @@ def write_results_to_csv(results_list, args, output_csv_path):
     if args.clean_header_field_names:
         df.rename(columns=lambda x: x.replace(
             ':', '_').replace('/', '__').replace('<', '_').replace('>', ''), inplace=True)
+        
+    if args.fixed_width:
+        padded_df = pad_column_values_and_headers(df)
+        padded_df.to_csv(output_csv_path, index=False, na_rep='NaN')
 
-    df.to_csv(output_csv_path, index=False, na_rep='NaN')
+    else:
+        df.to_csv(output_csv_path, index=False, na_rep='NaN')
 
 
 def main(cmd_line=None):
@@ -659,12 +692,14 @@ def main(cmd_line=None):
                              '"bundle_lid", and "bundle". If using multiple, separate '
                              'with spaces.')
     parser.add_argument('--config-file', type=str,
-                        help='Read a user-specified configuration file.. File must be a '
+                        help='Read a user-specified configuration file. File must be a '
                              '.ini file.')
     parser.add_argument('--dump-available-xpaths', action='store_true',
                         help='Give a .txt file of all xpaths within given label '
                              'file(s). This file can be used as a base file for '
                              '--elements-file.')
+    parser.add_argument('--fixed-width', action='store_true',
+                        help='Create an index file that is fixed-width.')
 
     if cmd_line is None:
         args = parser.parse_args()
