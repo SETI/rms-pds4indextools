@@ -6,9 +6,10 @@
 'External_Reference': {},
 'Source_Product_Internal': {},
 'Source_Product_External': {},
-
-
-
+'Table_Delimited': False,
+'Table_Character': True,
+'Product_Ancillary': True,
+'Product_Metadata_Supplemental': False
 }
 
 

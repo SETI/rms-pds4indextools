@@ -58,15 +58,22 @@ Example:
 
 import argparse
 from collections import namedtuple
+import csv
 import configparser
+from datetime import datetime
 import fnmatch
 import functools
 from itertools import groupby
 from lxml import etree
+import os
 import pandas as pd
 from pathlib import Path
+import platform
 import requests
 import sys
+import yaml
+
+import pdstemplate as ps
 
 
 SplitXPath = namedtuple('SplitXPath',
@@ -623,11 +630,6 @@ def write_results_to_csv(results_list, args, output_csv_path):
         rows.append(result_dict['Results'])
 
     df = pd.DataFrame(rows)
-    for c in df.columns:
-        number = c.split('/')[-1].split('<')[0].split('_')[-1]
-        if number.isdigit():
-            c_new = c.replace('_'+number, '')
-            df.rename(columns={c: c_new}, inplace=True)
 
     if args.sort_by:
         df.sort_values(by=args.sort_by, inplace=True)
@@ -642,6 +644,111 @@ def write_results_to_csv(results_list, args, output_csv_path):
 
     else:
         df.to_csv(output_csv_path, index=False, na_rep='NaN')
+
+
+##############LABEL GENERATION FUNCTIONS ####################
+@functools.cache
+def download_xsd_file(xsd_file):
+    return etree.fromstring(requests.get(xsd_file).content)
+
+def find_base_attribute(xsd_tree, target_name):
+    # Initialize target attribute value
+    target_attribute_value = None
+
+    # Define the XPath query to find the target element by name
+    xpath_query = (
+    f".//*[local-name()='element' and @name='{target_name}']/descendant::*[local-name()='restriction']/@base | "
+    f".//*[local-name()='attribute' and @name='{target_name}']/descendant::*[local-name()='restriction']/@base | "
+    f".//*[local-name()='simpleType' and @name='{target_name}']/*[local-name()='restriction']/@base | "
+    f".//*[local-name()='simpleType' and @name='{target_name}']/descendant::*[local-name()='restriction']/@base | "
+    f".//*[local-name()='complexType' and @name='{target_name}']//*[local-name()='extension']/@base | "
+    f".//*[local-name()='complexType' and @name='{target_name}']//*[local-name()='extension']/*/*/@base | "
+    f".//*[local-name()='complexType' and @name='{target_name}']//*[local-name()='extension']/*/*/*/@base | "
+    f".//*[local-name()='complexType' and @name='{target_name}']//*[local-name()='extension']/*/*/*/*/@base | "
+    f".//*[local-name()='complexType' and @name='{target_name}']//*[local-name()='extension']/*/@nilReason | "
+    f".//*[local-name()='complexType' and @name='Science_Facets']"
+    f"//*[local-name()='element' and @name='{target_name}']/@type"
+)
+
+
+    # Execute the XPath query
+    target_attribute_values = xsd_tree.xpath(xpath_query)
+
+    # Check if any attribute values are found
+    if target_attribute_values:
+        # Extract the first attribute value found
+        target_attribute_value = target_attribute_values[0]
+
+    # Return the target attribute value
+    return target_attribute_value
+    
+
+def scrape_namespaces(xsd_url):
+    # Fetch XSD content from the URL
+    response = requests.get(xsd_url)
+    if response.status_code != 200:
+        # Handle error if XSD file cannot be retrieved
+        raise ValueError(f"Failed to fetch XSD file from URL: {xsd_url}")
+
+    # Parse the XSD content
+    tree = etree.fromstring(response.content)
+
+    # Extract namespace declarations
+    namespaces = tree.nsmap
+
+    # Handle default namespace
+    default_namespace = namespaces.get(None)
+    if default_namespace:
+        # Add the default namespace with a prefix, e.g., 'ns'
+        namespaces['ns'] = default_namespace
+        # Remove the default namespace
+        del namespaces[None]
+
+    return namespaces
+
+
+def get_creation_date(file_path):
+    """
+    Returns the creation date of a file in ISO 8601 format.
+    
+    :param file_path: Path to the file.
+    :return: Creation date of the file in ISO 8601 format.
+    """
+    if platform.system() == 'Windows':
+        # On Windows, use os.path.getctime() to get the creation time
+        creation_time = os.path.getctime(file_path)
+    else:
+        # On Unix-based systems, try to get the birth time
+        stat = os.stat(file_path)
+        try:
+            creation_time = stat.st_birthtime
+        except AttributeError:
+            # Fallback to the last modification time if birth time is not available
+            creation_time = stat.st_mtime
+    
+    # Convert the creation time to a datetime object
+    dt_object = datetime.fromtimestamp(creation_time)
+    
+    # Return the creation date in ISO 8601 format
+    return dt_object.isoformat()
+
+
+def load_yaml_file(yaml_file):
+    with open(yaml_file, 'r') as file:
+        return yaml.safe_load(file)
+        
+
+def get_longest_row_length(filename):
+    with open(filename, 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')  # Adjust the delimiter as needed
+        longest_row_length = 0
+        
+        for row in reader:
+            current_row_length = sum(len(field.strip()) for field in row) + len(row) - 1
+            longest_row_length = max(longest_row_length, current_row_length)
+            
+    return longest_row_length
+#############################################################
 
 
 def main(cmd_line=None):
@@ -694,6 +801,14 @@ def main(cmd_line=None):
                              '--elements-file.')
     parser.add_argument('--fixed-width', action='store_true',
                         help='Create an index file that is fixed-width.')
+    parser.add_argument('--generate-label', type=str, nargs=1,
+                        choices=['Product_Ancillary', 'Product_Metadata_Supplemental'],
+                        help='Generate a PDS4 label for the generated index file. Can '
+                             'generate either a Product_Ancillary or '
+                             'Product_Metadata_Supplemental label.')
+    parser.add_argument('--label-user-input', type=str,
+                        help='Provide an optional .yaml file containing additional '
+                             'information for the generated label. ')
 
     if cmd_line is None:
         args = parser.parse_args()
@@ -713,6 +828,7 @@ def main(cmd_line=None):
     label_files = []
     all_results = []
     tags = []
+    xsd_files = []
     for pattern in patterns:
         files = directory_path.glob(f"{pattern}")
         label_files.extend(files)
@@ -740,6 +856,8 @@ def main(cmd_line=None):
 
         xml_urls = process_schema_location(file)
         for url in xml_urls:
+            if url not in xsd_files:
+                xsd_files.append(url)
             update_nillable_elements_from_xsd_file(url, nillable_elements_info)
 
         filepath = str(file.relative_to(args.directorypath)).replace('\\', '/')
@@ -868,6 +986,107 @@ def main(cmd_line=None):
     else:
         verboseprint(f'Index file generated at {output_path}')
         write_results_to_csv(all_results, args, output_path)
+
+    if args.generate_label:
+        index_file = output_path
+
+        module_dir = Path(__file__).resolve().parent
+        yaml_file = module_dir / 'default_values.yaml'
+        tempfile = str(module_dir / 'template_pds.xml')
+        template = ps.PdsTemplate(tempfile)
+
+        filename = str(Path(index_file).stem)
+
+        header_info = []
+        sniffer = csv.Sniffer()
+
+        with open(index_file, 'r', encoding='utf-8') as file:
+            full_header = file.readline()
+            full_header_length = len(full_header)
+            try:
+                sample_data = file.read(5000)
+                delimiter = sniffer.sniff(sample_data).delimiter
+                file.seek(0)  # Reset file pointer to the beginning
+            except csv.Error:
+                print('Unsupported file format. Please provide a CSV or tab-separated file.')
+                sys.exit()
+            reader = csv.reader(file, delimiter=delimiter)
+            headers = next(reader)
+
+            offset = 0
+            field_number = 0
+            jump = len(delimiter)
+            field_location = 1
+            # Example debugging approach
+            for header in headers:
+                header = header.strip()
+                parts = header.split('/')
+                name = parts[-1].split('<')[0].split(':')[-1]
+                
+                true_type = None
+                
+                for xsd_file in xsd_files:
+                    xsd_tree = download_xsd_file(xsd_file)
+                    true_type = find_base_attribute(xsd_tree, name)
+                    if true_type:
+                        break
+                
+                if not true_type:
+                    modified_name = name + "_WO_Units"
+                    for xsd_file in xsd_files:
+                        xsd_tree = download_xsd_file(xsd_file)
+                        true_type = find_base_attribute(xsd_tree, modified_name)
+                        if true_type:
+                            break
+
+
+                true_type = true_type.split(':')[-1]
+                field_number += 1
+                header_length = len(header.encode('utf-8'))
+                header_info.append({'name': header,
+                                    'field_number': field_number,
+                                    'field_location': field_location,
+                                    'data_type': true_type,
+                                    'field_length': header_length,
+                                    'maximum_field_length': header_length,
+                                    'offset': offset})
+                offset += header_length + jump
+                field_location = offset
+
+        creation_date = get_creation_date(index_file)
+
+        label_content = {
+            'logical_identifier': 'urn:nasa:pds:rms_metadata:document_opus:' + filename,
+            'creation_date_time': str(creation_date),
+            'TEMPFILE': index_file,
+            'Field_Content': header_info,
+            'fields': len(header_info),
+            'maximum_record_length': get_longest_row_length(index_file),
+            'object_length_h': full_header_length,
+            'object_length_t': os.path.getsize(index_file),
+            'Table_Delimited': False,
+            'Table_Character': False,
+            'Product_Ancillary': False,
+            'Product_Metadata_Supplemental': False
+            }
+        
+        if args.generate_label[0] == 'Product_Ancillary':
+            label_content['Product_Ancillary'] = True
+        else:
+            label_content['Product_Metadata_Supplemental'] = True
+
+        if args.fixed_width:
+            label_content['Table_Character'] = True
+        else:
+            label_content['Table_Delimited'] = True
+
+
+        additional_data = load_yaml_file(yaml_file)
+        label_content.update(additional_data)
+
+        output_subdir = Path(output_path).parent
+
+        template.write(label_content, str(output_subdir / filename)+'_label.xml')
 
 
 if __name__ == '__main__':
