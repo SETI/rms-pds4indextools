@@ -3,9 +3,8 @@ import pytest
 import os
 import sys
 import tempfile
-import pds4_create_xml_index as tools
-
 sys.path.append(str(Path(__file__).resolve().parent.parent / "pds4indextools"))
+import pds4_create_xml_index as tools
 
 
 # These two variables are the same for all tests, so we can either declare them as
