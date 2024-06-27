@@ -3,8 +3,10 @@ import pytest
 import os
 import sys
 import tempfile
-sys.path.append(str(Path(__file__).resolve().parent.parent / "pds4indextools"))
 import pds4_create_xml_index as tools
+
+sys.path.append(str(Path(__file__).resolve().parent.parent / "pds4indextools"))
+
 
 # These two variables are the same for all tests, so we can either declare them as
 # global variables, or get the ROOT_DIR at the setup stage before running each test
@@ -368,8 +370,6 @@ def test_failures(cmd_line):
         tools.main(cmd_line)
     assert e.type == SystemExit
     assert e.value.code != 0  # Check that the exit code indicates failure
-
-
 
 
 @pytest.mark.parametrize(

@@ -285,8 +285,9 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
     return filtered_dict
 
 
-def load_config_file(default_config_file=Path(__file__).resolve().parent / 'pds4indextools.ini',
-                     specified_config_file=None):
+def load_config_file(
+        default_config_file=Path(__file__).resolve().parent/'pds4indextools.ini',
+        specified_config_file=None):
     """
     Create a config object from a given configuration file.
 
@@ -578,7 +579,7 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
             parent_check = len(element)
             if not parent_check:
                 print(f'Non-nillable element in {label_filename} '
-                    f'has no associated text: {tag}')
+                      f'has no associated text: {tag}')
                 true_type = None
                 for xsd_file in xsd_files:
                     xsd_tree = download_xsd_file(xsd_file)

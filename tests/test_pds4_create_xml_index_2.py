@@ -1,11 +1,8 @@
 from lxml import etree
-from lxml.etree import XMLSyntaxError
-import os
 import pandas as pd
 from pathlib import Path
 import pytest
 import sys
-import tempfile
 import pds4_create_xml_index as tools
 
 sys.path.append(str(Path(__file__).resolve().parent.parent / Path("pds4indextools")))
@@ -61,7 +58,8 @@ def test_load_config_object():
             'anticipated')
 
     # Tests that the config_object is loaded over.
-    config_object = tools.load_config_file(specified_config_file=expected_dir/'tester_config.ini')
+    config_object = tools.load_config_file(
+        specified_config_file=expected_dir/'tester_config.ini')
 
     assert config_object['pds:ASCII_Date_YMD']['inapplicable'] == '0001-01-01'
     assert config_object['pds:ASCII_Date_YMD']['missing'] == '0002-01-01'
@@ -150,23 +148,26 @@ def test_default_value_for_nil_ascii_date_time_ymd_utc():
     # Test 'inapplicable'
     nil_value = 'inapplicable'
     expected_result = '0001-01-01T12:00Z'
-    assert tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) == expected_result
+    assert (tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) ==
+            expected_result)
 
     # Test 'missing'
     nil_value = 'missing'
     expected_result = '0002-01-01T12:00Z'
-    assert tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) == expected_result
+    assert (tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) ==
+            expected_result)
 
     # Test 'unknown'
     nil_value = 'unknown'
     expected_result = '0003-01-01T12:00Z'
-    assert tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) == expected_result
+    assert (tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) ==
+            expected_result)
 
     # Test 'anticipated'
     nil_value = 'anticipated'
     expected_result = '0004-01-01T12:00Z'
-    assert tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) == expected_result
-
+    assert (tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) ==
+            expected_result)
 
 
 # Testing split_into_elements()
@@ -194,7 +195,8 @@ def test_parse_label_file_exception_handling(capsys):
     with pytest.raises(SystemExit) as excinfo:
         tools.process_schema_location(non_existent_file)
     assert excinfo.value.code == 1
-    assert f'Label file could not be found at {non_existent_file}' in capsys.readouterr().out
+    assert (f'Label file could not be found at {non_existent_file}' in
+            capsys.readouterr().out)
 
 
 def test_extract_logical_identifier():
@@ -211,7 +213,7 @@ def test_download_xsd_file():
 
 def test_clean_headers():
     data = {
-        'pds:Product_Observational/pds:Identification_Area<1>/pds:version_id<1>': 
+        'pds:Product_Observational/pds:Identification_Area<1>/pds:version_id<1>':
         ['1.0']
         }
     df = pd.DataFrame(data)
@@ -225,6 +227,6 @@ def test_scrape_namespaces():
 
     assert ns == {'xs': 'http://www.w3.org/2001/XMLSchema',
                   'pds': 'http://pds.nasa.gov/pds4/pds/v1'}
-    
+
     with pytest.raises(ValueError):
         tools.scrape_namespaces('https://pds.nasa.gov/pds4/pds/v1/badschema.xsd')
