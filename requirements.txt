@@ -4,4 +4,4 @@ lxml
 pandas
 pytest
 requests
-yaml
+pyyaml
