@@ -3,5 +3,6 @@ flake8
 lxml
 pandas
 pytest
-requests
 pyyaml
+requests
+rms-pdstemplate
