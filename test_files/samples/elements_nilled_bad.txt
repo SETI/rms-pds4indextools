@@ -1,0 +1,3 @@
+**/*logical_identifier*
+**/*version_id*
+**/*publication_year*

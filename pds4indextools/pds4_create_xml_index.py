@@ -173,6 +173,11 @@ def correct_duplicates(label_results):
         element_names.add(tag)
 
 
+def clean_headers(df):
+    return df.rename(columns=lambda x: x.replace(
+            ':', '_').replace('/', '__').replace('<', '_').replace('>', ''), inplace=True)
+
+
 def default_value_for_nil(config, data_type, nil_value):
     """
     Find the default value for a nilled element.
@@ -213,8 +218,7 @@ def extract_logical_identifier(tree):
     logical_identifier = tree.find(
         './/pds:Identification_Area/pds:logical_identifier', namespaces=namespaces)
 
-    if logical_identifier is not None:
-        return logical_identifier.text.strip()
+    return logical_identifier.text.strip()
 
 
 def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
@@ -281,7 +285,8 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
     return filtered_dict
 
 
-def load_config_file(specified_config_file=None):
+def load_config_file(default_config_file=Path(__file__).resolve().parent / 'pds4indextools.ini',
+                     specified_config_file=None):
     """
     Create a config object from a given configuration file.
 
@@ -290,6 +295,8 @@ def load_config_file(specified_config_file=None):
     override what is in the default configuration file.
 
     Args:
+        default_config_file (str, optional): Name of or path to the default configuration
+            file.
         specified_config_file (str, optional): Name of or path to a specified
             configuration file.
 
@@ -297,9 +304,6 @@ def load_config_file(specified_config_file=None):
         configparser.ConfigParser: A ConfigParser object.
     """
     config = configparser.ConfigParser()
-    module_dir = Path(__file__).resolve().parent
-
-    default_config_file = module_dir / 'pds4indextools.ini'
 
     try:
         config.read_file(open(default_config_file))
@@ -544,7 +548,7 @@ def split_into_elements(xpath):
     return elements
 
 
-def store_element_text(element, tree, results_dict, nillable_elements_info,
+def store_element_text(element, tree, results_dict, xsd_files, nillable_elements_info,
                        config, label_filename):
     """
     Store text content of an XML element in a results dictionary.
@@ -561,15 +565,7 @@ def store_element_text(element, tree, results_dict, nillable_elements_info,
     if element.text and element.text.strip():
         xpath = tree.getpath(element)
         text = ' '.join(element.text.strip().split())
-
-        # Check if the tag already exists in the results dictionary
-        if xpath in results_dict:
-            # If the tag already exists, create a list to store multiple values
-            if not isinstance(results_dict[xpath], list):
-                results_dict[xpath] = [results_dict[xpath]]
-            results_dict[xpath].append(text)
-        else:
-            results_dict[xpath] = text
+        results_dict[xpath] = text
     else:
         xpath = tree.getpath(element)
         tag = element.xpath('local-name()')
@@ -581,11 +577,28 @@ def store_element_text(element, tree, results_dict, nillable_elements_info,
         else:
             parent_check = len(element)
             if not parent_check:
-                print(f'Non-nillable element in {label_filename} has no associated '
-                      f'text: {tag}')
+                print(f'Non-nillable element in {label_filename} '
+                    f'has no associated text: {tag}')
+                true_type = None
+                for xsd_file in xsd_files:
+                    xsd_tree = download_xsd_file(xsd_file)
+                    true_type = find_base_attribute(xsd_tree, tag)
+                    if true_type:
+                        break  # Exit the loop once true_type is found
+
+                if not true_type:
+                    modified_tag = tag + "_WO_Units"
+                    for xsd_file in xsd_files:
+                        xsd_tree = download_xsd_file(xsd_file)
+                        true_type = find_base_attribute(xsd_tree, modified_tag)
+                        if true_type:
+                            break
+
+                default = default_value_for_nil(config, true_type, nil_value)
+                results_dict[xpath] = default
 
 
-def traverse_and_store(element, tree, results_dict,
+def traverse_and_store(element, tree, results_dict, xsd_files,
                        nillable_elements_info, config, label_filename):
     """
     Traverse an XML tree and store text content of specified elements in a dictionary.
@@ -599,10 +612,10 @@ def traverse_and_store(element, tree, results_dict,
         config (dict): The configuration data.
         label_filename (str): The name of the label file.
     """
-    store_element_text(element, tree, results_dict,
+    store_element_text(element, tree, results_dict, xsd_files,
                        nillable_elements_info, config, label_filename)
     for child in element:
-        traverse_and_store(child, tree, results_dict,
+        traverse_and_store(child, tree, results_dict, xsd_files,
                            nillable_elements_info, config, label_filename)
 
 
@@ -718,8 +731,7 @@ def write_results_to_csv(results_list, args, output_csv_path):
         df.sort_values(by=args.sort_by, inplace=True)
 
     if args.clean_header_field_names:
-        df.rename(columns=lambda x: x.replace(
-            ':', '_').replace('/', '__').replace('<', '_').replace('>', ''), inplace=True)
+        clean_headers(df)
 
     if args.fixed_width:
         padded_df = pad_column_values_and_headers(df)
@@ -761,9 +773,7 @@ def find_base_attribute(xsd_tree, target_name):
     target_attribute_values = xsd_tree.xpath(xpath_query)
 
     # Check if any attribute values are found
-    if target_attribute_values:
-        # Extract the first attribute value found
-        target_attribute_value = target_attribute_values[0]
+    target_attribute_value = target_attribute_values[0]
 
     # Return the target attribute value
     return target_attribute_value
@@ -781,14 +791,6 @@ def scrape_namespaces(xsd_url):
 
     # Extract namespace declarations
     namespaces = tree.nsmap
-
-    # Handle default namespace
-    default_namespace = namespaces.get(None)
-    if default_namespace:
-        # Add the default namespace with a prefix, e.g., 'ns'
-        namespaces['ns'] = default_namespace
-        # Remove the default namespace
-        del namespaces[None]
 
     return namespaces
 
@@ -913,7 +915,7 @@ def main(cmd_line=None):
 
     verboseprint = print if args.verbose else lambda *a, **k: None
 
-    config = load_config_file(args.config_file)
+    config = load_config_file(specified_config_file=args.config_file)
 
     directory_path = Path(args.directorypath)
     verboseprint(f'Top level directory to scrape: {directory_path}')
@@ -992,7 +994,7 @@ def main(cmd_line=None):
 
         # Each label file is now traversed and scraped for the requested content.
         label_results = {}
-        traverse_and_store(root, tree, label_results,
+        traverse_and_store(root, tree, label_results, xsd_files,
                            nillable_elements_info, config, label_file)
 
         # The XPath headers in the label_results dictionary are reformatted to

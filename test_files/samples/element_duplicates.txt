@@ -1,0 +1,4 @@
+**/geom:spice_kernel_file_name*
+**/geom:spice_kernel_file_name*
+**/geom:spice_kernel_file_name*
+**/geom:spice_kernel_file_name*

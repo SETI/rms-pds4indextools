@@ -46,6 +46,19 @@ labels_dir = test_files_dir / 'labels'
             ),
 
             (
+                str(expected_dir / 'elements_file_success_2.txt'),
+                'elements_dupe_file_2.txt',
+                [
+                    str(test_files_dir),
+                    str(labels_dir.name / Path('tester_label_2.xml')),
+                    '--dump-available-xpaths',
+                    '--elements-file',
+                    str(samples_dir / 'element_duplicates.txt'),
+                    '--output-txt-file',
+                ]
+            ),
+
+            (
                 str(expected_dir / 'elements_file_success_3.txt'),
                 'elements_file_3.txt',
                 [
@@ -268,6 +281,27 @@ labels_dir = test_files_dir / 'labels'
                     '--output-csv-file'
                 ]
             ),
+            (
+                str(expected_dir / 'nilled_element_success.csv'),
+                'nilled_element.csv',
+                [
+                    str(test_files_dir),
+                    str(labels_dir.name / Path('nilled_label.xml')),
+                    '--elements-file',
+                    str(samples_dir / 'elements_nilled.txt'),
+                    '--output-csv-file'
+                ]
+            ),
+            (
+                str(expected_dir / 'fixed_width_success.csv'),
+                'fixed_width.csv',
+                [
+                    str(test_files_dir),
+                    str(labels_dir.name / Path('tester_label_1.xml')),
+                    '--fixed-width',
+                    '--output-csv-file'
+                ]
+            )
         ]
     )
 def test_success(golden_file, new_file, cmd_line):
@@ -294,7 +328,6 @@ def test_success(golden_file, new_file, cmd_line):
         assert formed == expected
 
 
-# Testing --add-extra-file-info (failure case)
 @pytest.mark.parametrize(
     'cmd_line',
     [
@@ -326,7 +359,7 @@ def test_success(golden_file, new_file, cmd_line):
             '--elements-file',
             str(samples_dir / 'element_empty.txt'),  # empty elements file
             '--output-txt-file',
-        ),
+        )
     ]
 )
 def test_failures(cmd_line):
@@ -335,3 +368,31 @@ def test_failures(cmd_line):
         tools.main(cmd_line)
     assert e.type == SystemExit
     assert e.value.code != 0  # Check that the exit code indicates failure
+
+
+
+
+@pytest.mark.parametrize(
+    'cmd_line',
+    [
+        (
+                str(test_files_dir),  # directory path
+                str(labels_dir.name / Path('nilled_label_bad.xml')),
+                '--elements-file',
+                str(samples_dir / 'elements_nilled_bad.txt'),
+                '--output-csv-file',
+                './stuff.csv'
+        ),
+    ]
+)
+def test_failure_message(capfd, cmd_line):
+    # Capture the output
+    tools.main(cmd_line)
+    captured = capfd.readouterr()
+
+    # Check if the expected statement is printed in stdout or stderr
+    expected_message = ("Non-nillable element in")
+    assert expected_message in captured.out or expected_message in captured.err
+
+    expected_message = ("Non-nillable element in")
+    assert expected_message in captured.out or expected_message in captured.err

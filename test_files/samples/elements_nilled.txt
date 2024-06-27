@@ -1,0 +1,4 @@
+**/*logical_identifier*
+**/*version_id*
+**/*start_date_time*
+**/*stop_date_time*

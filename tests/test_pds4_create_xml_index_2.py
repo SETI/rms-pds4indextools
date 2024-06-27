@@ -1,6 +1,11 @@
+from lxml import etree
+from lxml.etree import XMLSyntaxError
+import os
+import pandas as pd
 from pathlib import Path
 import pytest
 import sys
+import tempfile
 import pds4_create_xml_index as tools
 
 sys.path.append(str(Path(__file__).resolve().parent.parent / Path("pds4indextools")))
@@ -15,7 +20,7 @@ labels_dir = test_files_dir / 'labels'
 
 # Testing load_config_file()
 def test_load_config_object():
-    config_object = tools.load_config_file(None)
+    config_object = tools.load_config_file()
 
     assert (config_object['pds:ASCII_Date_Time_YMD_UTC']['inapplicable'] ==
             '0001-01-01T12:00Z')
@@ -56,7 +61,7 @@ def test_load_config_object():
             'anticipated')
 
     # Tests that the config_object is loaded over.
-    config_object = tools.load_config_file(expected_dir / 'tester_config.ini')
+    config_object = tools.load_config_file(specified_config_file=expected_dir/'tester_config.ini')
 
     assert config_object['pds:ASCII_Date_YMD']['inapplicable'] == '0001-01-01'
     assert config_object['pds:ASCII_Date_YMD']['missing'] == '0002-01-01'
@@ -82,17 +87,21 @@ def test_load_config_object():
     assert (config_object['pds:ASCII_Short_String_Collapsed']['anticipated'] ==
             'anticipated_alt')
 
-    # now, a bad config file
+    # A bad default config file
     with pytest.raises(SystemExit):
-        with pytest.raises(OSError):
-            tools.load_config_file("non_existent_file.ini")
+        tools.load_config_file(default_config_file=expected_dir/'non_existent_file.ini')
+
+    # A bad specified config file
+    with pytest.raises(SystemExit):
+        tools.load_config_file(specified_config_file=expected_dir/'non_existent_file.ini')
 
 
 # Testing default_value_for_nil()
 def test_default_value_for_nil():
-    config_object = tools.load_config_file(None)
+    config_object = tools.load_config_file()
     integer = 'pds:ASCII_Integer'
     double_float = 'pds:ASCII_Real'
+    datetime_ymd_utc = 'pds:ASCII_Date_Time_YMD_UTC'
 
     assert config_object['pds:ASCII_Integer']['inapplicable'] == '-999'
     assert tools.default_value_for_nil(config_object, integer, 'inapplicable') == -999
@@ -116,6 +125,49 @@ def test_default_value_for_nil():
     assert tools.default_value_for_nil(config_object, double_float,
                                        'anticipated') == -996.0
 
+    assert (config_object['pds:ASCII_Date_Time_YMD_UTC']['inapplicable'] ==
+            '0001-01-01T12:00Z')
+    assert tools.default_value_for_nil(config_object, datetime_ymd_utc,
+                                       'inapplicable') == '0001-01-01T12:00Z'
+    assert (config_object['pds:ASCII_Date_Time_YMD_UTC']['missing'] ==
+            '0002-01-01T12:00Z')
+    assert tools.default_value_for_nil(config_object, datetime_ymd_utc,
+                                       'missing') == '0002-01-01T12:00Z'
+    assert (config_object['pds:ASCII_Date_Time_YMD_UTC']['unknown'] ==
+            '0003-01-01T12:00Z')
+    assert tools.default_value_for_nil(config_object, datetime_ymd_utc,
+                                       'unknown') == '0003-01-01T12:00Z'
+    assert (config_object['pds:ASCII_Date_Time_YMD_UTC']['anticipated'] ==
+            '0004-01-01T12:00Z')
+    assert tools.default_value_for_nil(config_object, datetime_ymd_utc,
+                                       'anticipated') == '0004-01-01T12:00Z'
+
+
+def test_default_value_for_nil_ascii_date_time_ymd_utc():
+    datetime_ymd_utc = 'pds:ASCII_Date_Time_YMD_UTC'
+    example_config = tools.load_config_file()
+
+    # Test 'inapplicable'
+    nil_value = 'inapplicable'
+    expected_result = '0001-01-01T12:00Z'
+    assert tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) == expected_result
+
+    # Test 'missing'
+    nil_value = 'missing'
+    expected_result = '0002-01-01T12:00Z'
+    assert tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) == expected_result
+
+    # Test 'unknown'
+    nil_value = 'unknown'
+    expected_result = '0003-01-01T12:00Z'
+    assert tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) == expected_result
+
+    # Test 'anticipated'
+    nil_value = 'anticipated'
+    expected_result = '0004-01-01T12:00Z'
+    assert tools.default_value_for_nil(example_config, datetime_ymd_utc, nil_value) == expected_result
+
+
 
 # Testing split_into_elements()
 def test_split_into_elements():
@@ -135,3 +187,44 @@ def test_process_schema_location():
             'https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1B00.xsd')
     assert (schema_files[2] ==
             'https://pds.nasa.gov/pds4/mission/cassini/v1/PDS4_CASSINI_1B00_1300.xsd')
+
+
+def test_parse_label_file_exception_handling(capsys):
+    non_existent_file = 'testing_label_fake.xml'
+    with pytest.raises(SystemExit) as excinfo:
+        tools.process_schema_location(non_existent_file)
+    assert excinfo.value.code == 1
+    assert f'Label file could not be found at {non_existent_file}' in capsys.readouterr().out
+
+
+def test_extract_logical_identifier():
+    label_file = 'tester_label_1.xml'
+    tree = etree.parse(str(labels_dir / label_file))
+    assert (tools.extract_logical_identifier(tree) ==
+            'urn:nasa:pds:cassini_iss_saturn:data_raw:1455200455n')
+
+
+def test_download_xsd_file():
+    with pytest.raises(SystemExit):
+        tools.download_xsd_file('https://pds.nasa.gov/pds4/pds/v1/badschema.xsd')
+
+
+def test_clean_headers():
+    data = {
+        'pds:Product_Observational/pds:Identification_Area<1>/pds:version_id<1>': 
+        ['1.0']
+        }
+    df = pd.DataFrame(data)
+    tools.clean_headers(df)
+    assert (df.columns[0] ==
+            'pds_Product_Observational__pds_Identification_Area_1__pds_version_id_1')
+
+
+def test_scrape_namespaces():
+    ns = tools.scrape_namespaces('https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1B00.xsd')
+
+    assert ns == {'xs': 'http://www.w3.org/2001/XMLSchema',
+                  'pds': 'http://pds.nasa.gov/pds4/pds/v1'}
+    
+    with pytest.raises(ValueError):
+        tools.scrape_namespaces('https://pds.nasa.gov/pds4/pds/v1/badschema.xsd')

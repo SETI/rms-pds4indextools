@@ -21,7 +21,7 @@
         <product_class>Product_Observational</product_class>
         <Citation_Information>
             <author_list>French, Richard G.; McGhee-French, Colleen A.; Gordon, Mitchell K.</author_list>
-            <publication_year>2020</publication_year>
+            <publication_year nilReason="unknown" xsi:nil="true"/>
             <keyword>uranus atmosphere</keyword>
             <keyword>uranus atmosphere stellar occultation</keyword>
             <keyword>uranus atmosphere stellar occultation time series</keyword>
@@ -34,7 +34,7 @@
     <Observation_Area>
         <Time_Coordinates>
             <start_date_time>1998-11-06T04:38:18.7028Z</start_date_time>
-            <stop_date_time>1998-11-06T05:52:29.0559Z</stop_date_time>
+            <stop_date_time nilReason="missing" xsi:nil="true"/>
         </Time_Coordinates>
         <Primary_Result_Summary>
             <purpose>Science</purpose>
