@@ -4,7 +4,7 @@ import os
 import sys
 import tempfile
 sys.path.append(str(Path(__file__).resolve().parent.parent / "pds4indextools"))
-import pds4_create_xml_index as tools
+import pds4_create_xml_index as tools  # noqa: E402
 
 
 # These two variables are the same for all tests, so we can either declare them as
