@@ -1,21 +1,12 @@
-{'version_id': '1.1',
-'title': 'Tested Index File',
-'Citation_Information': {},
-'Modification_Detail': {},
-'Internal_Reference': {},
-'External_Reference': {},
-'Source_Product_Internal': {},
-'Source_Product_External': {},
-'Table_Delimited': False,
-'Table_Character': True,
-'Product_Ancillary': True,
-'Product_Metadata_Supplemental': False
-}
-
-
-
-
-
-
-
-
+- 'version_id': '1.1'
+- 'title': 'Tested Index File'
+- 'Citation_Information': {}
+- 'Modification_Detail': {}
+- 'Internal_Reference': {}
+- 'External_Reference': {}
+- 'Source_Product_Internal': {}
+- 'Source_Product_External': {}
+- 'Table_Delimited': False
+- 'Table_Character': True
+- 'Product_Ancillary': True
+- 'Product_Metadata_Supplemental': False

@@ -14,37 +14,37 @@ $IF(Product_Metadata_Supplemental)
 $END_IF
     <Identification_Area>
         <logical_identifier>$logical_identifier$</logical_identifier>                          
-        <version_id>$version_id$</version_id> <!--user input, optional-->
-        <title>$title$</title>           <!--user input, optional-->
+        <version_id>$version_id$</version_id> 
+        <title>$title$</title>           
         <information_model_version>1.21.0.0</information_model_version>
         <product_class>Product_Ancillary</product_class>
    $IF(Citation_Information)
-       <Citation_Information>          <!--user input, optional-->
-            <author_list>$Citation_Information['author_list']$</author_list> <!--user input, optional-->
-            <editor_list>$Citation_Information['editor_list']$</editor_list> <!--user input, optional-->
-            <publication_year>$Citation_Information['publication_year']$</publication_year> <!--user input, optional-->
-            <doi>$Citation_Information['doi']$</doi> <!--user input, optional-->
+       <Citation_Information>          
+            <author_list>$Citation_Information['author_list']$</author_list> 
+            <editor_list>$Citation_Information['editor_list']$</editor_list> 
+            <publication_year>$Citation_Information['publication_year']$</publication_year> 
+            <doi>$Citation_Information['doi']$</doi> 
         $FOR(Citation_Information['keyword'])
-            <keyword>$VALUE$</keyword> <!--user input, optional-->
+            <keyword>$VALUE$</keyword> 
         $END_FOR
-            <description>$Citation_Information['description']$</description> <!--user input, optional-->
+            <description>$Citation_Information['description']$</description> 
         $IF(Citation_Information.get('Funding_Acknowledgement']))
-            <Funding_Acknowledgement><!--user input, optional-->
-                <funding_source>$Funding_Acknowledgement['funding_source']$</funding_source> <!--user input, optional-->
-                <funding_year>$Funding_Acknowledgement['funding_year']$</funding_year> <!--user input, optional-->
-                <funding_award>$Funding_Acknowledgement['funding_year']$</funding_award> <!--user input, optional-->
-                <funding_acknowledgement_text>$Funding_Acknowledgement['funding_acknowledgement_text']$</funding_acknowledgement_text> <!--user input, optional-->
+            <Funding_Acknowledgement>
+                <funding_source>$Funding_Acknowledgement['funding_source']$</funding_source> 
+                <funding_year>$Funding_Acknowledgement['funding_year']$</funding_year> 
+                <funding_award>$Funding_Acknowledgement['funding_award']$</funding_award> 
+                <funding_acknowledgement_text>$Funding_Acknowledgement['funding_acknowledgement_text']$</funding_acknowledgement_text> 
             </Funding_Acknowledgement>
         $END_IF
         </Citation_Information>
     $END_IF
     $IF(Modification_Detail)
-        <Modification_History> <!--user input, recommended-->
+        <Modification_History> 
             $FOR(field, k=Modification_Detail)
             <Modification_Detail>
-                <modification_date>$field['modification_date']$</modification_date> <!--user input, recommended-->
-                <version_id>$field['version_id']$</version_id>   <!--user input, recommended-->
-                <description>$field['description']$</description> <!--user input, recommended-->
+                <modification_date>$field['modification_date']$</modification_date> 
+                <version_id>$field['version_id']$</version_id>   
+                <description>$field['description']$</description> 
             </Modification_Detail>
             $END_FOR
         </Modification_History>
@@ -58,10 +58,10 @@ $END_IF
             </Internal_Reference>
         </License_Information>
     </Identification_Area>
-    <Reference_List><!--user input, optional-->
+    <Reference_List>
         $IF(Internal_Reference)
         $FOR(field, k=Internal_Reference)
-        <Internal_Reference><!--user input, optional-->
+        <Internal_Reference>
             <lid_reference></lid_reference>                                             
             <reference_type></reference_type>                                 
             <comment></comment>
@@ -70,7 +70,7 @@ $END_IF
         $END_IF
         $IF(External_Reference)
         $FOR(field, k=External_Reference)
-        <External_Reference><!--user input, optional-->
+        <External_Reference>
             <doi></doi>                                                                 
             <reference_text></reference_text>                                           
             <description></description>                                                 
@@ -79,11 +79,11 @@ $END_IF
         $END_IF
         $IF(Source_Product_Internal)
         $FOR(field, k=Source_Product_Internal)
-        <Source_Product_Internal><!--user input, optional-->
+        <Source_Product_Internal>
             <lidvid_reference></lidvid_reference>                                       
             <reference_type></reference_type>                                           
             <comment></comment>                                                                                         
-        </Source_Product_Internal><!--user input, optional-->
+        </Source_Product_Internal>
         $END_FOR
         $END_IF
         $IF(Source_Product_External)
@@ -105,11 +105,11 @@ $END_IF
     <File_Area_Metadata>
     $END_IF                                   
         <File>
-            <file_name>$BASENAME(TEMPFILE)$</file_name> <!--from index file-->                                              
-            <local_identifier>index-table</local_identifier> <!--default-->                   
-            <creation_date_time>$DATETIME(creation_date_time)$</creation_date_time> <!--ESfrom index file-->                        
-            <md5_checksum>$FILE_MD5(TEMPFILE)$</md5_checksum> <!--ESfrom index file-->                                       
-            <comment></comment> <!--user input, optional-->                                          
+            <file_name>$BASENAME(TEMPFILE)$</file_name>                                              
+            <local_identifier>index-table</local_identifier>              
+            <creation_date_time>$DATETIME(creation_date_time)$</creation_date_time>                        
+            <md5_checksum>$FILE_MD5(TEMPFILE)$</md5_checksum>                                       
+            <comment></comment>                                           
         </File>
         <Header>                                                                       
             <offset unit="byte">0</offset>
@@ -121,13 +121,13 @@ $END_IF
         <Table_Character>
             <offset unit="byte"></offset>      
             <object_length unit="byte">$object_length_t$</object_length>                                        
-            <records>$FILE_RECORDS(TEMPFILE)$</records> <!--ESfrom index file-->
+            <records>$FILE_RECORDS(TEMPFILE)$</records> 
             <record_delimiter>Line-Feed</record_delimiter>
-            <description></description> <!--user input, optional-->                                          
+            <description></description>                                           
             <Record_Character>
-                <fields>$fields$</fields> <!--ESfrom index file-->
+                <fields>$fields$</fields> 
                 <groups>0</groups>
-                <record_length unit="byte"></record_length> <!--ESfrom index file-->                        
+                <record_length unit="byte"></record_length>                        
                 $FOR(field, k=Field_Content)
                     <Field_Character>
                         <name>$field['name']$</name>

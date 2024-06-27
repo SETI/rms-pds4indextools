@@ -1164,7 +1164,7 @@ def main(cmd_line=None):
         # The template label file and the default_values.yaml file are initialized.
         module_dir = Path(__file__).resolve().parent
         yaml_file = module_dir / 'default_values.yaml'
-        tempfile = str(module_dir / 'template_pds.xml')
+        tempfile = str(module_dir / 'index_label_template_pds.xml')
         template = ps.PdsTemplate(tempfile)
 
         # In this case, this filename is the filename of the index file previously
@@ -1265,7 +1265,8 @@ def main(cmd_line=None):
             label_content['Table_Delimited'] = True
 
         additional_data = load_yaml_file(yaml_file)
-        label_content.update(additional_data)
+        unnested_data = {k: v for d in additional_data for k, v in d.items()}
+        label_content.update(unnested_data)
 
         output_subdir = Path(output_csv_path).parent
 
