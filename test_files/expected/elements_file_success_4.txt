@@ -1,0 +1,9 @@
+pds:Product_Observational/pds:Reference_List<1>/pds:Internal_Reference<1>/pds:comment<1>
+pds:Product_Observational/pds:Reference_List<1>/pds:Internal_Reference<2>/pds:comment<1>
+pds:Product_Observational/pds:Reference_List<1>/pds:Internal_Reference<3>/pds:comment<1>
+pds:Product_Observational/pds:Reference_List<1>/pds:Internal_Reference<4>/pds:comment<1>
+pds:Product_Observational/pds:Reference_List<1>/pds:Internal_Reference<5>/pds:comment<1>
+pds:Product_Observational/pds:Reference_List<1>/pds:Internal_Reference<6>/pds:comment<1>
+pds:Product_Observational/pds:Reference_List<1>/pds:Internal_Reference<7>/pds:comment<1>
+pds:Product_Observational/pds:Reference_List<1>/pds:Internal_Reference<8>/pds:comment<1>
+pds:Product_Observational/pds:Observation_Area<1>/pds:comment<1>

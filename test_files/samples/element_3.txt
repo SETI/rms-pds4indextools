@@ -1,0 +1,2 @@
+**/pds:Observing_System_Component<*>/pds:name<*>
+**/pds:Target_Identification<*>/pds:name<*>

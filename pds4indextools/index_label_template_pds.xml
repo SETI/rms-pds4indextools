@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.sch"
+    schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+$IF(Product_Ancillary)   
+<Product_Ancillary xmlns="http://pds.nasa.gov/pds4/pds/v1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.xsd">
+$END_IF
+$IF(Product_Metadata_Supplemental)   
+<Product_Metadata_Supplemental xmlns="http://pds.nasa.gov/pds4/pds/v1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.xsd">
+$END_IF
+    <Identification_Area>
+        <logical_identifier>$logical_identifier$</logical_identifier>                          
+        <version_id>$version_id$</version_id> 
+        <title>$title$</title>           
+        <information_model_version>1.21.0.0</information_model_version>
+        <product_class>Product_Ancillary</product_class>
+   $IF(Citation_Information)
+       <Citation_Information>          
+            <author_list>$Citation_Information['author_list']$</author_list> 
+            <editor_list>$Citation_Information['editor_list']$</editor_list> 
+            <publication_year>$Citation_Information['publication_year']$</publication_year> 
+            <doi>$Citation_Information['doi']$</doi> 
+        $FOR(Citation_Information['keyword'])
+            <keyword>$VALUE$</keyword> 
+        $END_FOR
+            <description>$Citation_Information['description']$</description> 
+        $IF(Citation_Information.get('Funding_Acknowledgement']))
+            <Funding_Acknowledgement>
+                <funding_source>$Funding_Acknowledgement['funding_source']$</funding_source> 
+                <funding_year>$Funding_Acknowledgement['funding_year']$</funding_year> 
+                <funding_award>$Funding_Acknowledgement['funding_award']$</funding_award> 
+                <funding_acknowledgement_text>$Funding_Acknowledgement['funding_acknowledgement_text']$</funding_acknowledgement_text> 
+            </Funding_Acknowledgement>
+        $END_IF
+        </Citation_Information>
+    $END_IF
+    $IF(Modification_Detail)
+        <Modification_History> 
+            $FOR(field, k=Modification_Detail)
+            <Modification_Detail>
+                <modification_date>$field['modification_date']$</modification_date> 
+                <version_id>$field['version_id']$</version_id>   
+                <description>$field['description']$</description> 
+            </Modification_Detail>
+            $END_FOR
+        </Modification_History>
+     $END_IF
+        <License_Information>
+            <name>Creative Common Public License CC0 1.0 (2024)</name>
+            <description>Creative Commons Zero (CC0) license information.</description>
+            <Internal_Reference>
+                <lid_reference>urn:nasa:pds:system_bundle:document_pds4_standards:creative_commons_1.0.0::1.0</lid_reference>
+                <reference_type>product_to_license</reference_type>
+            </Internal_Reference>
+        </License_Information>
+    </Identification_Area>
+    <Reference_List>
+        $IF(Internal_Reference)
+        $FOR(field, k=Internal_Reference)
+        <Internal_Reference>
+            <lid_reference></lid_reference>                                             
+            <reference_type></reference_type>                                 
+            <comment></comment>
+        </Internal_Reference>
+        $END_FOR
+        $END_IF
+        $IF(External_Reference)
+        $FOR(field, k=External_Reference)
+        <External_Reference>
+            <doi></doi>                                                                 
+            <reference_text></reference_text>                                           
+            <description></description>                                                 
+        </External_Reference>
+        $END_FOR
+        $END_IF
+        $IF(Source_Product_Internal)
+        $FOR(field, k=Source_Product_Internal)
+        <Source_Product_Internal>
+            <lidvid_reference></lidvid_reference>                                       
+            <reference_type></reference_type>                                           
+            <comment></comment>                                                                                         
+        </Source_Product_Internal>
+        $END_FOR
+        $END_IF
+        $IF(Source_Product_External)
+        $FOR(field, k=Source_Product_External)
+        <Source_Product_External>                                
+            <external_source_product_identifier></external_source_product_identifier>                                                    
+            <reference_type></reference_type>                                           
+            <doi></doi>                                                                                                                
+            <curating_facility></curating_facility>
+            <description></description>
+        </Source_Product_External>
+        $END_FOR
+        $END_IF
+    </Reference_List>
+    $IF(Product_Ancillary)
+    <File_Area_Ancillary>
+    $END_IF
+    $IF(Product_Metadata_Supplemental)
+    <File_Area_Metadata>
+    $END_IF                                   
+        <File>
+            <file_name>$BASENAME(TEMPFILE)$</file_name>                                              
+            <local_identifier>index-table</local_identifier>              
+            <creation_date_time>$DATETIME(creation_date_time)$</creation_date_time>                        
+            <md5_checksum>$FILE_MD5(TEMPFILE)$</md5_checksum>                                       
+            <comment></comment>                                           
+        </File>
+        <Header>                                                                       
+            <offset unit="byte">0</offset>
+            <object_length unit="byte">$object_length_h$</object_length>                                            
+            <parsing_standard_id>UTF-8 Text</parsing_standard_id>                
+            <description>Provides the column headers, separated by commas, for the data table.</description>
+        </Header>
+        $IF(Table_Character)
+        <Table_Character>
+            <offset unit="byte"></offset>      
+            <object_length unit="byte">$object_length_t$</object_length>                                        
+            <records>$FILE_RECORDS(TEMPFILE)$</records> 
+            <record_delimiter>Line-Feed</record_delimiter>
+            <description></description>                                           
+            <Record_Character>
+                <fields>$fields$</fields> 
+                <groups>0</groups>
+                <record_length unit="byte"></record_length>                        
+                $FOR(field, k=Field_Content)
+                    <Field_Character>
+                        <name>$field['name']$</name>
+                        <field_number>$k + 1$</field_number>
+                        <field_location unit="byte">$field['field_location']$</field_location>                     
+                        <data_type>$field['data_type']$</data_type>
+                        <field_length unit="byte">$field['field_length']$</field_length>
+                    </Field_Character>
+                $END_FOR
+            </Record_Character>
+        </Table_Character>
+        $END_IF
+        $IF(Table_Delimited)
+        <Table_Delimited>
+            <offset unit="byte">0</offset>
+            <object_length unit="byte">$object_length_t$</object_length>
+            <parsing_standard_id>PDS DSV 1</parsing_standard_id>
+            <records>$FILE_RECORDS(TEMPFILE)$</records>
+            <record_delimiter>Line-Feed</record_delimiter>
+            <field_delimiter>Comma</field_delimiter>  
+            <Record_Delimited>
+                <fields>$fields$</fields>
+                <groups>0</groups>
+                <maximum_record_length unit="byte">$maximum_record_length$</maximum_record_length>                  
+                $FOR(field, k=Field_Content)
+                    <Field_Delimited>
+                        <name>$field['name']$</name>
+                        <field_number>$k + 1$</field_number>
+                        <data_type>$field['data_type']$</data_type>                 
+                        <maximum_field_length unit="byte">$field['maximum_field_length']$</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                $END_FOR
+            </Record_Delimited>
+        </Table_Delimited>
+        $END_IF
+    $IF(Product_Ancillary)
+    </File_Area_Ancillary>
+    $END_IF
+    $IF(Product_Metadata_Supplemental)
+    </File_Area_Metadata>
+    $END_IF
+$IF(Product_Ancillary)
+</Product_Ancillary>
+$END_IF
+$IF(Product_Metadata_Supplemental)
+</Product_Metadata_Supplemental>
+$END_IF

@@ -1,0 +1,6 @@
+pds:Product_Collection/pds:Identification_Area<1>/pds:logical_identifier<1>
+pds:Product_Collection/pds:Identification_Area<1>/pds:title<1>
+pds:Product_Collection/pds:Identification_Area<1>/pds:Citation_Information<1>/pds:editor_list<1>
+pds:Product_Collection/pds:Identification_Area<1>/pds:Citation_Information<1>/pds:description<1>
+pds:Product_Collection/pds:File_Area_Inventory<1>/pds:File<1>/pds:file_name<1>
+pds:Product_Collection/pds:File_Area_Inventory<1>/pds:Inventory<1>/pds:record_delimiter<1>

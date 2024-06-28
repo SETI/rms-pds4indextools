@@ -11,6 +11,20 @@ on:
     - cron: "21 11 * * 0"
 
 jobs:
+  flake8:
+    name: Flake8 pds4indextools
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Flake8
+        run: |
+          pip install flake8
+          flake8 pds4indextools tests
+
   test:
     name: Test pds4indextools
     runs-on: ${{ matrix.os }}
