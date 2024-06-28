@@ -23,6 +23,8 @@ Usage:
         [--config-file CONFIG_FILE]
         [--dump-available-xpaths]
         [--fixed-width]
+        [--generate-label GENERATE_LABEL]
+        [--label-user-input LABEL_USER_INPUT]
 
 Arguments:
     directorypath        The path to the directory containing the bundle to scrape.
@@ -53,6 +55,10 @@ Arguments:
                          given label file(s). Can be modified and used as a file for
                          --elements-file
     --fixed-width        Create a fixed-width index file.
+    --generate-label     Create a label file (Product_Ancillary or
+                         Product_Metadata_Supplemental) for a generated index
+                         file.
+    --label-user-input   Add additional content to the generated label file.
 
 Example:
     python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
