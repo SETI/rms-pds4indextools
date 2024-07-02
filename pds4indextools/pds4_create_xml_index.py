@@ -4,24 +4,21 @@ PDS4 Indexing Tool
 This script scrapes label files within specified directories, extracts information from
 user-defined XPaths/elements, and generates either an index file or a .txt file containing
 the XPaths available to the user. The script provides options for customizing the
-extraction process, such as:
-    - Specifying desired content by either limiting the results or requesting additional
-      file information.
-    - Sorting the resulting file by a user-specified value.
-    - Allowing for a user-made configuration file (.ini) for further custom content.
+extraction process. For a full list of options, use:
+
+python pds4_create_xml_index.py --help
 
 Usage:
     python pds4_create_xml_index.py <directorypath> <patterns>
-        [--elements-file ELEMENTS_FILE]
+        [--limit-xpaths-file XPATHS_FILE]
         [--simplify-xpaths]
-        [--output-csv-file OUTPUT_CSV_FILE]
-        [--output-txt-file OUTPUT_TXT_FILE]
+        [--output-index-file FILENAME]
+        [--output-headers-file FILENAME]
         [--verbose]
-        [--sort-by SORT_BY]
+        [--sort-by HEADER_NAME]
         [--clean-header-field-names]
         [--add-extra-file-info ADD_EXTRA_FILE_INFO]
         [--config-file CONFIG_FILE]
-        [--dump-available-xpaths]
         [--fixed-width]
         [--generate-label GENERATE_LABEL]
         [--label-user-input LABEL_USER_INPUT]
@@ -32,28 +29,25 @@ Arguments:
                          and **) for the files you wish to index. Multiple patterns
                          may be specified separated by spaces. Surround each pattern
                          with quotes.
-    --elements-file ELEMENTS_FILE
+    --limit-xpaths-file XPATHS_FILE
                          Optional text file specifying which elements to scrape.
     --simplify-xpaths    Replace unique XPath segments with shortened versions.
-    --output-csv-file OUTPUT_CSV_FILE
+    --output-index-file  FILENAME
                          The output path and filename for an index file.
-    --output-txt-file OUTPUT_TXT_FILE
+    --output-headers-file FILENAME
                          The output path and filename for an XPath headers file.
     --verbose            Activate verbose printed statements during runtime.
-    --sort-by SORT_BY    Sort the index file by a user-determined set of columns.
+    --sort-by HEADER_NAME
+                         Sort the index file by a user-determined set of columns.
     --clean-header-field-names
                          Replace the ":" and "/" with Windows-friendly characters.
     --add-extra-file-info ADD_EXTRA_FILE_INFO
                          Add additional column(s) to the index file containing file or
-                         bundle information. Possible values are: "LID", "filename",
+                         bundle information. Possible values are: "lid", "filename",
                          "filepath", "bundle", and "bundle_lid". Multiple values may be
                          specified separated by spaces.
     --config-file CONFIG_FILE
                          An optional .ini configuration file for further customization.
-    --dump-available-xpaths
-                         Create a .txt file containing all available XPath headers for
-                         given label file(s). Can be modified and used as a file for
-                         --elements-file
     --fixed-width        Create a fixed-width index file.
     --generate-label     Create a label file (Product_Ancillary or
                          Product_Metadata_Supplemental) for a generated index
@@ -62,7 +56,7 @@ Arguments:
 
 Example:
     python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
-    --output_file <outputfile> --elements-file sample_elements.txt --verbose
+    --output_file <outputfile> --limit-xpaths-file sample_elements.txt --verbose
 """
 
 import argparse
@@ -114,7 +108,6 @@ def convert_header_to_xpath(root, xml_header_path, namespaces):
         >>> namespaces = root.nsmap
         >>> convert_header_to_xpath(root, xml_header_path, namespaces)
         'pds:Product_Observational/pds:Identification_Area[1]/pds:version_id[2]'
-
     """
     sections = xml_header_path.split('/')
     xpath_final = ''
@@ -180,6 +173,13 @@ def correct_duplicates(label_results):
 
 
 def clean_headers(df):
+    """
+    Clean the headers of a DataFrame by replacing certain characters with safer
+    alternatives.
+
+    Args:
+        df (pandas.DataFrame): The DataFrame whose headers need to be cleaned.
+    """
     return df.rename(columns=lambda x: x.replace(
             ':', '_').replace('/', '__').replace('<', '_').replace('>', ''), inplace=True)
 
@@ -246,7 +246,7 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
         dict: A filtered dictionary containing only the keys that match the inclusion
         patterns and do not match the exclusion patterns.
 
-    How it works:
+    Notes:
         1. If `glob_patterns` is `None`, the function returns the original `input_dict`
            unchanged.
         2. If `glob_patterns` is an empty list, the function prints a message and exits
@@ -588,8 +588,9 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
                       f'has no associated text: {tag}')
                 true_type = None
                 for xsd_file in xsd_files:
+                    namespaces = scrape_namespaces(xsd_file)
                     xsd_tree = download_xsd_file(xsd_file)
-                    true_type = find_base_attribute(xsd_tree, tag)
+                    true_type = find_base_attribute(xsd_tree, tag, namespaces)
                     if true_type:
                         break  # Exit the loop once true_type is found
 
@@ -597,6 +598,7 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
                     modified_tag = tag + "_WO_Units"
                     for xsd_file in xsd_files:
                         xsd_tree = download_xsd_file(xsd_file)
+                        namespaces = scrape_namespaces(xsd_file)
                         true_type = find_base_attribute(xsd_tree, modified_tag)
                         if true_type:
                             break
@@ -710,6 +712,18 @@ def write_results_to_csv(results_list, args, output_csv_path):
     """
 
     def pad_column_values_and_headers(df):
+        """
+        Pad the values and headers of a DataFrame to align column widths.
+
+        Args:
+        df (pandas.DataFrame): The DataFrame whose column values and headers need to be
+            padded.
+
+        Returns:
+        pandas.DataFrame: A new DataFrame with padded column values and headers, where
+            each column's width is equal to the maximum width of its header or its longest
+            value.
+        """
         col_widths = {}
 
         # Calculate max width for each column based on header and values
@@ -735,7 +749,8 @@ def write_results_to_csv(results_list, args, output_csv_path):
     df = pd.DataFrame(rows)
 
     if args.sort_by:
-        df.sort_values(by=args.sort_by, inplace=True)
+        sort_values = str(args.sort_by).split(',')
+        df.sort_values(by=sort_values, inplace=True)
 
     if args.clean_header_field_names:
         clean_headers(df)
@@ -748,45 +763,153 @@ def write_results_to_csv(results_list, args, output_csv_path):
         df.to_csv(output_csv_path, index=False, na_rep='NaN')
 
 
-def find_base_attribute(xsd_tree, target_name):
-    # Initialize target attribute value
-    target_attribute_value = None
+def find_base_attribute(xsd_tree, target_name, new_namespaces):
+    """
+    Finds the base attribute of a target element in an XML schema.
 
-    # Define the XPath query to find the target element by name
-    xpath_query = (
+    This function searches for the base type of a given target element in the provided
+    XML schema tree. It follows nested type definitions to return the final meaningful
+    base type, such as `pds:ASCII_NonNegative_Integer`.
+
+    Args:
+        xsd_tree (etree._Element): The XML schema tree.
+        target_name (str): The name of the target element to search for.
+
+    Returns:
+        str: The base type of the target element if found, otherwise None.
+
+    Raises:
+        etree.XPathEvalError: If there is an error during XPath evaluation.
+    """
+
+    # Register namespaces
+    namespaces = {
+        'xs': 'http://www.w3.org/2001/XMLSchema',
+        'pds': 'http://pds.nasa.gov/pds4/pds/v1'
+    }
+    namespaces.update(new_namespaces)
+
+    def follow_base_type(base_type):
+        """
+        Recursively follows the base type definitions to find the final base type.
+
+        Args:
+            base_type (str): The initial base type to follow.
+
+        Returns:
+            str: The final base type.
+        """
+        while True:
+            if 'ASCII' in base_type or 'UTF8' in base_type:
+                return base_type
+
+            next_query = (
+                f".//xs:simpleType[@name='{base_type.split(':')[-1]}']"
+                f"//xs:restriction/@base"
+            )
+            try:
+                next_result = xsd_tree.xpath(next_query, namespaces=namespaces)
+            except Exception:
+                break
+            if not next_result:
+                break
+            base_type = next_result[0]
+        return base_type
+
+    def get_base_type(query):
+        """
+        Executes an XPath query to find the base type.
+
+        Args:
+            query (str): The XPath query to execute.
+
+        Returns:
+            list: The result of the XPath query.
+        """
+        try:
+            result = xsd_tree.xpath(query, namespaces=namespaces)
+            return result
+        except etree.XPathEvalError:
+            return None
+
+    # Define the initial XPath query to find the complexType element by name
+    initial_query = f".//xs:complexType[@name='{target_name}']//xs:extension/@base"
+    initial_result = get_base_type(initial_query)
+
+    if initial_result:
+        base_type = initial_result[0]
+        return follow_base_type(base_type)
+
+    # If the initial query did not find a result, try other patterns
+    other_queries = [
         f".//*[local-name()='element' and @name='{target_name}']"
-        f"/descendant::*[local-name()='restriction']/@base | "
+        f"/descendant::*[local-name()='restriction']/@base",
         f".//*[local-name()='attribute' and @name='{target_name}']"
-        f"/descendant::*[local-name()='restriction']/@base | "
+        f"/descendant::*[local-name()='restriction']/@base",
         f".//*[local-name()='simpleType' and @name='{target_name}']"
-        f"/*[local-name()='restriction']/@base | "
+        f"/*[local-name()='restriction']/@base",
         f".//*[local-name()='simpleType' and @name='{target_name}']"
-        f"/descendant::*[local-name()='restriction']/@base | "
+        f"/descendant::*[local-name()='restriction']/@base",
         f".//*[local-name()='complexType' and @name='{target_name}']"
-        f"//*[local-name()='extension']/@base | "
+        f"//*[local-name()='extension']/@base",
         f".//*[local-name()='complexType' and @name='{target_name}']"
-        f"//*[local-name()='extension']/*/*/@base | "
+        f"//*[local-name()='extension']/*/*/@base",
         f".//*[local-name()='complexType' and @name='{target_name}']"
-        f"//*[local-name()='extension']/*/*/*/@base | "
+        f"//*[local-name()='extension']/*/*/*/@base",
         f".//*[local-name()='complexType' and @name='{target_name}']"
-        f"//*[local-name()='extension']/*/*/*/*/@base | "
+        f"//*[local-name()='extension']/*/*/*/*/@base",
         f".//*[local-name()='complexType' and @name='{target_name}']"
-        f"//*[local-name()='extension']/*/@nilReason | "
+        f"//*[local-name()='extension']/*/@nilReason",
         f".//*[local-name()='complexType' and @name='Science_Facets']"
-        f"//*[local-name()='element' and @name='{target_name}']/@type"
-    )
+        f"//*[local-name()='element' and @name='{target_name}']/@type",
+        f".//xs:complexType[@name='{target_name}']"
+        f"//xs:extension[@base='pds:{target_name}_WO_Units']"
+        f"/xs:attribute[@name='unit']/@type",
+        f".//*[local-name()='complexType' and @name='{target_name}']"
+        f"/descendant::*[local-name()='simpleContent']"
+        f"/*[local-name()='extension']/@base",
+        f".//*[local-name()='complexType' and @name='{target_name}']"
+        f"/descendant::*[local-name()='simpleContent']"
+        f"/*[local-name()='extension']/*/*/@base",
+        f".//*[local-name()='complexType' and @name='{target_name}']"
+        f"/descendant::*[local-name()='simpleContent']"
+        f"/*[local-name()='extension']/*/*/*/@base",
+        f".//*[local-name()='complexType' and @name='{target_name}']"
+        f"/descendant::*[local-name()='simpleContent']"
+        f"/*[local-name()='extension']/@base",
+        f".//*[local-name()='complexType' and @name='{target_name}']"
+        f"//*[local-name()='simpleContent']"
+        f"/*[local-name()='extension']/@base",
+        f".//*[local-name()='complexType' and @name='{target_name}']"
+        f"//*[local-name()='simpleContent']"
+        f"/*[local-name()='extension']/*/*/@base",
+        f".//*[local-name()='complexType' and @name='{target_name}']"
+        f"//*[local-name()='simpleContent']"
+        f"/*[local-name()='extension']/*/*/*/@base"
+    ]
 
-    # Execute the XPath query
-    target_attribute_values = xsd_tree.xpath(xpath_query)
+    for query in other_queries:
+        result = get_base_type(query)
+        if result:
+            base_type = result[0]
+            return follow_base_type(base_type)
 
-    # Check if any attribute values are found
-    target_attribute_value = target_attribute_values[0]
-
-    # Return the target attribute value
-    return target_attribute_value
+    return None
 
 
 def scrape_namespaces(xsd_url):
+    """
+    Fetch and parse an XSD file from a given URL to extract namespace declarations.
+
+    Parameters:
+    xsd_url (str): The URL of the XSD file to be fetched and parsed.
+
+    Returns:
+    dict: A dictionary containing the namespace declarations found in the XSD file.
+
+    Raises:
+    ValueError: If the XSD file cannot be retrieved (HTTP status code is not 200).
+    """
     # Fetch XSD content from the URL
     response = requests.get(xsd_url)
     if response.status_code != 200:
@@ -806,8 +929,11 @@ def get_creation_date(file_path):
     """
     Returns the creation date of a file in ISO 8601 format.
 
-    :param file_path: Path to the file.
-    :return: Creation date of the file in ISO 8601 format.
+    Args:
+    file_path (str): The path to the file.
+
+    Returns:
+    str: The creation date of the file in ISO 8601 format.
     """
     if platform.system() == 'Windows':
         # On Windows, use os.path.getctime() to get the creation time
@@ -829,11 +955,33 @@ def get_creation_date(file_path):
 
 
 def load_yaml_file(yaml_file):
+    """
+    Load and parse a YAML file.
+
+    Parameters:
+    yaml_file (str): The path to the YAML file to be loaded.
+
+    Returns:
+    dict: The contents of the YAML file as a dictionary.
+    """
     with open(yaml_file, 'r') as yaml_fp:
         return yaml.safe_load(yaml_fp)
 
 
 def get_longest_row_length(filename):
+    """
+    Calculate the length of the longest row in a CSV file.
+
+    Args:
+    filename (str): The path to the CSV file to be read.
+
+    Returns:
+    int: The length of the longest row in the CSV file, measured by the sum of the lengths
+         of the fields plus the number of delimiters in the row.
+
+    Raises:
+    FileNotFoundError: If the specified file does not exist.
+    """
     with open(filename, 'r') as csvfile_fp:
         reader = csv.reader(csvfile_fp, delimiter=',')  # Adjust the delimiter as needed
         longest_row_length = 0
@@ -845,78 +993,139 @@ def get_longest_row_length(filename):
     return longest_row_length
 
 
+def validate_comma_separated_list(arg_value, valid_choices):
+    """
+    Validate and parse a comma-separated list of values.
+
+    Args:
+    arg_value (str): A string containing comma-separated values to be validated.
+    valid_choices (list): A list of valid choices that each value in the comma-separated
+                          list must be part of.
+
+    Returns:
+    list: A list of values parsed from the input string.
+
+    Raises:
+    argparse.ArgumentTypeError: If any value in the comma-separated list is not in the
+                                valid choices.
+    """
+    values = arg_value.split(',')
+    for value in values:
+        if value not in valid_choices:
+            raise argparse.ArgumentTypeError(f"Invalid choice: '{value}' "
+                                             f"(choose from {valid_choices})")
+    return values
+
+
+def generate_unique_filename(base_name):
+    """
+    Generate a unique filename by appending a number to the base_name if it already
+    exists.
+
+    Args:
+    base_name (str): The base name of the file including the extension.
+
+    Returns:
+    str: A unique filename that does not already exist in the current directory. The
+        filename is generated by appending a number to the base name before the file
+        extension.
+    """
+    counter = 1
+    new_filename = base_name
+    base, extension = os.path.splitext(base_name)
+
+    while os.path.exists(new_filename):
+        new_filename = f"{base}{counter}{extension}"
+        counter += 1
+
+    return new_filename
+
+
 def main(cmd_line=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('directorypath', type=str,
-                        help='The path to the directory containing the bundleset, '
-                             'bundle, or collection you wish to scrape')
+    # FIXIT: CHANGE THIS LINK AFTER MERGED TO MAIN
+    parser = argparse.ArgumentParser(
+        epilog="For more details, please visit the online documentation at: "
+        "https://github.com/SETI/rms-pds4indextools/blob/es-unit_tests/README.md"
+        )
 
-    parser.add_argument('patterns', type=str, nargs='+',
-                        help='The glob pattern(s) for the files you wish to index. They '
-                             'may include wildcards like *, ?, and **. If supplying '
-                             'multiple patterns, separate with spaces. Surround each '
-                             'pattern with quotes.')
+    valid_add_extra_file_info = ['lid', 'filename', 'filepath', 'bundle_lid', 'bundle']
 
-    parser.add_argument('--output-csv-file', type=str,
-                        help='Specify the location and filename of the index file.')
+    index_file_generation = parser.add_argument_group('Index File Generation')
+    index_file_generation.add_argument('directorypath', type=str,
+                                       help='The path to the directory containing the '
+                                            'bundleset, bundle, or collection you wish '
+                                            'to scrape')
 
-    parser.add_argument('--output-txt-file', type=str,
-                        help='Specify the location and filename of the XPath headers '
-                             'file.')
+    index_file_generation.add_argument('patterns', type=str, nargs='+',
+                                       help='The glob pattern(s) for the files you wish '
+                                            'to index. They may include wildcards '
+                                            'like *, ?, and **. If supplying multiple '
+                                            'patterns, separate with spaces. Surround '
+                                            'each pattern with quotes.')
 
-    parser.add_argument('--elements-file', type=str,
-                        help='Optional text file specifying which elements to scrape. '
-                             'If not specified, all elements found in the label files '
-                             'are included.')
+    index_file_generation.add_argument('--output-index-file', type=str,
+                                       help='Specify the location and filename of the '
+                                            'index file.')
 
-    parser.add_argument('--simplify-xpaths', action='store_true',
-                        help='If specified, only writes the tags of unique XPaths to '
-                             'output files. Any values with duplicate values will still '
-                             'use their full XPath.')
+    index_file_generation.add_argument(
+        '--add-extra-file-info',
+        type=lambda x: validate_comma_separated_list(x, valid_add_extra_file_info),
+        help='Add additional columns to the final index file. If specifying multiple '
+        'column names, supply them as separate arguments separated by spaces.')
 
-    parser.add_argument('--verbose', action='store_true',
-                        help='Turn on verbose mode and show the details of file '
-                             'scraping.')
+    index_file_generation.add_argument(
+        '--sort-by',
+        type=str,
+        help='Sort resulting index file by one or more columns. Must be specified by '
+             'either the full XPath header or the simplified version if using '
+             '--simplify-xpaths. To see all available options, use '
+             '--output-headers-file.')
 
-    parser.add_argument('--sort-by', type=str, nargs='+',
-                        help='Sort resulting index file by one or more columns. Must be '
-                             'specified by either the full XPath header or the '
-                             'simplified version if using --simplify-xpaths. To see all '
-                             'available options, use --dump-available-xpaths.')
+    index_file_generation.add_argument('--fixed-width', action='store_true',
+                                       help='Create an index file with fixed-width '
+                                            'columns.')
 
-    parser.add_argument('--clean-header-field-names', action='store_true',
-                        help='Rename column headers such that they only contain '
-                             'characters permissible in variable names.')
+    index_file_generation.add_argument('--clean-header-field-names', action='store_true',
+                                       help='Rename column headers such that they only '
+                                            'contain characters permissible in variable '
+                                            'names.')
 
-    parser.add_argument('--add-extra-file-info', type=str, nargs='+',
-                        choices=['LID', 'filename', 'filepath', 'bundle_lid', 'bundle'],
-                        help='Add additional columns to the final index file. Choose '
-                             'from the following: "LID", "filename", "filepath", '
-                             '"bundle_lid", and "bundle". If specifying multiple column '
-                             'names, supply them as separate arguments separated by '
-                             'spaces')
+    index_file_generation.add_argument(
+        '--simplify-xpaths',
+        action='store_true',
+        help='If specified, only writes the tags of unique XPaths to output files. Any '
+             'values with duplicate values will still use their full XPath.')
 
-    parser.add_argument('--config-file', type=str,
-                        help='Read a user-specified configuration file. File must be a '
-                             '.ini file.')
+    limiting_results = parser.add_argument_group('Limiting Results')
+    limiting_results.add_argument('--limit-xpaths-file', type=str,
+                                  help='Optional text file specifying which elements to '
+                                       'scrape. If not specified, all elements found in '
+                                       'the label files are included.')
 
-    parser.add_argument('--dump-available-xpaths', action='store_true',
-                        help='Give a .txt file of all XPaths within the given label '
-                             'files. This file can be used as a base file for '
-                             '--elements-file.')
+    limiting_results.add_argument('--output-headers-file', type=str,
+                                  help='Specify the location and filename of the XPath '
+                                       'headers file.')
 
-    parser.add_argument('--fixed-width', action='store_true',
-                        help='Create an index file with fixed-width columns.')
+    label_generation = parser.add_argument_group('Label Generation')
+    label_generation.add_argument('--generate-label', type=str, nargs=1,
+                                  help='Generate a PDS4 label for the generated index '
+                                       'file called "<output_index_file>_label.xml". '
+                                       'Can generate either a Product_Ancillary or '
+                                       'Product_Metadata_Supplemental label.')
 
-    parser.add_argument('--generate-label', type=str, nargs=1,
-                        choices=['Product_Ancillary', 'Product_Metadata_Supplemental'],
-                        help='Generate a PDS4 label for the generated index file. Can '
-                             'generate either a Product_Ancillary or '
-                             'Product_Metadata_Supplemental label.')
+    label_generation.add_argument('--label-user-input', type=str,
+                                  help='Provide an optional file containing additional '
+                                       'information for the generated label. File must '
+                                       'be in YAML format.')
 
-    parser.add_argument('--label-user-input', type=str,
-                        help='Provide an optional .yaml file containing additional '
-                             'information for the generated label. ')
+    misc = parser.add_argument_group('Miscellaneous')
+    misc.add_argument('--verbose', action='store_true',
+                      help='Turn on verbose mode and show the details of file '
+                           'scraping.')
+
+    misc.add_argument('--config-file', type=str,
+                      help='Read a user-specified configuration file. The file must be '
+                           'in .ini file format.')
 
     args = parser.parse_args(cmd_line)
 
@@ -929,16 +1138,29 @@ def main(cmd_line=None):
     patterns = args.patterns
     verboseprint(f'Patterns to scrape: {patterns}')
 
-    """
-    Initializing the required arguments: directorypath and patterns. These
-    will determine which files will be scraped for
-    """
+    # Initializing the required arguments: directorypath and patterns. These
+    # will determine which files will be scraped for.
 
     nillable_elements_info = {}
     label_files = []
     all_results = []
     tags = []
     xsd_files = []
+
+    output_csv_path = None
+    output_txt_path = None
+
+    if args.output_index_file:
+        output_csv_path = args.output_index_file
+    else:
+        output_csv_path = generate_unique_filename('index.csv')
+
+    if args.output_headers_file:
+        output_txt_path = args.output_headers_file
+
+    if not args.output_index_file and not args.output_headers_file:
+        output_csv_path = generate_unique_filename('index.csv')
+
     for pattern in patterns:
         files = directory_path.glob(pattern)
         if not files:
@@ -952,15 +1174,12 @@ def main(cmd_line=None):
         print(f'No files matching any patterns found in directory: {directory_path}')
         sys.exit(1)
 
-    """
-    Loading in additional patterns from --elelemts-file, if applicable,
-    """
-
-    if args.elements_file:
+    # Loading in additional patterns from --limit-xpaths-file, if applicable,
+    if args.limit_xpaths_file:
         verboseprint(
-            f'Element file {args.elements_file} used for additional patterns.')
-        with open(args.elements_file, 'r') as elements_file:
-            elements_to_scrape = [line.strip() for line in elements_file]
+            f'Element file {args.limit_xpaths_file} used for additional patterns.')
+        with open(args.limit_xpaths_file, 'r') as limit_xpaths_file:
+            elements_to_scrape = [line.strip() for line in limit_xpaths_file]
             verboseprint('Elements to scrape:')
             for element in elements_to_scrape:
                 verboseprint(f'    {element}')
@@ -971,12 +1190,9 @@ def main(cmd_line=None):
     else:
         elements_to_scrape = None
 
-    """
-    For each file in label_files, load in schema files and namespaces for reference.
-    Traverse the label file and scrape the desired contents. Place these contents
-    into a dictionary to later parse into a csv file.
-    """
-
+    # For each file in label_files, load in schema files and namespaces for reference.
+    # Traverse the label file and scrape the desired contents. Place these contents
+    # into a dictionary to later parse into a csv file.
     for label_file in label_files:
         verboseprint(f'Now scraping {label_file}')
         tree = etree.parse(str(label_file))
@@ -1043,7 +1259,7 @@ def main(cmd_line=None):
         correct_duplicates(label_results)
 
         # The label_results dictionary will now be filtered according to the contents
-        # of the --elements-file input file. If this command is not used, the original
+        # of the --limit-xpaths-file input file. If this command is not used, the original
         # dictionary will be returned. Glob patterns are processed sequentially, with the
         # first pattern having the highest priority.
         label_results = filter_dict_by_glob_patterns(
@@ -1053,12 +1269,9 @@ def main(cmd_line=None):
             print('No results found: glob pattern(s) excluded all matches.')
             sys.exit(1)
 
-        """
-        Collect metadata about the label file.
-        """
-
-        # The label file's LID is scraped and broken into multiple parts. This metadata
-        # can then be requested as additional columns within the index file.
+        # Collect metadata about the label file. The label file's lid is scraped and
+        # broken into multiple parts. This metadata can then be requested as additional
+        # columns within the index file.
         lid = extract_logical_identifier(tree)
         if lid is None:
             lid = label_results.get('pds:logical_identifier', 'Missing_LID')
@@ -1066,7 +1279,7 @@ def main(cmd_line=None):
         # Attach extra columns if asked for.
         bundle_lid = ':'.join(lid.split(':')[:4])
         bundle = bundle_lid.split(':')[-1]
-        extras = {'LID': lid, 'filepath': filepath, 'filename': label_file.name,
+        extras = {'lid': lid, 'filepath': filepath, 'filename': label_file.name,
                   'bundle': bundle, 'bundle_lid': bundle_lid}
         if args.add_extra_file_info:
             verboseprint('--add-extra-file-info requested '
@@ -1077,63 +1290,54 @@ def main(cmd_line=None):
         result_dict = {'Results': label_results}
         all_results.append(result_dict)
 
-    """
-    If applicable, simplify the XPath headers.
-    """
-
     # If --simplify-xpaths is used, the XPath headers will be shortened to the
     # element's tag and namespace prefix. This is contingent on the uniqueness of
     # the XPath header; if more than one XPath header shares a tag, a namespace and a
     # predicate value, the XPath header will remain whole.
-    label_results = all_results[0]['Results']
-
     if args.simplify_xpaths:
-        xpath_elements = []
-        names = []
-        tags = []
+        for i in range(len(all_results)):
+            label_results = all_results[i]['Results']
+            tags = []
+            names = []
 
-        for key in label_results.keys():
-            elements = key.split('/')
-            xpath_elements.append(elements)
-            names.append(elements[-1])
+            # Step 1: Gather all tags from keys
+            for key in label_results.keys():
+                elements = key.split('/')
+                tag = elements[-1]
+                name = tag.split('<')[0]
+                tags.append(tag)
+                names.append(name)
 
-        duplicates = [tuple(t) for t in set(map(tuple, xpath_elements)) if
-                      xpath_elements.count(t) > 1]
+            # Step 2: Find unique tags
+            unique_tags = []
+            for tag in tags:
+                name = tag.split('<')[0]
+                if tags.count(tag) == 1 and names.count(name) == 1:
+                    unique_tags.append(tag)
 
-        duplicate_names = {tag for tag in names if names.count(tag) > 1}
+            # Step 3: Create a new dictionary to hold modified results
+            new_label_results = {}
 
-        if duplicate_names:
-            verboseprint(f'Duplicate tags found: {duplicate_names}')
+            # Step 4: Iterate over original dictionary to modify and copy to new
+            # dictionary
+            for key, value in list(label_results.items()):
+                elements = key.split('/')
+                tag = elements[-1]
+                if tag in unique_tags:
+                    new_tag = tag.split('<')[0]
+                    verboseprint(f'XPath header {key} changed to {new_tag}')
+                    new_label_results[new_tag] = value
+                else:
+                    new_label_results[key] = value
 
-        for key in list(label_results.keys()):
-            elements = key.split('/')
-            tag = elements[-1]
-            tags.append(tag)
-            if tuple(elements) not in duplicates and tag not in duplicate_names:
-                tag = tag.split('<')[0]
-                verboseprint(f'XPath header {key} changed to {tag}')
-                label_results[tag] = label_results.pop(key)
-            else:
-                verboseprint(f'Keeping XPath header {key} as {key}')
+            all_results[i]['Results'] = new_label_results
 
-    """
-    Determine the location of the resulting index file, as well as contents of that
-    file.
-    """
-    output_csv_path = None
-    output_txt_path = None
-    if args.output_csv_file:
-        output_csv_path = args.output_csv_file
-
-    if args.output_txt_file:
-        output_txt_path = args.output_txt_file
-
-    if not args.output_csv_file and not args.output_txt_file:
-        print('Output path not chosen.')
-        sys.exit(1)
+    if output_csv_path:
+        verboseprint(f'Index file generated at {output_csv_path}')
+        write_results_to_csv(all_results, args, output_csv_path)
 
     # To instead receive a list of available information available within a label or set
-    # of labels, you may use --dump-available-xpaths. This will take all of the keys of
+    # of labels, you may use --output-headers-file. This will take all of the keys of
     # the label_results dictionary and place them in the output file, instead of the
     # index file.
     if output_txt_path:
@@ -1156,13 +1360,7 @@ def main(cmd_line=None):
                 output_fp.write("%s\n" % item)
         verboseprint(f'XPath headers file generated at {output_txt_path}')
 
-    else:
-        verboseprint(f'Index file generated at {output_csv_path}')
-        write_results_to_csv(all_results, args, output_csv_path)
-
-    """
-    Generates the label for this index file, if --generate-label is used.
-    """
+    # Generates the label for this index file, if --generate-label is used.
 
     if args.generate_label:
         index_file = output_csv_path
@@ -1214,7 +1412,7 @@ def main(cmd_line=None):
 
                 for xsd_file in xsd_files:
                     xsd_tree = download_xsd_file(xsd_file)
-                    true_type = find_base_attribute(xsd_tree, name)
+                    true_type = find_base_attribute(xsd_tree, name, namespaces)
                     if true_type:
                         break
 
@@ -1222,7 +1420,8 @@ def main(cmd_line=None):
                     modified_name = name + "_WO_Units"
                     for xsd_file in xsd_files:
                         xsd_tree = download_xsd_file(xsd_file)
-                        true_type = find_base_attribute(xsd_tree, modified_name)
+                        true_type = find_base_attribute(xsd_tree, modified_name,
+                                                        namespaces)
                         if true_type:
                             break
 

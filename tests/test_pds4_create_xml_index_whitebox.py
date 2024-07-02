@@ -1,11 +1,12 @@
+from datetime import datetime
 from lxml import etree
+import os
 import pandas as pd
 from pathlib import Path
 import pytest
-import sys
-import pds4_create_xml_index as tools
+import pds4indextools.pds4_create_xml_index as tools
+from unittest import mock
 
-sys.path.append(str(Path(__file__).resolve().parent.parent / Path("pds4indextools")))
 
 # These two variables are the same for all tests, so we can either declare them as
 # global variables, or get the ROOT_DIR at the setup stage before running each test
@@ -230,3 +231,29 @@ def test_scrape_namespaces():
 
     with pytest.raises(ValueError):
         tools.scrape_namespaces('https://pds.nasa.gov/pds4/pds/v1/badschema.xsd')
+
+
+def test_get_longest_row_length():
+    filename = expected_dir / 'extra_file_info_success_1.csv'
+    result = tools.get_longest_row_length(filename)
+    assert result == 254
+
+
+@pytest.fixture
+def create_temp_file():
+    # Create a temporary file
+    with open('temp.txt', 'w') as f:
+        f.write("Temporary file for testing")
+    yield 'temp.txt'
+    # Clean up: Delete the temporary file after the test
+    os.remove('temp.txt')
+
+
+@pytest.mark.parametrize('platform_name', ['Windows', 'Linux', 'Darwin'])
+def test_get_creation_date(create_temp_file, platform_name):
+    # Mock platform.system() to simulate different platforms
+    with mock.patch('platform.system', return_value=platform_name):
+        creation_date = tools.get_creation_date(create_temp_file)
+        assert isinstance(creation_date, str)
+        # Assert that the returned date is in ISO 8601 format
+        assert datetime.fromisoformat(creation_date)

@@ -1,10 +1,8 @@
 from pathlib import Path
 import pytest
 import os
-import sys
 import tempfile
-sys.path.append(str(Path(__file__).resolve().parent.parent / "pds4indextools"))
-import pds4_create_xml_index as tools  # noqa: E402
+import pds4indextools.pds4_create_xml_index as tools
 
 
 # These two variables are the same for all tests, so we can either declare them as
@@ -19,73 +17,68 @@ labels_dir = test_files_dir / 'labels'
 @pytest.mark.parametrize(
         'golden_file,new_file,cmd_line',
         [
-            # Testing --elements-file
+            # Testing --limit-xpaths-file
             (
-                str(expected_dir / 'elements_file_success_1.txt'),
-                'elements_file.txt',
+                str(expected_dir / 'limit_xpaths_file_success_1.txt'),
+                'limit_xpaths_file.txt',
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_1.xml')),
-                    '--dump-available-xpaths',
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'element_1.txt'),
-                    '--output-txt-file'
+                    '--output-headers-file'
                 ]
             ),
 
             (
-                str(expected_dir / 'elements_file_success_2.txt'),
-                'elements_file_2.txt',
+                str(expected_dir / 'limit_xpaths_file_success_2.txt'),
+                'limit_xpaths_file_2.txt',
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_2.xml')),
-                    '--dump-available-xpaths',
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'element_2.txt'),
-                    '--output-txt-file',
+                    '--output-headers-file',
                 ]
             ),
 
             (
-                str(expected_dir / 'elements_file_success_2.txt'),
+                str(expected_dir / 'limit_xpaths_file_success_2.txt'),
                 'elements_dupe_file_2.txt',
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_2.xml')),
-                    '--dump-available-xpaths',
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'element_duplicates.txt'),
-                    '--output-txt-file',
+                    '--output-headers-file',
                 ]
             ),
 
             (
-                str(expected_dir / 'elements_file_success_3.txt'),
-                'elements_file_3.txt',
+                str(expected_dir / 'limit_xpaths_file_success_3.txt'),
+                'limit_xpaths_file_3.txt',
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_2.xml')),
                     str(labels_dir.name / Path('tester_label_3.xml')),
-                    '--dump-available-xpaths',
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'element_3.txt'),
-                    '--output-txt-file',
+                    '--output-headers-file',
                 ]
             ),
 
 
             (
-                str(expected_dir / 'elements_file_success_4.txt'),
-                'elements_file_4.txt',
+                str(expected_dir / 'limit_xpaths_file_success_4.txt'),
+                'limit_xpaths_file_4.txt',
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_1.xml')),
                     str(labels_dir.name / Path('tester_label_2.xml')),
                     str(labels_dir.name / Path('tester_label_3.xml')),
-                    '--dump-available-xpaths',
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'element_4.txt'),
-                    '--output-txt-file',
+                    '--output-headers-file',
                 ]
             ),
 
@@ -96,9 +89,8 @@ labels_dir = test_files_dir / 'labels'
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_1.xml')),
-                    '--dump-available-xpaths',
                     '--simplify-xpaths',
-                    '--output-txt-file',
+                    '--output-headers-file',
                 ]
             ),
 
@@ -110,11 +102,10 @@ labels_dir = test_files_dir / 'labels'
                     str(labels_dir.name / Path('tester_label_1.xml')),
                     str(labels_dir.name / Path('tester_label_2.xml')),
                     str(labels_dir.name / Path('tester_label_3.xml')),
-                    '--dump-available-xpaths',
                     '--simplify-xpaths',
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'elements_xpath_simplify_2.txt'),
-                    '--output-txt-file',
+                    '--output-headers-file',
                 ]
             ),
 
@@ -124,11 +115,10 @@ labels_dir = test_files_dir / 'labels'
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_2.xml')),
-                    '--dump-available-xpaths',
                     '--simplify-xpaths',
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'elements_xpath_simplify_3.txt'),
-                    '--output-txt-file',
+                    '--output-headers-file',
                 ]
             ),
 
@@ -138,11 +128,10 @@ labels_dir = test_files_dir / 'labels'
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_3.xml')),
-                    '--dump-available-xpaths',
                     '--simplify-xpaths',
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'elements_xpath_simplify_4.txt'),
-                    '--output-txt-file',
+                    '--output-headers-file',
                 ]
             ),
 
@@ -153,12 +142,11 @@ labels_dir = test_files_dir / 'labels'
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_2.xml')),
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'element_1.txt'),
                     '--add-extra-file-info',
-                    'filename',
-                    'filepath',
-                    '--output-csv-file',
+                    'filename,filepath',
+                    '--output-index-file',
                 ]
             ),
 
@@ -170,13 +158,13 @@ labels_dir = test_files_dir / 'labels'
                     str(labels_dir.name / Path('tester_label_1.xml')),
                     str(labels_dir.name / Path('tester_label_2.xml')),
                     str(labels_dir.name / Path('tester_label_3.xml')),
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'element_5.txt'),
                     '--add-extra-file-info',
                     'filename',
                     '--sort-by',
                     'filename',
-                    '--output-csv-file',
+                    '--output-index-file',
                 ]
             ),
 
@@ -188,17 +176,13 @@ labels_dir = test_files_dir / 'labels'
                     str(labels_dir.name / Path('tester_label_1.xml')),
                     str(labels_dir.name / Path('tester_label_2.xml')),
                     str(labels_dir.name / Path('tester_label_3.xml')),
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'element_5.txt'),
                     '--add-extra-file-info',
-                    'filename',
-                    'filepath',
-                    'LID',
-                    'bundle',
-                    'bundle_lid',
+                    'filename,filepath,lid,bundle,bundle_lid',
                     '--sort-by',
                     'filename',
-                    '--output-csv-file',
+                    '--output-index-file',
                 ]
             ),
 
@@ -209,9 +193,8 @@ labels_dir = test_files_dir / 'labels'
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_1.xml')),
-                    '--dump-available-xpaths',
                     '--clean-header-field-names',
-                    '--output-txt-file',
+                    '--output-headers-file',
                 ]
             ),
 
@@ -222,11 +205,10 @@ labels_dir = test_files_dir / 'labels'
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_1.xml')),
                     str(labels_dir.name / Path('tester_label_2.xml')),
-                    '--dump-available-xpaths',
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'elements_clean_header_field_names.txt'),
                     '--clean-header-field-names',
-                    '--output-txt-file',
+                    '--output-headers-file',
                 ]
             ),
 
@@ -239,12 +221,12 @@ labels_dir = test_files_dir / 'labels'
                     str(labels_dir.name / Path('tester_label_1.xml')),
                     str(labels_dir.name / Path('tester_label_2.xml')),
                     str(labels_dir.name / Path('tester_label_3.xml')),
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'elements_clean_header_field_names.txt'),
                     '--sort-by',
                     'pds:Product_Observational/pds:Identification_Area<1>/'
                     'pds:logical_identifier<1>',
-                    '--output-csv-file',
+                    '--output-index-file',
                 ]
             ),
 
@@ -256,14 +238,13 @@ labels_dir = test_files_dir / 'labels'
                     str(labels_dir.name / Path('tester_label_1.xml')),
                     str(labels_dir.name / Path('tester_label_2.xml')),
                     str(labels_dir.name / Path('tester_label_3.xml')),
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'elements_clean_header_field_names.txt'),
                     '--add-extra-file-info',
-                    'bundle_lid',
-                    'filepath',
+                    'bundle_lid,filepath',
                     '--sort-by',
                     'bundle_lid',
-                    '--output-csv-file',
+                    '--output-index-file',
                 ]
             ),
 
@@ -273,13 +254,13 @@ labels_dir = test_files_dir / 'labels'
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('identical_label_*.xml')),
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'identical_elements.txt'),
                     '--add-extra-file-info',
                     'filename',
                     '--sort-by',
                     'filename',
-                    '--output-csv-file'
+                    '--output-index-file'
                 ]
             ),
             (
@@ -288,9 +269,9 @@ labels_dir = test_files_dir / 'labels'
                 [
                     str(test_files_dir),
                     str(labels_dir.name / Path('nilled_label.xml')),
-                    '--elements-file',
+                    '--limit-xpaths-file',
                     str(samples_dir / 'elements_nilled.txt'),
-                    '--output-csv-file'
+                    '--output-index-file'
                 ]
             ),
             (
@@ -300,7 +281,7 @@ labels_dir = test_files_dir / 'labels'
                     str(test_files_dir),
                     str(labels_dir.name / Path('tester_label_1.xml')),
                     '--fixed-width',
-                    '--output-csv-file'
+                    '--output-index-file'
                 ]
             )
         ]
@@ -337,29 +318,29 @@ def test_success(golden_file, new_file, cmd_line):
             str(labels_dir.name / Path('tester_label_1.xml')),
             str(labels_dir.name / Path('tester_label_2.xml')),
             str(labels_dir.name / Path('tester_label_3.xml')),
-            '--elements-file',
+            '--limit-xpaths-file',
             str(samples_dir / 'element_1.txt'),
             '--add-extra-file-info',
             'bad_element',
-            '--output-txt-file',
+            '--output-headers-file',
         ),
         (
             str(test_files_dir),  # directory path
             ' bad_directory/labels/tester_label_*.xml',  # non-existent directory
-            '--elements-file',
+            '--limit-xpaths-file',
             str(samples_dir / 'element_1.txt'),  # elements file
             '--add-extra-file-info',  # extra file info
             'filename',
-            '--output-txt-file',
+            '--output-headers-file',
         ),
         (
             str(test_files_dir),  # directory path
             str(labels_dir.name / Path('tester_label_1.xml')),
             str(labels_dir.name / Path('tester_label_2.xml')),
             str(labels_dir.name / Path('tester_label_3.xml')),
-            '--elements-file',
+            '--limit-xpaths-file',
             str(samples_dir / 'element_empty.txt'),  # empty elements file
-            '--output-txt-file',
+            '--output-headers-file',
         )
     ]
 )
@@ -377,9 +358,9 @@ def test_failures(cmd_line):
         (
                 str(test_files_dir),  # directory path
                 str(labels_dir.name / Path('nilled_label_bad.xml')),
-                '--elements-file',
+                '--limit-xpaths-file',
                 str(samples_dir / 'elements_nilled_bad.txt'),
-                '--output-csv-file',
+                '--output-index-file',
                 './stuff.csv'
         ),
     ]
