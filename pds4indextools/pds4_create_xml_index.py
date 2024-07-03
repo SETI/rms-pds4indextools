@@ -1220,9 +1220,8 @@ def main(cmd_line=None):
         if args.add_extra_file_info:
             verboseprint('--add-extra-file-info requested '
                          f'for the following: {args.add_extra_file_info}')
-            label_results = {**{ele: extras[ele] for ele in
-                                         args.add_extra_file_info},
-                                         **label_results}
+            label_results = {**{ele: extras[ele] for ele in args.add_extra_file_info},
+                             **label_results}
 
         result_dict = {'Results': label_results}
         all_results.append(result_dict)
@@ -1232,10 +1231,10 @@ def main(cmd_line=None):
     # dictionary will be returned. Glob patterns are processed sequentially, with the
     # first pattern having the highest priority.
     for i in range(len(all_results)):
-            label_results = all_results[i]['Results']
-            filtered_label_results = filter_dict_by_glob_patterns(
-                label_results, elements_to_scrape, verboseprint)
-            all_results[i]['Results'] = filtered_label_results
+        label_results = all_results[i]['Results']
+        filtered_label_results = filter_dict_by_glob_patterns(
+            label_results, elements_to_scrape, verboseprint)
+        all_results[i]['Results'] = filtered_label_results
 
     if len(all_results) == 0:
         print('No results found: glob pattern(s) excluded all matches.')

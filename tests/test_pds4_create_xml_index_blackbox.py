@@ -355,15 +355,16 @@ def test_failures(cmd_line):
 @pytest.mark.parametrize(
     'new_file,cmd_line',
     [
-        (   'nillable.csv',
-                [
+        (
+            'nillable.csv',
+            [
                 str(test_files_dir),  # directory path
                 str(labels_dir.name / Path('nilled_label_bad.xml')),
                 '--limit-xpaths-file',
                 str(samples_dir / 'elements_nilled_bad.txt'),
-                 '--output-index-file'
-                ]
-        ),
+                '--output-index-file'
+            ]
+        )
     ]
 )
 def test_failure_message(capfd, new_file, cmd_line):
@@ -374,7 +375,7 @@ def test_failure_message(capfd, new_file, cmd_line):
         path_to_file = temp_dir_path / new_file
         # Call main() function with the simulated command line arguments
         cmd_line.append(str(path_to_file))
-            
+
         # Capture the output
         tools.main(cmd_line)
         captured = capfd.readouterr()
