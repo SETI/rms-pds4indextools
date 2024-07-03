@@ -7,56 +7,6 @@ the XPaths available to the user. The script provides options for customizing th
 extraction process. For a full list of options, use:
 
 python pds4_create_xml_index.py --help
-
-Usage:
-    python pds4_create_xml_index.py <directorypath> <patterns>
-        [--limit-xpaths-file XPATHS_FILE]
-        [--simplify-xpaths]
-        [--output-index-file FILENAME]
-        [--output-headers-file FILENAME]
-        [--verbose]
-        [--sort-by HEADER_NAME]
-        [--clean-header-field-names]
-        [--add-extra-file-info ADD_EXTRA_FILE_INFO]
-        [--config-file CONFIG_FILE]
-        [--fixed-width]
-        [--generate-label GENERATE_LABEL]
-        [--label-user-input LABEL_USER_INPUT]
-
-Arguments:
-    directorypath        The path to the directory containing the bundle to scrape.
-    patterns             The glob pattern(s) (which may include wildcards like *, ?,
-                         and **) for the files you wish to index. Multiple patterns
-                         may be specified separated by spaces. Surround each pattern
-                         with quotes.
-    --limit-xpaths-file XPATHS_FILE
-                         Optional text file specifying which elements to scrape.
-    --simplify-xpaths    Replace unique XPath segments with shortened versions.
-    --output-index-file  FILENAME
-                         The output path and filename for an index file.
-    --output-headers-file FILENAME
-                         The output path and filename for an XPath headers file.
-    --verbose            Activate verbose printed statements during runtime.
-    --sort-by HEADER_NAME
-                         Sort the index file by a user-determined set of columns.
-    --clean-header-field-names
-                         Replace the ":" and "/" with Windows-friendly characters.
-    --add-extra-file-info ADD_EXTRA_FILE_INFO
-                         Add additional column(s) to the index file containing file or
-                         bundle information. Possible values are: "lid", "filename",
-                         "filepath", "bundle", and "bundle_lid". Multiple values may be
-                         specified separated by spaces.
-    --config-file CONFIG_FILE
-                         An optional .ini configuration file for further customization.
-    --fixed-width        Create a fixed-width index file.
-    --generate-label     Create a label file (Product_Ancillary or
-                         Product_Metadata_Supplemental) for a generated index
-                         file.
-    --label-user-input   Add additional content to the generated label file.
-
-Example:
-    python3 pds4_create_xml_index.py <toplevel_directory> "glob_path1" "glob_path2"
-    --output_file <outputfile> --limit-xpaths-file sample_elements.txt --verbose
 """
 
 import argparse
@@ -93,7 +43,7 @@ def convert_header_to_xpath(root, xml_header_path, namespaces):
     This function replaces the asterisks with the respective names of the elements and
     attributes they represent.
 
-    Args:
+    Parameters:
         root (Element): The root element of the XML document.
         xml_header_path (str): Original XML header path.
         namespaces (dict): Dictionary of XML namespace mappings.
@@ -134,7 +84,7 @@ def correct_duplicates(label_results):
     does not affect elements or attributes that natively contain the '_num' substring
     (e.g., cassini:filter_name_1 and cassini:filter_name_2).
 
-    Args:
+    Parameters:
         label_results (dict): The dictionary of XML results. This argument will be
             mutated by the function.
 
@@ -177,7 +127,7 @@ def clean_headers(df):
     Clean the headers of a DataFrame by replacing certain characters with safer
     alternatives.
 
-    Args:
+    Parameters:
         df (pandas.DataFrame): The DataFrame whose headers need to be cleaned.
     """
     return df.rename(columns=lambda x: x.replace(
@@ -188,7 +138,7 @@ def default_value_for_nil(config, data_type, nil_value):
     """
     Find the default value for a nilled element.
 
-    Args:
+    Parameters:
         config (dict): The configuration data.
         data_type (str): The attribute describing the data type of the element.
         nil_value (str): The associated value for nilReason.
@@ -210,7 +160,7 @@ def extract_logical_identifier(tree):
     """
     Extract the logical_identifier element from an XML tree.
 
-    Args:
+    Parameters:
         tree (ElementTree.Element): The XML tree.
 
     Returns:
@@ -235,7 +185,7 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
     the provided glob patterns. The glob patterns follow Unix shell-style wildcards.
     Patterns can start with '!' to indicate exclusion.
 
-    Args:
+    Parameters:
         input_dict (dict): The dictionary to filter. Keys are expected to be strings.
         glob_patterns (list): A list of glob patterns to match against dictionary keys.
             Patterns starting with '!' indicate keys that should be excluded from the
@@ -271,6 +221,7 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
         {'file1.txt': 'content1'}
     """
     filtered_dict = {}
+    allowables = ['lid', 'filename', 'filepath', 'bundle_lid', 'bundle']
 
     if glob_patterns is None:
         return input_dict
@@ -279,7 +230,7 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
         if not pattern.startswith('!'):
             verboseprint(f'Adding elements according to: {pattern}')
             for key, value in input_dict.items():
-                if fnmatch.fnmatch(key, pattern):
+                if fnmatch.fnmatch(key, pattern) or key in allowables:
                     filtered_dict[key] = value
         else:
             verboseprint(f'Removing elements according to: {pattern}')
@@ -301,7 +252,7 @@ def load_config_file(
     event a specified configuration file is given, the contents of that file will
     override what is in the default configuration file.
 
-    Args:
+    Parameters:
         default_config_file (str, optional): Name of or path to the default configuration
             file.
         specified_config_file (str, optional): Name of or path to a specified
@@ -332,7 +283,7 @@ def process_schema_location(file_path):
     """
     Process schema location from an XML file.
 
-    Args:
+    Parameters:
         file_path (str): Path to the XML file.
 
     Returns:
@@ -366,7 +317,7 @@ def process_headers(label_results, key, root, namespaces, prefixes):
     If a duplicate XPath is encountered, it appends an underscore and a number
     to make the XPath unique.
 
-    Args:
+    Parameters:
         label_results (dict): A dictionary containing XML data to be processed.
         key (str): The key representing the XML tag to be processed.
         root (Element): The root element of the XML tree.
@@ -442,12 +393,12 @@ def renumber_xpaths(xpaths):
             /b[2]/c[2]
             /b[3]/c[1]
 
-    Args:
+    Parameters:
         xpaths (list): The list of XPaths or XPath fragments.
 
     Returns:
         dict: A dictionary containing a mapping from the original XPaths to the
-        renumbered XPaths.
+            renumbered XPaths.
     """
 
     def split_xpath_prefix_and_num(s):
@@ -465,12 +416,12 @@ def renumber_xpaths(xpaths):
         If there is no <child>, None is used. If there is no [<num>], None is
         used.
 
-        Args:
+        Parameters:
             xpath (str): The XPath string to convert.
 
         Returns:
             SplitXPath: A namedtuple containing the parent, child, and num
-            elements of the XPath.
+                elements of the XPath.
         """
         parent, child, *_ = s.split('/', 1) + [None]
         try:
@@ -538,7 +489,7 @@ def split_into_elements(xpath):
     """
     Extract elements from an XPath in the order they appear.
 
-    Args:
+    Parameters:
         xpath (str): The XPath of a scraped element.
 
     Returns:
@@ -560,7 +511,7 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
     """
     Store text content of an XML element in a results dictionary.
 
-    Args:
+    Parameters:
         element (Element): The XML element.
         tree (ElementTree): The XML tree.
         results_dict (dict): Dictionary in which to store results.
@@ -612,7 +563,7 @@ def traverse_and_store(element, tree, results_dict, xsd_files,
     """
     Traverse an XML tree and store text content of specified elements in a dictionary.
 
-    Args:
+    Parameters:
         element (Element): The current XML element.
         tree (ElementTree): The XML tree.
         results_dict (dict): Dictionary to store results.
@@ -633,7 +584,7 @@ def download_xsd_file(xsd_file_url):
     """
     Download and parse an XSD file from a given URL using requests.
 
-    Args:
+    Parameters:
         xsd_file_url (str): The URL of the XSD file to download.
 
     Returns:
@@ -651,7 +602,7 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
     """
     Store all nillable elements and their data types in a dictionary.
 
-    Args:
+    Parameters:
         xsd_file (str): An XML Schema Definition file.
         nillable_elements_info (dict): A dictionary containing nillable element
             information.
@@ -705,7 +656,7 @@ def write_results_to_csv(results_list, args, output_csv_path):
     """
     Write results from a list of dictionaries to a CSV file.
 
-    Args:
+    Parameters:
         results_list (list): List of dictionaries containing results.
         args (argparse.Namespace): Arguments parsed from command line using argparse.
         output_csv_path (str): The output directory and filename.
@@ -715,9 +666,9 @@ def write_results_to_csv(results_list, args, output_csv_path):
         """
         Pad the values and headers of a DataFrame to align column widths.
 
-        Args:
-        df (pandas.DataFrame): The DataFrame whose column values and headers need to be
-            padded.
+        Parameters:
+            df (pandas.DataFrame): The DataFrame whose column values and headers need to
+            be padded.
 
         Returns:
         pandas.DataFrame: A new DataFrame with padded column values and headers, where
@@ -749,7 +700,7 @@ def write_results_to_csv(results_list, args, output_csv_path):
     df = pd.DataFrame(rows)
 
     if args.sort_by:
-        sort_values = str(args.sort_by).split(',')
+        sort_values = args.sort_by.split(',')
         df.sort_values(by=sort_values, inplace=True)
 
     if args.clean_header_field_names:
@@ -771,7 +722,7 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
     XML schema tree. It follows nested type definitions to return the final meaningful
     base type, such as `pds:ASCII_NonNegative_Integer`.
 
-    Args:
+    Parameters:
         xsd_tree (etree._Element): The XML schema tree.
         target_name (str): The name of the target element to search for.
 
@@ -793,7 +744,7 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
         """
         Recursively follows the base type definitions to find the final base type.
 
-        Args:
+        Parameters:
             base_type (str): The initial base type to follow.
 
         Returns:
@@ -809,7 +760,7 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
             )
             try:
                 next_result = xsd_tree.xpath(next_query, namespaces=namespaces)
-            except Exception:
+            except etree.XPathEvalError:
                 break
             if not next_result:
                 break
@@ -820,7 +771,7 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
         """
         Executes an XPath query to find the base type.
 
-        Args:
+        Parameters:
             query (str): The XPath query to execute.
 
         Returns:
@@ -832,16 +783,8 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
         except etree.XPathEvalError:
             return None
 
-    # Define the initial XPath query to find the complexType element by name
-    initial_query = f".//xs:complexType[@name='{target_name}']//xs:extension/@base"
-    initial_result = get_base_type(initial_query)
-
-    if initial_result:
-        base_type = initial_result[0]
-        return follow_base_type(base_type)
-
-    # If the initial query did not find a result, try other patterns
-    other_queries = [
+    queries = [
+        f".//xs:complexType[@name='{target_name}']//xs:extension/@base",
         f".//*[local-name()='element' and @name='{target_name}']"
         f"/descendant::*[local-name()='restriction']/@base",
         f".//*[local-name()='attribute' and @name='{target_name}']"
@@ -888,7 +831,7 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
         f"/*[local-name()='extension']/*/*/*/@base"
     ]
 
-    for query in other_queries:
+    for query in queries:
         result = get_base_type(query)
         if result:
             base_type = result[0]
@@ -902,13 +845,13 @@ def scrape_namespaces(xsd_url):
     Fetch and parse an XSD file from a given URL to extract namespace declarations.
 
     Parameters:
-    xsd_url (str): The URL of the XSD file to be fetched and parsed.
+        xsd_url (str): The URL of the XSD file to be fetched and parsed.
 
     Returns:
-    dict: A dictionary containing the namespace declarations found in the XSD file.
+        dict: A dictionary containing the namespace declarations found in the XSD file.
 
     Raises:
-    ValueError: If the XSD file cannot be retrieved (HTTP status code is not 200).
+        ValueError: If the XSD file cannot be retrieved (HTTP status code is not 200).
     """
     # Fetch XSD content from the URL
     response = requests.get(xsd_url)
@@ -929,11 +872,11 @@ def get_creation_date(file_path):
     """
     Returns the creation date of a file in ISO 8601 format.
 
-    Args:
-    file_path (str): The path to the file.
+    Parameters:
+        file_path (str): The path to the file.
 
     Returns:
-    str: The creation date of the file in ISO 8601 format.
+        str: The creation date of the file in ISO 8601 format.
     """
     if platform.system() == 'Windows':
         # On Windows, use os.path.getctime() to get the creation time
@@ -959,10 +902,10 @@ def load_yaml_file(yaml_file):
     Load and parse a YAML file.
 
     Parameters:
-    yaml_file (str): The path to the YAML file to be loaded.
+        yaml_file (str): The path to the YAML file to be loaded.
 
     Returns:
-    dict: The contents of the YAML file as a dictionary.
+        dict: The contents of the YAML file as a dictionary.
     """
     with open(yaml_file, 'r') as yaml_fp:
         return yaml.safe_load(yaml_fp)
@@ -972,42 +915,38 @@ def get_longest_row_length(filename):
     """
     Calculate the length of the longest row in a CSV file.
 
-    Args:
-    filename (str): The path to the CSV file to be read.
+    Parameters:
+        filename (str): The path to the CSV file to be read.
 
     Returns:
-    int: The length of the longest row in the CSV file, measured by the sum of the lengths
-         of the fields plus the number of delimiters in the row.
-
-    Raises:
-    FileNotFoundError: If the specified file does not exist.
+        int: The length of the longest row in the CSV file, measured by the sum of the
+        lengths of the fields plus the number of delimiters in the row.
     """
-    with open(filename, 'r') as csvfile_fp:
-        reader = csv.reader(csvfile_fp, delimiter=',')  # Adjust the delimiter as needed
-        longest_row_length = 0
-
-        for row in reader:
-            current_row_length = sum(len(field.strip()) for field in row) + len(row) - 1
-            longest_row_length = max(longest_row_length, current_row_length)
-
-    return longest_row_length
+    longest_line = ''
+    with open(filename, 'r', newline='') as csvfile:
+        csv_reader = csv.reader(csvfile)
+        for row in csv_reader:
+            line = ','.join(row)
+            if len(line) > len(longest_line):
+                longest_line = line
+    return len(longest_line)
 
 
 def validate_comma_separated_list(arg_value, valid_choices):
     """
     Validate and parse a comma-separated list of values.
 
-    Args:
-    arg_value (str): A string containing comma-separated values to be validated.
-    valid_choices (list): A list of valid choices that each value in the comma-separated
-                          list must be part of.
+    Parameters:
+        arg_value (str): A string containing comma-separated values to be validated.
+        valid_choices (list): A list of valid choices that each value in the
+            comma-separated list must be part of.
 
     Returns:
-    list: A list of values parsed from the input string.
+        list: A list of values parsed from the input string.
 
     Raises:
-    argparse.ArgumentTypeError: If any value in the comma-separated list is not in the
-                                valid choices.
+        argparse.ArgumentTypeError: If any value in the comma-separated list is not in the
+        valid choices.
     """
     values = arg_value.split(',')
     for value in values:
@@ -1022,13 +961,13 @@ def generate_unique_filename(base_name):
     Generate a unique filename by appending a number to the base_name if it already
     exists.
 
-    Args:
-    base_name (str): The base name of the file including the extension.
+    Parameters:
+        base_name (str): The base name of the file including the extension.
 
     Returns:
-    str: A unique filename that does not already exist in the current directory. The
-        filename is generated by appending a number to the base name before the file
-        extension.
+        str: A unique filename that does not already exist in the current directory. The
+            filename is generated by appending a number to the base name before the file
+            extension.
     """
     counter = 1
     new_filename = base_name
@@ -1064,18 +1003,22 @@ def main(cmd_line=None):
                                             'each pattern with quotes.')
 
     index_file_generation.add_argument('--output-index-file', type=str,
+                                       metavar='INDEX_FILEPATH',
                                        help='Specify the location and filename of the '
                                             'index file.')
 
     index_file_generation.add_argument(
         '--add-extra-file-info',
         type=lambda x: validate_comma_separated_list(x, valid_add_extra_file_info),
+        metavar='COMMA_SEPARATED_COLUMN_NAMES',
         help='Add additional columns to the final index file. If specifying multiple '
-        'column names, supply them as separate arguments separated by spaces.')
+             'column names, supply them as one argument separated by commas. Possible '
+             'values include "lid", "filename", "filepath", "bundle_lid", and "bundle"')
 
     index_file_generation.add_argument(
         '--sort-by',
         type=str,
+        metavar='COMMA_SEPARATED_HEADER_NAME(s)',
         help='Sort resulting index file by one or more columns. Must be specified by '
              'either the full XPath header or the simplified version if using '
              '--simplify-xpaths. To see all available options, use '
@@ -1098,22 +1041,27 @@ def main(cmd_line=None):
 
     limiting_results = parser.add_argument_group('Limiting Results')
     limiting_results.add_argument('--limit-xpaths-file', type=str,
+                                  metavar='XPATHS_FILEPATH',
                                   help='Optional text file specifying which elements to '
                                        'scrape. If not specified, all elements found in '
                                        'the label files are included.')
 
     limiting_results.add_argument('--output-headers-file', type=str,
+                                  metavar='HEADERS_FILEPATH',
                                   help='Specify the location and filename of the XPath '
                                        'headers file.')
 
     label_generation = parser.add_argument_group('Label Generation')
     label_generation.add_argument('--generate-label', type=str, nargs=1,
+                                  metavar='{Product_Ancillary, '
+                                          'Product_Metadata_Supplemental}',
                                   help='Generate a PDS4 label for the generated index '
-                                       'file called "<output_index_file>_label.xml". '
+                                       'file called "<output_index_file>.xml". '
                                        'Can generate either a Product_Ancillary or '
                                        'Product_Metadata_Supplemental label.')
 
     label_generation.add_argument('--label-user-input', type=str,
+                                  metavar='USER_INPUT_FILEPATH',
                                   help='Provide an optional file containing additional '
                                        'information for the generated label. File must '
                                        'be in YAML format.')
@@ -1124,6 +1072,7 @@ def main(cmd_line=None):
                            'scraping.')
 
     misc.add_argument('--config-file', type=str,
+                      metavar='CONFIG_FILEPATH',
                       help='Read a user-specified configuration file. The file must be '
                            'in .ini file format.')
 
@@ -1152,8 +1101,6 @@ def main(cmd_line=None):
 
     if args.output_index_file:
         output_csv_path = args.output_index_file
-    else:
-        output_csv_path = generate_unique_filename('index.csv')
 
     if args.output_headers_file:
         output_txt_path = args.output_headers_file
@@ -1258,17 +1205,6 @@ def main(cmd_line=None):
 
         correct_duplicates(label_results)
 
-        # The label_results dictionary will now be filtered according to the contents
-        # of the --limit-xpaths-file input file. If this command is not used, the original
-        # dictionary will be returned. Glob patterns are processed sequentially, with the
-        # first pattern having the highest priority.
-        label_results = filter_dict_by_glob_patterns(
-            label_results, elements_to_scrape, verboseprint)
-
-        if label_results == []:
-            print('No results found: glob pattern(s) excluded all matches.')
-            sys.exit(1)
-
         # Collect metadata about the label file. The label file's lid is scraped and
         # broken into multiple parts. This metadata can then be requested as additional
         # columns within the index file.
@@ -1284,11 +1220,26 @@ def main(cmd_line=None):
         if args.add_extra_file_info:
             verboseprint('--add-extra-file-info requested '
                          f'for the following: {args.add_extra_file_info}')
-            label_results = {**{ele: extras[ele] for ele in args.add_extra_file_info},
-                             **label_results}
+            label_results = {**{ele: extras[ele] for ele in
+                                         args.add_extra_file_info},
+                                         **label_results}
 
         result_dict = {'Results': label_results}
         all_results.append(result_dict)
+
+    # The label_results dictionary will now be filtered according to the contents
+    # of the --limit-xpaths-file input file. If this command is not used, the original
+    # dictionary will be returned. Glob patterns are processed sequentially, with the
+    # first pattern having the highest priority.
+    for i in range(len(all_results)):
+            label_results = all_results[i]['Results']
+            filtered_label_results = filter_dict_by_glob_patterns(
+                label_results, elements_to_scrape, verboseprint)
+            all_results[i]['Results'] = filtered_label_results
+
+    if len(all_results) == 0:
+        print('No results found: glob pattern(s) excluded all matches.')
+        sys.exit(1)
 
     # If --simplify-xpaths is used, the XPath headers will be shortened to the
     # element's tag and namespace prefix. This is contingent on the uniqueness of
@@ -1453,10 +1404,10 @@ def main(cmd_line=None):
             'maximum_record_length': get_longest_row_length(index_file),
             'object_length_h': full_header_length,
             'object_length_t': os.path.getsize(index_file),
-            'Table_Delimited': False,
-            'Table_Character': False,
             'Product_Ancillary': False,
-            'Product_Metadata_Supplemental': False
+            'Product_Metadata_Supplemental': False,
+            'Table_Character': False,
+            'Table_Delimited': False
             }
 
         if args.generate_label[0] == 'Product_Ancillary':
@@ -1475,7 +1426,7 @@ def main(cmd_line=None):
 
         output_subdir = Path(output_csv_path).parent
 
-        template.write(label_content, str(output_subdir / filename) + '_label.xml')
+        template.write(label_content, str(output_subdir / filename) + '.xml')
 
 
 if __name__ == '__main__':

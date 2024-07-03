@@ -353,26 +353,35 @@ def test_failures(cmd_line):
 
 
 @pytest.mark.parametrize(
-    'cmd_line',
+    'new_file,cmd_line',
     [
-        (
+        (   'nillable.csv',
+                [
                 str(test_files_dir),  # directory path
                 str(labels_dir.name / Path('nilled_label_bad.xml')),
                 '--limit-xpaths-file',
                 str(samples_dir / 'elements_nilled_bad.txt'),
-                '--output-index-file',
-                './stuff.csv'
+                 '--output-index-file'
+                ]
         ),
     ]
 )
-def test_failure_message(capfd, cmd_line):
-    # Capture the output
-    tools.main(cmd_line)
-    captured = capfd.readouterr()
+def test_failure_message(capfd, new_file, cmd_line):
+    with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
+        temp_dir_path = Path(temp_dir)
 
-    # Check if the expected statement is printed in stdout or stderr
-    expected_message = ("Non-nillable element in")
-    assert expected_message in captured.out or expected_message in captured.err
+        # THE PATH TO THE NEW FILE
+        path_to_file = temp_dir_path / new_file
+        # Call main() function with the simulated command line arguments
+        cmd_line.append(str(path_to_file))
+            
+        # Capture the output
+        tools.main(cmd_line)
+        captured = capfd.readouterr()
 
-    expected_message = ("Non-nillable element in")
-    assert expected_message in captured.out or expected_message in captured.err
+        # Check if the expected statement is printed in stdout or stderr
+        expected_message = ("Non-nillable element in")
+        assert expected_message in captured.out or expected_message in captured.err
+
+        expected_message = ("Non-nillable element in")
+        assert expected_message in captured.out or expected_message in captured.err
