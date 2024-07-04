@@ -177,7 +177,8 @@ def extract_logical_identifier(tree):
     return logical_identifier.text.strip()
 
 
-def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
+def filter_dict_by_glob_patterns(input_dict, glob_patterns, valid_add_extra_file_info,
+                                 verboseprint):
     """
     Filter a dictionary based on a list of glob patterns matching for keys.
 
@@ -190,6 +191,8 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
         glob_patterns (list): A list of glob patterns to match against dictionary keys.
             Patterns starting with '!' indicate keys that should be excluded from the
             result.
+        valid_extra_file_info (list): A list of allowed values that cannot be excluded
+            from the result.
         verboseprint (function): A function for printing verbose messages.
 
     Returns:
@@ -217,11 +220,13 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
         ... }
         >>> glob_patterns = ['*.txt', '!file3.txt']
         >>> verboseprint = print
-        >>> filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint)
+        >>> valid_add_extra_file_info = ['lid', 'filename', 'filepath', 'bundle_lid',
+                                         'bundle']
+        >>> filter_dict_by_glob_patterns(input_dict, glob_patterns,
+                                         valid_add_extra_file_info, verboseprint)
         {'file1.txt': 'content1'}
     """
     filtered_dict = {}
-    allowables = ['lid', 'filename', 'filepath', 'bundle_lid', 'bundle']
 
     if glob_patterns is None:
         return input_dict
@@ -230,13 +235,13 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, verboseprint):
         if not pattern.startswith('!'):
             verboseprint(f'Adding elements according to: {pattern}')
             for key, value in input_dict.items():
-                if fnmatch.fnmatch(key, pattern) or key in allowables:
+                if fnmatch.fnmatch(key, pattern):
                     filtered_dict[key] = value
         else:
             verboseprint(f'Removing elements according to: {pattern}')
             pattern = pattern[1:]
             for key, value in list(filtered_dict.items()):
-                if fnmatch.fnmatch(key, pattern):
+                if fnmatch.fnmatch(key, pattern) and key not in valid_add_extra_file_info:
                     del filtered_dict[key]
 
     return filtered_dict
@@ -700,7 +705,7 @@ def write_results_to_csv(results_list, args, output_csv_path):
     df = pd.DataFrame(rows)
 
     if args.sort_by:
-        sort_values = args.sort_by.split(',')
+        sort_values = str(args.sort_by).split(',')
         df.sort_values(by=sort_values, inplace=True)
 
     if args.clean_header_field_names:
@@ -1042,14 +1047,15 @@ def main(cmd_line=None):
     limiting_results = parser.add_argument_group('Limiting Results')
     limiting_results.add_argument('--limit-xpaths-file', type=str,
                                   metavar='XPATHS_FILEPATH',
-                                  help='Optional text file specifying which elements to '
-                                       'scrape. If not specified, all elements found in '
+                                  help='Optional text file specifying which XPaths to '
+                                       'scrape. If not specified, all XPaths found in '
                                        'the label files are included.')
 
     limiting_results.add_argument('--output-headers-file', type=str,
-                                  metavar='HEADERS_FILEPATH',
-                                  help='Specify the location and filename of the XPath '
-                                       'headers file.')
+                                  metavar='XPATHS_FILEPATH',
+                                  help='Generate a file containing all possible headers '
+                                       'after they have been optionally filtered and/or '
+                                       'simplified.')
 
     label_generation = parser.add_argument_group('Label Generation')
     label_generation.add_argument('--generate-label', type=str, nargs=1,
@@ -1134,6 +1140,7 @@ def main(cmd_line=None):
         if elements_to_scrape == []:
             print('Given elements file is empty.')
             sys.exit(1)
+
     else:
         elements_to_scrape = None
 
@@ -1220,11 +1227,14 @@ def main(cmd_line=None):
         if args.add_extra_file_info:
             verboseprint('--add-extra-file-info requested '
                          f'for the following: {args.add_extra_file_info}')
-            label_results = {**{ele: extras[ele] for ele in args.add_extra_file_info},
-                             **label_results}
+            label_results = {**{ele: extras[ele] for ele in
+                                args.add_extra_file_info}, **label_results}
 
         result_dict = {'Results': label_results}
         all_results.append(result_dict)
+
+    if args.add_extra_file_info:
+        elements_to_scrape = args.add_extra_file_info + elements_to_scrape
 
     # The label_results dictionary will now be filtered according to the contents
     # of the --limit-xpaths-file input file. If this command is not used, the original
@@ -1232,11 +1242,12 @@ def main(cmd_line=None):
     # first pattern having the highest priority.
     for i in range(len(all_results)):
         label_results = all_results[i]['Results']
-        filtered_label_results = filter_dict_by_glob_patterns(
-            label_results, elements_to_scrape, verboseprint)
-        all_results[i]['Results'] = filtered_label_results
+        label_results = filter_dict_by_glob_patterns(
+            label_results, elements_to_scrape, valid_add_extra_file_info, verboseprint)
+        all_results[i]['Results'] = label_results
 
-    if len(all_results) == 0:
+    extra_file_info_set = set(['lid', 'filename', 'filepath', 'bundle_lid', 'bundle'])
+    if all(len(set(r)-extra_file_info_set) == 0 for r in all_results):
         print('No results found: glob pattern(s) excluded all matches.')
         sys.exit(1)
 
