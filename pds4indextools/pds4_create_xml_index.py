@@ -937,6 +937,30 @@ def get_longest_row_length(filename):
     return len(longest_line)
 
 
+def max_field_lengths(file_path):
+    max_lengths = {}
+    
+    try:
+        with open(file_path, mode='r', newline='') as file:
+            reader = csv.DictReader(file)
+            
+            # Initialize the dictionary with headers and set their max length to 0
+            for header in reader.fieldnames:
+                max_lengths[header] = 0
+            
+            # Iterate through each row to calculate maximum field lengths
+            for row in reader:
+                for header in reader.fieldnames:
+                    field_length = len(row[header])
+                    if field_length > max_lengths[header]:
+                        max_lengths[header.strip()] = field_length
+    
+    except FileNotFoundError as e:
+        print(f"File not found: {e}")
+    
+    return max_lengths
+
+
 def validate_comma_separated_list(arg_value, valid_choices):
     """
     Validate and parse a comma-separated list of values.
@@ -1233,7 +1257,7 @@ def main(cmd_line=None):
         result_dict = {'Results': label_results}
         all_results.append(result_dict)
 
-    if args.add_extra_file_info:
+    if args.add_extra_file_info and elements_to_scrape is not None:
         elements_to_scrape = args.add_extra_file_info + elements_to_scrape
 
     # The label_results dictionary will now be filtered according to the contents
@@ -1246,8 +1270,7 @@ def main(cmd_line=None):
             label_results, elements_to_scrape, valid_add_extra_file_info, verboseprint)
         all_results[i]['Results'] = label_results
 
-    extra_file_info_set = set(['lid', 'filename', 'filepath', 'bundle_lid', 'bundle'])
-    if all(len(set(r)-extra_file_info_set) == 0 for r in all_results):
+    if all(len(set(r)) == 0 for r in all_results):
         print('No results found: glob pattern(s) excluded all matches.')
         sys.exit(1)
 
@@ -1349,8 +1372,7 @@ def main(cmd_line=None):
                 delimiter = sniffer.sniff(sample_data).delimiter
                 index_fp.seek(0)  # Reset file pointer to the beginning
             except csv.Error:
-                print('Unsupported file format. Please provide a CSV or tab-separated '
-                      'file.')
+                print(f'Index file {index_file} is not a CSV or tab-separated file.')
                 sys.exit()
             reader = csv.reader(index_fp, delimiter=delimiter)
             headers = next(reader)
@@ -1359,42 +1381,50 @@ def main(cmd_line=None):
             field_number = 0
             jump = len(delimiter)
             field_location = 1
+            maximum_field_lengths = max_field_lengths(index_file)
 
             # Each header is processed for it's information, which is then put into
             # header_info to be referenced later. Not all information will be put into
             # the generated label, since some information depends on whether the index
             # file is fixed-width or delimited.
             for header in headers:
-                header = header.strip()
-                parts = header.split('/')
-                name = parts[-1].split('<')[0].split(':')[-1]
+                print(len(header))
+                if header.strip() in valid_add_extra_file_info and 'lid' in header:
+                    true_type = 'pds:ASCII_LID'
+                elif header.strip() in valid_add_extra_file_info and 'lid' not in header:
+                    true_type = 'pds:ASCII_Text_Preserved'
+                else:
+                    header = header.strip()
+                    parts = header.split('/')
+                    name = parts[-1].split('<')[0].split(':')[-1]
 
-                true_type = None
+                    true_type = None
 
-                for xsd_file in xsd_files:
-                    xsd_tree = download_xsd_file(xsd_file)
-                    true_type = find_base_attribute(xsd_tree, name, namespaces)
-                    if true_type:
-                        break
-
-                if not true_type:
-                    modified_name = name + "_WO_Units"
                     for xsd_file in xsd_files:
                         xsd_tree = download_xsd_file(xsd_file)
-                        true_type = find_base_attribute(xsd_tree, modified_name,
-                                                        namespaces)
+                        true_type = find_base_attribute(xsd_tree, name, namespaces)
                         if true_type:
                             break
+
+                    if not true_type:
+                        modified_name = name + "_WO_Units"
+                        for xsd_file in xsd_files:
+                            xsd_tree = download_xsd_file(xsd_file)
+                            true_type = find_base_attribute(xsd_tree, modified_name,
+                                                            namespaces)
+                            if true_type:
+                                break
 
                 true_type = true_type.split(':')[-1]
                 field_number += 1
                 header_length = len(header.encode('utf-8'))
+                maximum_field_length = maximum_field_lengths[header]
                 header_info.append({'name': header,
                                     'field_number': field_number,
                                     'field_location': field_location,
                                     'data_type': true_type,
                                     'field_length': header_length,
-                                    'maximum_field_length': header_length,
+                                    'maximum_field_length': maximum_field_length,
                                     'offset': offset})
                 offset += header_length + jump
                 field_location = offset
