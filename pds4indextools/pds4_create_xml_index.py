@@ -1388,7 +1388,6 @@ def main(cmd_line=None):
             # the generated label, since some information depends on whether the index
             # file is fixed-width or delimited.
             for header in headers:
-                print(len(header))
                 if header.strip() in valid_add_extra_file_info and 'lid' in header:
                     true_type = 'pds:ASCII_LID'
                 elif header.strip() in valid_add_extra_file_info and 'lid' not in header:
