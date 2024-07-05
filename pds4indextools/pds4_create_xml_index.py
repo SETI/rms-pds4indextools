@@ -939,25 +939,26 @@ def get_longest_row_length(filename):
 
 def max_field_lengths(file_path):
     max_lengths = {}
-    
+
     try:
         with open(file_path, mode='r', newline='') as file:
             reader = csv.DictReader(file)
-            
+
             # Initialize the dictionary with headers and set their max length to 0
             for header in reader.fieldnames:
                 max_lengths[header] = 0
-            
+
             # Iterate through each row to calculate maximum field lengths
             for row in reader:
                 for header in reader.fieldnames:
                     field_length = len(row[header])
                     if field_length > max_lengths[header]:
                         max_lengths[header.strip()] = field_length
-    
-    except FileNotFoundError as e:
-        print(f"File not found: {e}")
-    
+
+    except FileNotFoundError:
+        print(f"Index file {file_path} not found")
+        sys.exit(1)
+
     return max_lengths
 
 
