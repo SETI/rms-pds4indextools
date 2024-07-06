@@ -1,0 +1,1 @@
+**/geom:spice_kernel_file_name*

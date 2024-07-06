@@ -1,0 +1,2 @@
+filename,filepath,pds:Product_Observational/pds:Identification_Area<1>/pds:logical_identifier<1>,pds:Product_Observational/pds:Identification_Area<1>/pds:version_id<1>,pds:Product_Observational/pds:Identification_Area<1>/pds:title<1>
+tester_label_2.xml,labels/tester_label_2.xml,urn:nasa:pds:uranus_occ_u149_irtf_320cm:data:2200nm_counts-v-time_occult,1.0,Calibrated Time Series of the Uranus System Occultation of Star u149 (2MASS 20462044-1838345) Observed from the IRTF 320cm Telescope

@@ -1,0 +1,5 @@
+pds:Product_Observational/pds:Observation_Area<1>/pds:Observing_System<1>/pds:Observing_System_Component<1>/pds:name<1>
+pds:Product_Observational/pds:Observation_Area<1>/pds:Observing_System<1>/pds:Observing_System_Component<2>/pds:name<1>
+pds:Product_Observational/pds:Observation_Area<1>/pds:Observing_System<1>/pds:Observing_System_Component<3>/pds:name<1>
+pds:Product_Observational/pds:Observation_Area<1>/pds:Target_Identification<1>/pds:name<1>
+pds:Product_Observational/pds:Observation_Area<1>/pds:Target_Identification<2>/pds:name<1>
