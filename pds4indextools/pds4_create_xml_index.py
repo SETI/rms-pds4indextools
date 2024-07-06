@@ -713,10 +713,12 @@ def write_results_to_csv(results_list, args, output_csv_path):
 
     if args.fixed_width:
         padded_df = pad_column_values_and_headers(df)
-        padded_df.to_csv(output_csv_path, index=False, na_rep='NaN')
+        print(f'Fixed-width index file generated at {output_csv_path}')
+        padded_df.to_csv(output_csv_path, index=False, na_rep='')
 
     else:
-        df.to_csv(output_csv_path, index=False, na_rep='NaN')
+        print(f'Index file generated at {output_csv_path}')
+        df.to_csv(output_csv_path, index=False, na_rep='')
 
 
 def find_base_attribute(xsd_tree, target_name, new_namespaces):
@@ -937,7 +939,20 @@ def get_longest_row_length(filename):
     return len(longest_line)
 
 
-def max_field_lengths(file_path):
+def compute_max_field_lengths(file_path):
+    """
+    Calculate the maximum length of each column in an index file.
+
+    Parameters:
+        file_path (str): The path to the index file.
+
+    Returns:
+        dict: A dictionary of headers and the maximum lengths in their columns.
+
+    Raises:
+        FileNotFoundError: If the index file was not generated and therefore cannot be
+            found.
+    """
     max_lengths = {}
 
     try:
@@ -953,7 +968,7 @@ def max_field_lengths(file_path):
                 for header in reader.fieldnames:
                     field_length = len(row[header])
                     if field_length > max_lengths[header]:
-                        max_lengths[header.strip()] = field_length
+                        max_lengths[header] = field_length
 
     except FileNotFoundError:
         print(f"Index file {file_path} not found")
@@ -1271,7 +1286,7 @@ def main(cmd_line=None):
             label_results, elements_to_scrape, valid_add_extra_file_info, verboseprint)
         all_results[i]['Results'] = label_results
 
-    if all(len(set(r)) == 0 for r in all_results):
+    if all(len(set(r['Results'])) == 0 for r in all_results):
         print('No results found: glob pattern(s) excluded all matches.')
         sys.exit(1)
 
@@ -1343,7 +1358,7 @@ def main(cmd_line=None):
                     item = item.replace(
                         ':', '_').replace('/', '__').replace('<', '_').replace('>', '')
                 output_fp.write("%s\n" % item)
-        verboseprint(f'XPath headers file generated at {output_txt_path}')
+        print(f'XPath headers file generated at {output_txt_path}')
 
     # Generates the label for this index file, if --generate-label is used.
 
@@ -1374,27 +1389,33 @@ def main(cmd_line=None):
                 index_fp.seek(0)  # Reset file pointer to the beginning
             except csv.Error:
                 print(f'Index file {index_file} is not a CSV or tab-separated file.')
-                sys.exit()
-            reader = csv.reader(index_fp, delimiter=delimiter)
+                sys.exit(1)
+
+            reader = csv.reader(index_fp, delimiter=',')
             headers = next(reader)
 
             offset = 0
             field_number = 0
             jump = len(delimiter)
             field_location = 1
-            maximum_field_lengths = max_field_lengths(index_file)
+            maximum_field_lengths = compute_max_field_lengths(index_file)
 
-            # Each header is processed for it's information, which is then put into
+            # Each header is processed for its information, which is then put into
             # header_info to be referenced later. Not all information will be put into
             # the generated label, since some information depends on whether the index
             # file is fixed-width or delimited.
             for header in headers:
-                if header.strip() in valid_add_extra_file_info and 'lid' in header:
+                whole_header = header
+                if args.fixed_width:
+                    header = header.strip()
+                if (header in valid_add_extra_file_info and 'lid' in header):
                     true_type = 'pds:ASCII_LID'
-                elif header.strip() in valid_add_extra_file_info and 'lid' not in header:
+                elif (header in valid_add_extra_file_info
+                      and 'file' in header):
+                    true_type = 'pds:ASCII_File_Specification_Name'
+                elif header == 'bundle':
                     true_type = 'pds:ASCII_Text_Preserved'
                 else:
-                    header = header.strip()
                     parts = header.split('/')
                     name = parts[-1].split('<')[0].split(':')[-1]
 
@@ -1418,12 +1439,14 @@ def main(cmd_line=None):
                 true_type = true_type.split(':')[-1]
                 field_number += 1
                 header_length = len(header.encode('utf-8'))
-                maximum_field_length = maximum_field_lengths[header]
-                header_info.append({'name': header,
+                header_name = header
+
+                maximum_field_length = maximum_field_lengths[whole_header]
+                header_info.append({'name': header_name,
                                     'field_number': field_number,
                                     'field_location': field_location,
                                     'data_type': true_type,
-                                    'field_length': header_length,
+                                    'field_length': maximum_field_length,
                                     'maximum_field_length': maximum_field_length,
                                     'offset': offset})
                 offset += header_length + jump
@@ -1466,6 +1489,8 @@ def main(cmd_line=None):
 
         output_subdir = Path(output_csv_path).parent
 
+        print(f'{args.generate_label[0]} label generated at '
+              f'{str(output_subdir / filename)}.xml')
         template.write(label_content, str(output_subdir / filename) + '.xml')
 
 
