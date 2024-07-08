@@ -1126,8 +1126,7 @@ def main(cmd_line=None):
                                   type=lambda x: validate_label_type(x,
                                                                      valid_label_types),
                                   nargs=1,
-                                  metavar='{Product_Ancillary, '
-                                          'Product_Metadata_Supplemental}',
+                                  metavar='{ancillary, metadata}',
                                   help='Generate a PDS4 label for the generated index '
                                        'file called "<output_index_file>.xml". '
                                        'Can generate either a Product_Ancillary or '
