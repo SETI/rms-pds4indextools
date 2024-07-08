@@ -11,7 +11,9 @@ requires-python = ">=3.8"
 dependencies = [
     "lxml",
     "pandas",
-    "requests"
+    "pyyaml",
+    "requests",
+    "rms-pdstemplate"
 ]
 license = {text = "Apache-2.0"}
 maintainers = [
@@ -38,9 +40,13 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/SETI/rms-pds4indextools"
+Documentation = "https://rms-textkernel.readthedocs.io/en/latest"
 Repository = "https://github.com/SETI/rms-pds4indextools"
 Source = "https://github.com/SETI/rms-pds4indextools"
 Issues = "https://github.com/SETI/rms-pds4indextools/issues"
+
+[project.scripts]
+pds4_create_xml_index = "pds4indextools.pds4_create_xml_index:main"
 
 [tool.setuptools]
 packages = ["pds4indextools"]
