@@ -1001,6 +1001,28 @@ def validate_comma_separated_list(arg_value, valid_choices):
     return values
 
 
+def validate_label_type(arg_value, valid_choices):
+    """
+    Validate and parse a single value.
+
+    Parameters:
+        arg_value (str): A string value to be validated.
+        valid_choices (dict): A dictionary of valid choices for arg_value, with their
+        associated full values.
+
+    Returns:
+        str: the full version of the aliased string.
+
+    Raises:
+        argparse.ArgumentTypeError: If the value is not in the valid choices.
+    """
+    value = arg_value.lower()
+    if value not in valid_choices:
+        raise argparse.ArgumentTypeError(f'Invalid choice: "{arg_value}" (choose '
+                                         f'from {list(valid_choices.keys())})')
+    return valid_choices[value]
+
+
 def generate_unique_filename(base_name):
     """
     Generate a unique filename by appending a number to the base_name if it already
@@ -1033,6 +1055,8 @@ def main(cmd_line=None):
         )
 
     valid_add_extra_file_info = ['lid', 'filename', 'filepath', 'bundle_lid', 'bundle']
+    valid_label_types = {'ancillary': 'Product_Ancillary',
+                         'metadata': 'Product_Metadata_Supplemental'}
 
     index_file_generation = parser.add_argument_group('Index File Generation')
     index_file_generation.add_argument('directorypath', type=str,
@@ -1098,7 +1122,10 @@ def main(cmd_line=None):
                                        'simplified.')
 
     label_generation = parser.add_argument_group('Label Generation')
-    label_generation.add_argument('--generate-label', type=str, nargs=1,
+    label_generation.add_argument('--generate-label',
+                                  type=lambda x: validate_label_type(x,
+                                                                     valid_label_types),
+                                  nargs=1,
                                   metavar='{Product_Ancillary, '
                                           'Product_Metadata_Supplemental}',
                                   help='Generate a PDS4 label for the generated index '
@@ -1361,7 +1388,7 @@ def main(cmd_line=None):
         print(f'XPath headers file generated at {output_txt_path}.')
         if not args.output_index_file:
             print('No index file generated because --output-headers-file was '
-                  'provided without --output-index-file')
+                  'provided without --output-index-file.')
 
     # Generates the label for this index file, if --generate-label is used.
 
@@ -1381,7 +1408,6 @@ def main(cmd_line=None):
         except TypeError:
             print('Label not generated. The "--output-index-file" argument is '
                   'required to generate the label file.')
-
             sys.exit(1)
 
         header_info = []
@@ -1482,14 +1508,7 @@ def main(cmd_line=None):
             'Table_Delimited': False
             }
 
-        if args.generate_label[0] == 'Product_Ancillary':
-            label_content['Product_Ancillary'] = True
-        elif args.generate_label[0] == 'Product_Metadata_Supplemental':
-            label_content['Product_Metadata_Supplemental'] = True
-        else:
-            print(f'"{args.generate_label[0]}" is not an accepted value. Must be '
-                  f'"Product_Ancillary" or "Product_Metadata_Supplemental".')
-            sys.exit(1)
+        label_content[args.generate_label[0]] = True
 
         if args.fixed_width:
             label_content['Table_Character'] = True
@@ -1504,6 +1523,11 @@ def main(cmd_line=None):
 
         print(f'{args.generate_label[0]} label generated at '
               f'{str(output_subdir / filename)}.xml')
+        if not args.output_index_file:
+            print('Warning: Because --output-index-file was not specified, the '
+                  'generated label will only contain generic information. When creating '
+                  'index and label files for production use, please specify '
+                  '--output-index-file.')
         template.write(label_content, str(output_subdir / filename) + '.xml')
 
 
