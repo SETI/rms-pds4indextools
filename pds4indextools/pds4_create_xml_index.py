@@ -25,9 +25,18 @@ from pathlib import Path
 import platform
 import requests
 import sys
+import textwrap as _textwrap
 import yaml
 
 import pdstemplate as ps
+
+try:
+    from ._version import __version__
+except ImportError:  # pragma: nocover
+    try:
+        from _version import __version__
+    except ImportError:  # pragma: nocover
+        __version__ = 'Version unspecified'
 
 
 SplitXPath = namedtuple('SplitXPath',
@@ -1047,11 +1056,33 @@ def generate_unique_filename(base_name):
     return new_filename
 
 
+class MultilineFormatter(argparse.HelpFormatter):
+    """Class to allow multi-line help messages with argparse.
+
+    See details here:
+    https://stackoverflow.com/questions/3853722/how-to-insert-newlines-on-argparse-help-text
+    """
+    def _fill_text(self, text, width, indent):
+        text = self._whitespace_matcher.sub(' ', text).strip()
+        paragraphs = text.split('|n')
+        multiline_text = ''
+        for paragraph in paragraphs:
+            formatted_paragraph = _textwrap.fill(paragraph, width, initial_indent=indent,
+                                                 subsequent_indent=indent) + '\n'
+            multiline_text = multiline_text + formatted_paragraph
+        return multiline_text
+
+
 def main(cmd_line=None):
-    # FIXIT: CHANGE THIS LINK AFTER MERGED TO MAIN
+    epilog_sfx = ''
+    if __version__ != 'Version unspecified':
+        epilog_sfx = f'|nVersion: {__version__}'
     parser = argparse.ArgumentParser(
-        epilog="For more details, please visit the online documentation at: "
-        "https://github.com/SETI/rms-pds4indextools/blob/es-unit_tests/README.md"
+        formatter_class=MultilineFormatter,
+        description='Scrape a set of PDS4 XML labels, usually from a single collection, '
+                    'and produce a summary index file.',
+        epilog='For more details, please visit the online documentation at: '
+               'https://rms-pds4indextools.readthedocs.io/en/latest' + epilog_sfx
         )
 
     valid_add_extra_file_info = ['lid', 'filename', 'filepath', 'bundle_lid', 'bundle']
@@ -1079,7 +1110,7 @@ def main(cmd_line=None):
     index_file_generation.add_argument(
         '--add-extra-file-info',
         type=lambda x: validate_comma_separated_list(x, valid_add_extra_file_info),
-        metavar='COMMA_SEPARATED_COLUMN_NAMES',
+        metavar='COMMA_SEPARATED_COLUMN_NAME(s)',
         help='Add additional columns to the final index file. If specifying multiple '
              'column names, supply them as one argument separated by commas. Possible '
              'values include "lid", "filename", "filepath", "bundle_lid", and "bundle"')
@@ -1116,7 +1147,7 @@ def main(cmd_line=None):
                                        'the label files are included.')
 
     limiting_results.add_argument('--output-headers-file', type=str,
-                                  metavar='XPATHS_FILEPATH',
+                                  metavar='HEADERS_FILEPATH',
                                   help='Generate a file containing all possible headers '
                                        'after they have been optionally filtered and/or '
                                        'simplified.')

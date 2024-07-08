@@ -1,128 +1,94 @@
-# rms-pds4indextools
+[![GitHub release; latest by date](https://img.shields.io/github/v/release/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/releases)
+[![GitHub Release Date](https://img.shields.io/github/release-date/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/releases)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/SETI/rms-pds4indextools/run-tests.yml?branch=main)](https://github.com/SETI/rms-pds4indextools/actions)
+[![Documentation Status](https://readthedocs.org/projects/rms-pds4indextools/badge/?version=latest)](https://rms-pds4indextools.readthedocs.io/en/latest/?badge=latest)
+[![Code coverage](https://img.shields.io/codecov/c/github/SETI/rms-pds4indextools/main?logo=codecov)](https://codecov.io/gh/SETI/rms-pds4indextools)
+<br />
+[![PyPI - Version](https://img.shields.io/pypi/v/rms-pds4indextools)](https://pypi.org/project/rms-pds4indextools)
+[![PyPI - Format](https://img.shields.io/pypi/format/rms-pds4indextools)](https://pypi.org/project/rms-pds4indextools)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/rms-pds4indextools)](https://pypi.org/project/rms-pds4indextools)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/rms-pds4indextools)](https://pypi.org/project/rms-pds4indextools)
+<br />
+[![GitHub commits since latest release](https://img.shields.io/github/commits-since/SETI/rms-pds4indextools/latest)](https://github.com/SETI/rms-pds4indextools/commits/main/)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/commits/main/)
+[![GitHub last commit](https://img.shields.io/github/last-commit/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/commits/main/)
+<br />
+[![Number of GitHub open issues](https://img.shields.io/github/issues-raw/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/issues)
+[![Number of GitHub closed issues](https://img.shields.io/github/issues-closed-raw/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/issues)
+[![Number of GitHub open pull requests](https://img.shields.io/github/issues-pr-raw/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/pulls)
+[![Number of GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/pulls)
+<br />
+![GitHub License](https://img.shields.io/github/license/SETI/rms-pds4indextools)
+[![Number of GitHub stars](https://img.shields.io/github/stars/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/stargazers)
+![GitHub forks](https://img.shields.io/github/forks/SETI/rms-pds4indextools)
 
-Supported versions: Python >= 3.8
+# Introduction
 
-# PDS Ring-Moon Systems Node, SETI Institute
+`pds4indextools` is a set of programs and modules for parsing PDS4 XML labels.
+They were created and are maintained by the [Ring-Moon Systems Node](https://pds-rings.seti.org)
+of NASA's [Planetary Data System (PDS)](https://pds.nasa.gov).
 
-# `pds4indextools` MODULE OVERVIEW
+The following tools are currently available:
 
-The PDS4 Indexing Tool (`pds4indextools`) is a Python module designed to 
-facilitate the extraction and indexing of information from Planetary Data System
-(PDS) label files. This tool automates the process of parsing specified 
-directories for label files, extracting user-defined elements using XPath 
-expressions, and generating organized output files. Users can customize the 
-extraction process through various options, such as filtering content, 
-sorting output, and integrating additional file metadata. The tool supports 
-flexibility with configuration files and provides a straightforward interface 
-for creating both CSV-based index files and text files listing available XPath 
-headers. Whether for scientific research, data management, or archival purposes, 
-the PDS4 Indexing Tool offers a robust solution for efficiently managing and 
-accessing structured data within PDS-compliant datasets.
+- [`pds4_create_xml_index`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_xml_index.html):
+  A command-line program to scrape information from a series of PDS4 XML labels, usually
+  in a single collection, and generate a summary index file.
 
-`pds4indextools` may be installed by running `pip install pds4indextools`.
+# Installation
 
-Python versions 3.9 thru 3.12 are currently supported, with pre-built wheels
-available for Linux, MacOS, and Windows.
+`pds4indextools` is available via the `rms-pds4indextools` package on PyPI and
+can be installed with:
 
-# `XPath` SYNTAX AND STRUCTURE
+```sh
+pip install rms-pds4indextools
+```
 
-Before using the tool, it is imperative that the user becomes comfortable with 
-the XPath language, and how it is parsed with `lxml`.
+Note that this will install `pds4indextools` into your current system Python, or into your
+currently activated virtual environment (venv), if any. You may also install using `pipx`,
+which will isolate the installation from your system Python without requiring the creation
+of a virtual environment. To install `pipx`, please see the [installation
+instructions](https://pipx.pypa.io/stable/installation/). Once `pipx` is available, you
+may install `pds4indextools` with:
 
-When elements are scraped from a label, they are returned in a format akin to a
-filepath. The absolute XPath contains all parent elements up to the root element
-of the label. Each element after a certain depth can also contain predicates: 
-numbers surrounded by square brackets. These predicates give information on the
-location of the element in the label file, in relation to surrounding elements.
+```sh
+pipx install rms-pds4indextools
+```
 
-However, this module returns XPath headers that have been reformatted from XPath
-syntax.
+# Getting Started With `pds4_create_xml_index`
 
-- Namespaces are replaced by their prefixes. Namespaces are URIs that identify
-  which schema an element belongs to. For readability, the full URI's are
-  replaced by their prefixes.
+Once `pds4indextools` has been installed, you may access the `pds4_create_index_tools`
+program directly from the command line.
 
-- Square brackets are replaced by angled brackets. This module utilizes `glob`
-  syntax for finding label files and filtering out elements/attributes. Because
-  square brackets have meaning within `glob` statements, they needed to be
-  replaced with angled brackets. 
+The simplest use scrapes all XML labels from a collection and generates an index file:
 
-- The values within the predicates have been renumbered. In XPath syntax,
-  predicates are used to determine the location of an element in relation to its
-  parent. While this is useful in other applications, this logic fails if
-  multiples of the element and its parent appear within the document. Even if
-  the elements all have different values, all of their XPaths would be the same.
-  Instead, the predicates are renumbered to reflect which instance of the
-  element the value is represented by.
+```sh
+pds4_create_xml_index <collection_dir> "**/*.xml"
+```
 
-# SETUP
+Many options are available to customize the scraping and generation process, including
+limiting which XML elements are scrape, changing the format of the resulting index file,
+and generating a PDS4-compliant label. A summary of available options is available
+by typing:
 
-After using `pip install pds4indextools`, you can start planning where you would
-like to run the module from. While the module can run from anywhere, it is
-important to know where you plan to scrape the labels. This way you can avoid
-either producing an empty output file, or a file containing incorrect contents.
+```sh
+pds4_create_xml_index --help
+```
+
+Complete documentation is available [here](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_xml_index.html)
 
 
-# COMMAND-LINE ARGUMENTS
+# Contributing
 
-This module uses command-line arguments to create and tailor the contents and
-format of your output file.
+Information on contributing to this package can be found in the
+[Contributing Guide](https://github.com/SETI/rms-pds4indextools/blob/main/CONTRIBUTING.md).
 
-`REQUIRED COMMAND-LINE ARGUMENTS -- LABEL LOCATION AND NOMENCLATURE`
-- directorypath: The topmost level directory you want to navigate. This is the 
-  starting point where the code will look for matching labels.
+# Links
 
-- patterns: The glob pattern(s) that will be used to find label files under the
-  given directorypath. The directorypath combined with these patterns should
-  form a complete filepath. `glob` wildcard symbols, such as `*`, `?`, and `**`,
-  are allowed. Surround each pattern with quotes. If the user wants to specify
-  multiple patterns, separate with spaces.
+- [Documentation](https://rms-pds4indextools.readthedocs.io)
+- [Repository](https://github.com/SETI/rms-pds4indextools)
+- [Issue tracker](https://github.com/SETI/rms-pds4indextools/issues)
+- [PyPi](https://pypi.org/project/rms-pds4indextools)
 
-`REQUIRED COMMAND-LINE ARGUMENTS -- OUTPUT FILE FORMAT`
-- output-csv-file: Specify the location and filename of the index file. This
-  file will contain the extracted information organized in CSV format.
+# Licensing
 
-- output-txt-file: Specify the location and filename of the XPath headers file.
-  This file will contain a list of available XPaths extracted from the label
-  files.
-
-`OPTIONAL COMMAND-LINE ARGUMENTS -- CUSTOMIZATION`
-- elements-file: Optional. Specify a text file containing a list of specific
-  elements or XPaths to extract from the label files. If not specified, all
-  elements found in the label files will be included.
-
-- simplify-xpaths: Optional. If specified, the output will only include unique
-  XPaths with simplified tags. Duplicate values will still use their full XPath.
-
-- verbose: Optional. Activate verbose mode to display detailed information
-  during the file scraping process.
-
-- sort-by: Optional. Specify one or more columns to sort the index file.
-  Columns can be identified by either the full XPath header or the simplified
-  version if `--simplify-xpaths` is used. Use `--dump-available-xpaths` to see
-  all available sorting options.
-
-- clean-header-field-names: Optional. If specified, column headers will be
-  renamed to use only characters permissible in variable names, making them
-  more compatible with certain systems.
-
-- add-extra-file-info: Optional. Add additional columns to the final index file.
-  Choose from "LID", "filename", "filepath", "bundle_lid", and "bundle". Specify
-  multiple values as separate arguments separated by spaces.
-
-- config-file: Optional. Specify a `.ini` configuration file for further
-  customization of the extraction process.
-
-- dump-available-xpaths: Optional. Generates a `.txt` file containing all
-  available XPaths within the given label files. This file can serve as a base
-  file for `--elements-file` if modified.
-
-- fixed-width: Optional. If specified, the index file will be formatted with
-  fixed-width columns.
-
-- generate-label: Optional. Specify the type of PDS4 label to generate for the
-  index file. Choose either "Product_Ancillary" or
-  "Product_Metadata_Supplemental".
-
-- label-user-input: Optional. Provide an optional `.yaml` file containing
-  additional information for the generated PDS4 label.
+This code is licensed under the [Apache License v2.0](https://github.com/SETI/rms-pds4indextools/blob/main/LICENSE).
