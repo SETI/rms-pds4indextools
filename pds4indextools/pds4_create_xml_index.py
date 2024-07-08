@@ -1358,7 +1358,10 @@ def main(cmd_line=None):
                     item = item.replace(
                         ':', '_').replace('/', '__').replace('<', '_').replace('>', '')
                 output_fp.write("%s\n" % item)
-        print(f'XPath headers file generated at {output_txt_path}')
+        print(f'XPath headers file generated at {output_txt_path}.')
+        if not args.output_index_file:
+            print('No index file generated because --output-headers-file was '
+                  'provided without --output-index-file')
 
     # Generates the label for this index file, if --generate-label is used.
 
@@ -1373,7 +1376,13 @@ def main(cmd_line=None):
 
         # In this case, this filename is the filename of the index file previously
         # generated.
-        filename = str(Path(index_file).stem)
+        try:
+            filename = str(Path(index_file).stem)
+        except TypeError:
+            print('Label not generated. The "--output-index-file" argument is '
+                  'required to generate the label file.')
+
+            sys.exit(1)
 
         header_info = []
         sniffer = csv.Sniffer()
@@ -1475,8 +1484,12 @@ def main(cmd_line=None):
 
         if args.generate_label[0] == 'Product_Ancillary':
             label_content['Product_Ancillary'] = True
-        else:
+        elif args.generate_label[0] == 'Product_Metadata_Supplemental':
             label_content['Product_Metadata_Supplemental'] = True
+        else:
+            print(f'"{args.generate_label[0]}" is not an accepted value. Must be '
+                  f'"Product_Ancillary" or "Product_Metadata_Supplemental".')
+            sys.exit(1)
 
         if args.fixed_width:
             label_content['Table_Character'] = True
