@@ -722,6 +722,7 @@ def write_results_to_csv(results_list, args, output_csv_path):
         except KeyError as bad_sort:
             print(f'Unknown sort key {bad_sort}. For a list of available sort keys, use '
                   f'the --output-headers-file option.')
+            sys.exit(1)
 
     if args.clean_header_field_names:
         clean_headers(df)
