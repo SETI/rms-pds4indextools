@@ -159,6 +159,8 @@ def default_value_for_nil(config, data_type, nil_value):
         default = config[data_type].getint(nil_value)
     elif data_type == 'pds:ASCII_Real':
         default = config[data_type].getfloat(nil_value)
+    elif data_type == None:
+        default = None
     else:
         default = config[data_type][nil_value]
 
@@ -564,7 +566,8 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
                     for xsd_file in xsd_files:
                         xsd_tree = download_xsd_file(xsd_file)
                         namespaces = scrape_namespaces(xsd_file)
-                        true_type = find_base_attribute(xsd_tree, modified_tag)
+                        true_type = find_base_attribute(xsd_tree, modified_tag,
+                                                        namespaces)
                         if true_type:
                             break
 
@@ -798,6 +801,35 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
             return result
         except etree.XPathEvalError:
             return None
+        
+    def is_empty_complex_type(target_name):
+        """
+        Checks if the target name is defined as an empty complex type (class).
+
+        Parameters:
+            target_name (str): The name of the target to check.
+
+        Returns:
+            bool: True if it is an empty complex type, False otherwise.
+        """
+        complex_type_query = f".//xs:complexType[@name='{target_name}']"
+        try:
+            complex_type_result = xsd_tree.xpath(complex_type_query, namespaces=namespaces)
+            if complex_type_result:
+                for complex_type in complex_type_result:
+                    # Check if the complex type has no child elements, attributes, 
+                    # or other sub-elements
+                    if len(complex_type) == 0:
+                        return True
+            return False
+        except etree.XPathEvalError:
+            return False
+
+    # Check if the target is an empty complex type
+    if is_empty_complex_type(target_name):
+        print(f"{target_name} is an empty complex type (class)")
+        return None
+    
 
     queries = [
         f".//xs:complexType[@name='{target_name}']//xs:extension/@base",
@@ -870,7 +902,7 @@ def scrape_namespaces(xsd_url):
         ValueError: If the XSD file cannot be retrieved (HTTP status code is not 200).
     """
     # Fetch XSD content from the URL
-    response = requests.get(xsd_url)
+    response = requests.get(xsd_url, timeout=120)
     if response.status_code != 200:
         # Handle error if XSD file cannot be retrieved
         raise ValueError(f"Failed to fetch XSD file from URL: {xsd_url}")
@@ -1448,20 +1480,14 @@ def main(cmd_line=None):
         with open(index_file, 'r', encoding='utf-8') as index_fp:
             full_header = index_fp.readline()
             full_header_length = len(full_header)
-            try:
-                sample_data = index_fp.read(5000)
-                delimiter = sniffer.sniff(sample_data).delimiter
-                index_fp.seek(0)  # Reset file pointer to the beginning
-            except csv.Error:
-                print(f'Index file {index_file} is not a CSV or tab-separated file.')
-                sys.exit(1)
+            index_fp.seek(0)  # Reset file pointer to the beginning
 
             reader = csv.reader(index_fp, delimiter=',')
             headers = next(reader)
 
             offset = 0
             field_number = 0
-            jump = len(delimiter)
+            jump = 1
             field_location = 1
             maximum_field_lengths = compute_max_field_lengths(index_file)
 
