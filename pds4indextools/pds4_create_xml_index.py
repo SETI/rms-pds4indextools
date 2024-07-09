@@ -25,9 +25,18 @@ from pathlib import Path
 import platform
 import requests
 import sys
+import textwrap as _textwrap
 import yaml
 
 import pdstemplate as ps
+
+try:
+    from ._version import __version__
+except ImportError:  # pragma: nocover
+    try:
+        from _version import __version__
+    except ImportError:  # pragma: nocover
+        __version__ = 'Version unspecified'
 
 
 SplitXPath = namedtuple('SplitXPath',
@@ -150,6 +159,8 @@ def default_value_for_nil(config, data_type, nil_value):
         default = config[data_type].getint(nil_value)
     elif data_type == 'pds:ASCII_Real':
         default = config[data_type].getfloat(nil_value)
+    elif data_type == None:
+        default = None
     else:
         default = config[data_type][nil_value]
 
@@ -555,7 +566,8 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
                     for xsd_file in xsd_files:
                         xsd_tree = download_xsd_file(xsd_file)
                         namespaces = scrape_namespaces(xsd_file)
-                        true_type = find_base_attribute(xsd_tree, modified_tag)
+                        true_type = find_base_attribute(xsd_tree, modified_tag,
+                                                        namespaces)
                         if true_type:
                             break
 
@@ -789,6 +801,35 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
             return result
         except etree.XPathEvalError:
             return None
+        
+    def is_empty_complex_type(target_name):
+        """
+        Checks if the target name is defined as an empty complex type (class).
+
+        Parameters:
+            target_name (str): The name of the target to check.
+
+        Returns:
+            bool: True if it is an empty complex type, False otherwise.
+        """
+        complex_type_query = f".//xs:complexType[@name='{target_name}']"
+        try:
+            complex_type_result = xsd_tree.xpath(complex_type_query, namespaces=namespaces)
+            if complex_type_result:
+                for complex_type in complex_type_result:
+                    # Check if the complex type has no child elements, attributes, 
+                    # or other sub-elements
+                    if len(complex_type) == 0:
+                        return True
+            return False
+        except etree.XPathEvalError:
+            return False
+
+    # Check if the target is an empty complex type
+    if is_empty_complex_type(target_name):
+        print(f"{target_name} is an empty complex type (class)")
+        return None
+    
 
     queries = [
         f".//xs:complexType[@name='{target_name}']//xs:extension/@base",
@@ -861,7 +902,7 @@ def scrape_namespaces(xsd_url):
         ValueError: If the XSD file cannot be retrieved (HTTP status code is not 200).
     """
     # Fetch XSD content from the URL
-    response = requests.get(xsd_url)
+    response = requests.get(xsd_url, timeout=120)
     if response.status_code != 200:
         # Handle error if XSD file cannot be retrieved
         raise ValueError(f"Failed to fetch XSD file from URL: {xsd_url}")
@@ -1047,11 +1088,33 @@ def generate_unique_filename(base_name):
     return new_filename
 
 
+class MultilineFormatter(argparse.HelpFormatter):
+    """Class to allow multi-line help messages with argparse.
+
+    See details here:
+    https://stackoverflow.com/questions/3853722/how-to-insert-newlines-on-argparse-help-text
+    """
+    def _fill_text(self, text, width, indent):
+        text = self._whitespace_matcher.sub(' ', text).strip()
+        paragraphs = text.split('|n')
+        multiline_text = ''
+        for paragraph in paragraphs:
+            formatted_paragraph = _textwrap.fill(paragraph, width, initial_indent=indent,
+                                                 subsequent_indent=indent) + '\n'
+            multiline_text = multiline_text + formatted_paragraph
+        return multiline_text
+
+
 def main(cmd_line=None):
-    # FIXIT: CHANGE THIS LINK AFTER MERGED TO MAIN
+    epilog_sfx = ''
+    if __version__ != 'Version unspecified':
+        epilog_sfx = f'|nVersion: {__version__}'
     parser = argparse.ArgumentParser(
-        epilog="For more details, please visit the online documentation at: "
-        "https://github.com/SETI/rms-pds4indextools/blob/es-unit_tests/README.md"
+        formatter_class=MultilineFormatter,
+        description='Scrape a set of PDS4 XML labels, usually from a single collection, '
+                    'and produce a summary index file.',
+        epilog='For more details, please visit the online documentation at: '
+               'https://rms-pds4indextools.readthedocs.io/en/latest' + epilog_sfx
         )
 
     valid_add_extra_file_info = ['lid', 'filename', 'filepath', 'bundle_lid', 'bundle']
@@ -1079,7 +1142,7 @@ def main(cmd_line=None):
     index_file_generation.add_argument(
         '--add-extra-file-info',
         type=lambda x: validate_comma_separated_list(x, valid_add_extra_file_info),
-        metavar='COMMA_SEPARATED_COLUMN_NAMES',
+        metavar='COMMA_SEPARATED_COLUMN_NAME(s)',
         help='Add additional columns to the final index file. If specifying multiple '
              'column names, supply them as one argument separated by commas. Possible '
              'values include "lid", "filename", "filepath", "bundle_lid", and "bundle"')
@@ -1116,7 +1179,7 @@ def main(cmd_line=None):
                                        'the label files are included.')
 
     limiting_results.add_argument('--output-headers-file', type=str,
-                                  metavar='XPATHS_FILEPATH',
+                                  metavar='HEADERS_FILEPATH',
                                   help='Generate a file containing all possible headers '
                                        'after they have been optionally filtered and/or '
                                        'simplified.')
@@ -1417,20 +1480,14 @@ def main(cmd_line=None):
         with open(index_file, 'r', encoding='utf-8') as index_fp:
             full_header = index_fp.readline()
             full_header_length = len(full_header)
-            try:
-                sample_data = index_fp.read(5000)
-                delimiter = sniffer.sniff(sample_data).delimiter
-                index_fp.seek(0)  # Reset file pointer to the beginning
-            except csv.Error:
-                print(f'Index file {index_file} is not a CSV or tab-separated file.')
-                sys.exit(1)
+            index_fp.seek(0)  # Reset file pointer to the beginning
 
             reader = csv.reader(index_fp, delimiter=',')
             headers = next(reader)
 
             offset = 0
             field_number = 0
-            jump = len(delimiter)
+            jump = 1
             field_location = 1
             maximum_field_lengths = compute_max_field_lengths(index_file)
 
