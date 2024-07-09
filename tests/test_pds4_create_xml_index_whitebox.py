@@ -224,13 +224,11 @@ def test_clean_headers():
 
 
 def test_scrape_namespaces():
-    ns = tools.scrape_namespaces('https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1B00.xsd')
+    tree = tools.download_xsd_file('https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1B00.xsd')
+    ns = tools.scrape_namespaces(tree)
 
     assert ns == {'xs': 'http://www.w3.org/2001/XMLSchema',
                   'pds': 'http://pds.nasa.gov/pds4/pds/v1'}
-
-    with pytest.raises(ValueError):
-        tools.scrape_namespaces('https://pds.nasa.gov/pds4/pds/v1/badschema.xsd')
 
 
 def test_get_longest_row_length():
