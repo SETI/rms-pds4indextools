@@ -190,14 +190,3 @@ Miscellaneous
 
 - ``--config-file``: Specify a ``.ini``-style configuration file for further customization
   of the extraction process.
-
-
-
-(FIXIT) ADDITIONAL THINGS TO DISCUSS
-------------------------------------
-
-- Explanation of how we format XPaths (e.g. what do the ``<1>``-style suffixes mean?)
-- Format and contents of the ``--config-file`` config file including discussion of
-  nillable elements.
-- Format and contents of the ``--label-user-file`` config file (and should these be the
-  same thing?)
