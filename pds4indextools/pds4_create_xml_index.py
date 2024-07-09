@@ -159,7 +159,7 @@ def default_value_for_nil(config, data_type, nil_value):
         default = config[data_type].getint(nil_value)
     elif data_type == 'pds:ASCII_Real':
         default = config[data_type].getfloat(nil_value)
-    elif data_type == None:
+    if data_type is None:
         default = None
     else:
         default = config[data_type][nil_value]
@@ -720,8 +720,8 @@ def write_results_to_csv(results_list, args, output_csv_path):
         try:
             df.sort_values(by=sort_values, inplace=True)
         except KeyError as bad_sort:
-            print(f'Unknown sort key {bad_sort}. For a list of available sort keys, use the '
-                  f'--output-headers-file option.')
+            print(f'Unknown sort key {bad_sort}. For a list of available sort keys, use '
+                  f'the --output-headers-file option.')
 
     if args.clean_header_field_names:
         clean_headers(df)
@@ -1436,7 +1436,6 @@ def main(cmd_line=None):
             sys.exit(1)
 
         header_info = []
-        sniffer = csv.Sniffer()
 
         # The index file is opened and read for the contents of the headers. The delimiter
         # is also found for later reference.
@@ -1490,7 +1489,7 @@ def main(cmd_line=None):
                             if true_type:
                                 break
 
-                if true_type == None:
+                if true_type is None:
                     true_type = ':inapplicable'
                 true_type = true_type.split(':')[-1]
                 field_number += 1
