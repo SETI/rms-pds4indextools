@@ -1491,7 +1491,7 @@ def main(cmd_line=None):
                                 break
 
                 if true_type == None:
-                    true_type = ':'
+                    true_type = ':inapplicable'
                 true_type = true_type.split(':')[-1]
                 field_number += 1
                 header_length = len(header.encode('utf-8'))
