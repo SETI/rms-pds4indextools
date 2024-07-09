@@ -18,10 +18,6 @@ and accessing structured data within PDS4-compliant datasets.
 XPath Syntax and Structure
 --------------------------
 
-(FIXIT The next two paragraphs need to be rewritten becase the user *doesn't* need to
-learn ``lxml``, just the XPath format we provide. We should explain that in detail, with
-examples.)
-
 Before using the tool, it is imperative that the user becomes comfortable with
 the XPath language and how it is parsed with ``lxml``.
 
