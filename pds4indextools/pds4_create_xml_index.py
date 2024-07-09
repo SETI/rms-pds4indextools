@@ -159,7 +159,7 @@ def default_value_for_nil(config, data_type, nil_value):
         default = config[data_type].getint(nil_value)
     elif data_type == 'pds:ASCII_Real':
         default = config[data_type].getfloat(nil_value)
-    if data_type is None:
+    elif data_type is None:
         default = None
     else:
         default = config[data_type][nil_value]
