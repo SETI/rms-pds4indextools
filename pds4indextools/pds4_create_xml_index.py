@@ -159,6 +159,8 @@ def default_value_for_nil(config, data_type, nil_value):
         default = config[data_type].getint(nil_value)
     elif data_type == 'pds:ASCII_Real':
         default = config[data_type].getfloat(nil_value)
+    elif data_type is None:
+        default = None
     else:
         default = config[data_type][nil_value]
 
@@ -553,8 +555,8 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
                       f'has no associated text: {tag}')
                 true_type = None
                 for xsd_file in xsd_files:
-                    namespaces = scrape_namespaces(xsd_file)
                     xsd_tree = download_xsd_file(xsd_file)
+                    namespaces = scrape_namespaces(xsd_tree)
                     true_type = find_base_attribute(xsd_tree, tag, namespaces)
                     if true_type:
                         break  # Exit the loop once true_type is found
@@ -562,9 +564,9 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
                 if not true_type:
                     modified_tag = tag + "_WO_Units"
                     for xsd_file in xsd_files:
-                        xsd_tree = download_xsd_file(xsd_file)
-                        namespaces = scrape_namespaces(xsd_file)
-                        true_type = find_base_attribute(xsd_tree, modified_tag)
+                        namespaces = scrape_namespaces(xsd_tree)
+                        true_type = find_base_attribute(xsd_tree, modified_tag,
+                                                        namespaces)
                         if true_type:
                             break
 
@@ -715,7 +717,12 @@ def write_results_to_csv(results_list, args, output_csv_path):
 
     if args.sort_by:
         sort_values = str(args.sort_by).split(',')
-        df.sort_values(by=sort_values, inplace=True)
+        try:
+            df.sort_values(by=sort_values, inplace=True)
+        except KeyError as bad_sort:
+            print(f'Unknown sort key {bad_sort}. For a list of available sort keys, use '
+                  f'the --output-headers-file option.')
+            sys.exit(1)
 
     if args.clean_header_field_names:
         clean_headers(df)
@@ -856,27 +863,16 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
     return None
 
 
-def scrape_namespaces(xsd_url):
+def scrape_namespaces(tree):
     """
     Fetch and parse an XSD file from a given URL to extract namespace declarations.
 
     Parameters:
-        xsd_url (str): The URL of the XSD file to be fetched and parsed.
+        xsd_tree (etree._Element): The XML schema tree.
 
     Returns:
         dict: A dictionary containing the namespace declarations found in the XSD file.
-
-    Raises:
-        ValueError: If the XSD file cannot be retrieved (HTTP status code is not 200).
     """
-    # Fetch XSD content from the URL
-    response = requests.get(xsd_url)
-    if response.status_code != 200:
-        # Handle error if XSD file cannot be retrieved
-        raise ValueError(f"Failed to fetch XSD file from URL: {xsd_url}")
-
-    # Parse the XSD content
-    tree = etree.fromstring(response.content)
 
     # Extract namespace declarations
     namespaces = tree.nsmap
@@ -1441,27 +1437,20 @@ def main(cmd_line=None):
             sys.exit(1)
 
         header_info = []
-        sniffer = csv.Sniffer()
 
         # The index file is opened and read for the contents of the headers. The delimiter
         # is also found for later reference.
         with open(index_file, 'r', encoding='utf-8') as index_fp:
             full_header = index_fp.readline()
             full_header_length = len(full_header)
-            try:
-                sample_data = index_fp.read(5000)
-                delimiter = sniffer.sniff(sample_data).delimiter
-                index_fp.seek(0)  # Reset file pointer to the beginning
-            except csv.Error:
-                print(f'Index file {index_file} is not a CSV or tab-separated file.')
-                sys.exit(1)
+            index_fp.seek(0)  # Reset file pointer to the beginning
 
             reader = csv.reader(index_fp, delimiter=',')
             headers = next(reader)
 
             offset = 0
             field_number = 0
-            jump = len(delimiter)
+            jump = 1
             field_location = 1
             maximum_field_lengths = compute_max_field_lengths(index_file)
 
@@ -1501,6 +1490,8 @@ def main(cmd_line=None):
                             if true_type:
                                 break
 
+                if true_type is None:
+                    true_type = ':inapplicable'
                 true_type = true_type.split(':')[-1]
                 field_number += 1
                 header_length = len(header.encode('utf-8'))
