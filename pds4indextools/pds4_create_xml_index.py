@@ -555,8 +555,8 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
                       f'has no associated text: {tag}')
                 true_type = None
                 for xsd_file in xsd_files:
-                    namespaces = scrape_namespaces(xsd_file)
                     xsd_tree = download_xsd_file(xsd_file)
+                    namespaces = scrape_namespaces(xsd_tree)
                     true_type = find_base_attribute(xsd_tree, tag, namespaces)
                     if true_type:
                         break  # Exit the loop once true_type is found
@@ -564,8 +564,7 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
                 if not true_type:
                     modified_tag = tag + "_WO_Units"
                     for xsd_file in xsd_files:
-                        xsd_tree = download_xsd_file(xsd_file)
-                        namespaces = scrape_namespaces(xsd_file)
+                        namespaces = scrape_namespaces(xsd_tree)
                         true_type = find_base_attribute(xsd_tree, modified_tag,
                                                         namespaces)
                         if true_type:
@@ -718,7 +717,11 @@ def write_results_to_csv(results_list, args, output_csv_path):
 
     if args.sort_by:
         sort_values = str(args.sort_by).split(',')
-        df.sort_values(by=sort_values, inplace=True)
+        try:
+            df.sort_values(by=sort_values, inplace=True)
+        except KeyError as bad_sort:
+            print(f'Unknown sort key {bad_sort}. For a list of available sort keys, use the '
+                  f'--output-headers-file option.')
 
     if args.clean_header_field_names:
         clean_headers(df)
@@ -801,35 +804,6 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
             return result
         except etree.XPathEvalError:
             return None
-        
-    def is_empty_complex_type(target_name):
-        """
-        Checks if the target name is defined as an empty complex type (class).
-
-        Parameters:
-            target_name (str): The name of the target to check.
-
-        Returns:
-            bool: True if it is an empty complex type, False otherwise.
-        """
-        complex_type_query = f".//xs:complexType[@name='{target_name}']"
-        try:
-            complex_type_result = xsd_tree.xpath(complex_type_query, namespaces=namespaces)
-            if complex_type_result:
-                for complex_type in complex_type_result:
-                    # Check if the complex type has no child elements, attributes, 
-                    # or other sub-elements
-                    if len(complex_type) == 0:
-                        return True
-            return False
-        except etree.XPathEvalError:
-            return False
-
-    # Check if the target is an empty complex type
-    if is_empty_complex_type(target_name):
-        print(f"{target_name} is an empty complex type (class)")
-        return None
-    
 
     queries = [
         f".//xs:complexType[@name='{target_name}']//xs:extension/@base",
@@ -888,27 +862,16 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
     return None
 
 
-def scrape_namespaces(xsd_url):
+def scrape_namespaces(tree):
     """
     Fetch and parse an XSD file from a given URL to extract namespace declarations.
 
     Parameters:
-        xsd_url (str): The URL of the XSD file to be fetched and parsed.
+        xsd_tree (etree._Element): The XML schema tree.
 
     Returns:
         dict: A dictionary containing the namespace declarations found in the XSD file.
-
-    Raises:
-        ValueError: If the XSD file cannot be retrieved (HTTP status code is not 200).
     """
-    # Fetch XSD content from the URL
-    response = requests.get(xsd_url, timeout=120)
-    if response.status_code != 200:
-        # Handle error if XSD file cannot be retrieved
-        raise ValueError(f"Failed to fetch XSD file from URL: {xsd_url}")
-
-    # Parse the XSD content
-    tree = etree.fromstring(response.content)
 
     # Extract namespace declarations
     namespaces = tree.nsmap
@@ -1527,6 +1490,8 @@ def main(cmd_line=None):
                             if true_type:
                                 break
 
+                if true_type == None:
+                    true_type = ':'
                 true_type = true_type.split(':')[-1]
                 field_number += 1
                 header_length = len(header.encode('utf-8'))
