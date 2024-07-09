@@ -18,10 +18,6 @@ and accessing structured data within PDS4-compliant datasets.
 XPath Syntax and Structure
 --------------------------
 
-(FIXIT The next two paragraphs need to be rewritten becase the user *doesn't* need to
-learn ``lxml``, just the XPath format we provide. We should explain that in detail, with
-examples.)
-
 Before using the tool, it is imperative that the user becomes comfortable with
 the XPath language and how it is parsed with ``lxml``.
 
@@ -190,14 +186,3 @@ Miscellaneous
 
 - ``--config-file``: Specify a ``.ini``-style configuration file for further customization
   of the extraction process.
-
-
-
-(FIXIT) ADDITIONAL THINGS TO DISCUSS
-------------------------------------
-
-- Explanation of how we format XPaths (e.g. what do the ``<1>``-style suffixes mean?)
-- Format and contents of the ``--config-file`` config file including discussion of
-  nillable elements.
-- Format and contents of the ``--label-user-file`` config file (and should these be the
-  same thing?)
