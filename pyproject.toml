@@ -40,7 +40,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/SETI/rms-pds4indextools"
-Documentation = "https://rms-textkernel.readthedocs.io/en/latest"
+Documentation = "https://rms-pds4indextools.readthedocs.io/en/latest"
 Repository = "https://github.com/SETI/rms-pds4indextools"
 Source = "https://github.com/SETI/rms-pds4indextools"
 Issues = "https://github.com/SETI/rms-pds4indextools/issues"
