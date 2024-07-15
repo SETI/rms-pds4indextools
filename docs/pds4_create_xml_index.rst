@@ -23,14 +23,16 @@ hierarchy in a manner similar to `the standard XPath format <https://developer.m
 While familiarity with XPath syntax is beneficial, it is not necessary to use this tool
 effectively. Note that for simplicity we call our headers XPaths throughout this document
 and within the command line arguments, despite some minor syntax differences. Below we
-describe the syntax we use for our headers. An XPath header is read from left to right,
-starting with the root element and moving through each subsequent child element. Each
-element in the path is separated by a forward slash (/). If an element has multiple
-instances within a single parent, predicates (numbers within angle brackets) are used to
-specify the exact instance, such as ../pds:Observation_Area<1>/pds:version_id<1>, which
-selects the first version_id element in Observation_Area. The predicate numbers count the
-instances of the child element, rather than its structural position in the file. For
-example, given the XML fragment:
+describe the syntax we use for our headers. 
+
+An XPath header is read from left to right, starting with the root element and moving 
+through each subsequent child element. Elements are separated by a forward slash (``/``).
+If an element has multiple instances within a single parent, predicates (numbers within
+angle brackets) are used to specify the exact instance, such as
+``../pds:Observation_Area<1>/pds:version_id<1>``, which selects the first ``version_id``
+element in ``Observation_Area``. The predicate numbers count the instances of the child
+element, rather than its structural position in the file. For example, given the XML
+fragment:
 
 ```
 <Product_Observational>
@@ -200,6 +202,7 @@ Miscellaneous
   of the extraction process. This file allows you to replace the field entry for any
   element's data type. Its primary purpose is to handle nilled elements. Nilled elements
   are elements that are intentionally omitted due to inapplicable, missing, unknown, or
-  anticipated values. The default configuration file (``pds4indextools.ini``) covers a
-  specific set of data types. Any additional data types can be covered using the specified
-  configuration file.
+  anticipated values. The following data types are automatically covered by the tool:
+  ``ASCII_Real``, ``ASCII_Integer``, ``ASCII_Short_String_Collapsed``, ``ASCII_Date_YMD``,
+  ``ASCII_Date_Time_YMD``, and ``ASCII_Date_Time_YMD_UTC``. Any additional data types can
+  be covered using the specified configuration file.
