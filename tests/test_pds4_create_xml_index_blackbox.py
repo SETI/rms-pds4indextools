@@ -18,6 +18,12 @@ labels_dir = test_files_dir / 'labels'
         'golden_file,new_file,cmd_line',
         [
             # Testing --limit-xpaths-file
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" --limit-xpaths-file
+            # ../test_files/samples/element_1.txt --output-headers-file
+            # limit_xpaths_file.txt
+            # Compare result to golden copy:
+            # test_files/expected/limit_xpaths_file_success_1.txt
             (
                 str(expected_dir / 'limit_xpaths_file_success_1.txt'),
                 'limit_xpaths_file.txt',
@@ -30,6 +36,12 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_2.xml" --limit-xpaths-file
+            # ../test_files/samples/element_2.txt --output-headers-file
+            # limit_xpaths_file_2.txt
+            # Compare result to golden copy:
+            # test_files/expected/limit_xpaths_file_success_2.txt
             (
                 str(expected_dir / 'limit_xpaths_file_success_2.txt'),
                 'limit_xpaths_file_2.txt',
@@ -42,6 +54,12 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_2.xml" --limit-xpaths-file
+            # ../test_files/samples/element_duplicates.txt
+            # --output-headers-file elements_dupe_file_2.txt
+            # Compare result to golden copy:
+            # test_files/expected/limit_xpaths_file_success_2.txt
             (
                 str(expected_dir / 'limit_xpaths_file_success_2.txt'),
                 'elements_dupe_file_2.txt',
@@ -54,6 +72,12 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_2.xml" tester_label_3.xml" --limit-xpaths-file
+            # ../test_files/samples/element_3.txt --output-headers-file
+            # limit_xpaths_file_3.txt
+            # Compare result to golden copy:
+            # test_files/expected/limit_xpaths_file_success_3.txt
             (
                 str(expected_dir / 'limit_xpaths_file_success_3.txt'),
                 'limit_xpaths_file_3.txt',
@@ -67,7 +91,12 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
-
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml"
+            # --limit-xpaths-file ../test_files/samples/element_4.txt
+            # --output-headers-file limit_xpaths_file_4.txt
+            # Compare result to golden copy:
+            # test_files/expected/limit_xpaths_file_success_4.txt
             (
                 str(expected_dir / 'limit_xpaths_file_success_4.txt'),
                 'limit_xpaths_file_4.txt',
@@ -83,6 +112,11 @@ labels_dir = test_files_dir / 'labels'
             ),
 
             # Testing --simplify-xpaths
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" --simplify-xpaths
+            # --output-headers-file simplify_xpaths_1.txt
+            # Compare result to golden copy:
+            # test_files/expected/simplify_xpaths_success_1.txt
             (
                 str(expected_dir / 'simplify_xpaths_success_1.txt'),
                 'simplify_xpaths_1.txt',
@@ -94,6 +128,14 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Testing --simplify-xpaths
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml"
+            # --simplify-xpaths --limit-xpaths-file
+            # ../test_files/samples/elements_xpath_simplify_2.txt
+            # --output-headers-file simplify_xpaths_2.txt
+            # Compare result to golden copy:
+            # test_files/expected/simplify_xpaths_success_2.txt
             (
                 str(expected_dir / 'simplify_xpaths_success_2.txt'),
                 'simplify_xpaths_2.txt',
@@ -109,6 +151,13 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Testing --simplify-xpaths
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_2.xml" --simplify-xpaths --limit-xpaths-file
+            # ../test_files/samples/elements_xpath_simplify_3.txt
+            # --output-headers-file simplify_xpaths_3.txt
+            # Compare result to golden copy:
+            # test_files/expected/simplify_xpaths_success_3.txt
             (
                 str(expected_dir / 'simplify_xpaths_success_3.txt'),
                 'simplify_xpaths_3.txt',
@@ -122,6 +171,13 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Testing --simplify-xpaths
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_3.xml" --simplify-xpaths --limit-xpaths-file
+            # ../test_files/samples/elements_xpath_simplify_4.txt
+            # --output-headers-file simplify_xpaths_4.txt
+            # Compare result to golden copy:
+            # test_files/expected/simplify_xpaths_success_4.txt
             (
                 str(expected_dir / 'simplify_xpaths_success_4.txt'),
                 'simplify_xpaths_4.txt',
@@ -136,6 +192,12 @@ labels_dir = test_files_dir / 'labels'
             ),
 
             # Testing --add-extra-file-info
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_2.xml" --limit-xpaths-file
+            # ../test_files/samples/element_1.txt --add-extra-file-info filename,filepath
+            # --output-index-file extra_file_info_1.csv
+            # Compare result to golden copy:
+            # test_files/expected/extra_file_info_success_1.csv
             (
                 str(expected_dir / 'extra_file_info_success_1.csv'),
                 'extra_file_info_1.csv',
@@ -150,6 +212,13 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml"
+            # --limit-xpaths-file ../test_files/samples/element_5.txt
+            # --add-extra-file-info filename --sort-by filename
+            # --output-index-file extra_file_info_2.csv
+            # Compare result to golden copy:
+            # test_files/expected/extra_file_info_success_2.csv
             (
                 str(expected_dir / 'extra_file_info_success_2.csv'),
                 'extra_file_info_2.csv',
@@ -168,6 +237,13 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml"
+            # --limit-xpaths-file ../test_files/samples/element_5.txt
+            # --add-extra-file-info filename,filepath,lid,bundle,bundle_lid
+            # --sort-by filename --output-index-file extra_file_info_3.csv
+            # Compare result to golden copy:
+            # test_files/expected/extra_file_info_success_3.csv
             (
                 str(expected_dir / 'extra_file_info_success_3.csv'),
                 'extra_file_info_3.csv',
@@ -187,6 +263,11 @@ labels_dir = test_files_dir / 'labels'
             ),
 
             # Testing --clean-header-field-names
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" --clean-header-field-names
+            # --output-headers-file clean_header_field_names_1.txt
+            # Compare result to golden copy:
+            # test_files/expected/clean_header_field_names_success_1.txt
             (
                 str(expected_dir / 'clean_header_field_names_success_1.txt'),
                 'clean_header_field_names_1.txt',
@@ -198,6 +279,13 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" "tester_label_1.xml" --limit-xpaths-file
+            # ../test_files/samples/elements_clean_header_field_names.txt
+            # --clean-header-field-names
+            # --output-headers-file clean_header_field_names_2.txt
+            # Compare result to golden copy:
+            # test_files/expected/clean_header_field_names_success_2.txt
             (
                 str(expected_dir / 'clean_header_field_names_success_2.txt'),
                 'clean_header_field_names_2.txt',
@@ -213,6 +301,14 @@ labels_dir = test_files_dir / 'labels'
             ),
 
             # Testing --sort by
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml"
+            # --limit-xpaths-file
+            # ../test_files/samples/elements_clean_header_field_names.txt --sort-by
+            # 'pds:Product_Observational/pds:Identification_Area<1>/
+            #  pds:logical_identifier<1>' --output-index-file sort_by_1.csv
+            # Compare result to golden copy:
+            # test_files/expected/sort_by_success_1.csv
             (
                 str(expected_dir / 'sort_by_success_1.csv'),
                 'sort_by_1.csv',
@@ -230,6 +326,14 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml"
+            # --limit-xpaths-file
+            # ../test_files/samples/elements_clean_header_field_names.txt
+            # --add-extra-file-info bundle_lid,filepath --sort-by bundle_lid
+            # --output-index-file sort_by_2.csv
+            # Compare result to golden copy:
+            # test_files/expected/sort_by_success_2.csv
             (
                 str(expected_dir / 'sort_by_success_2.csv'),
                 'sort_by_2.csv',
@@ -248,6 +352,12 @@ labels_dir = test_files_dir / 'labels'
                 ]
             ),
 
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "identical_label_*.xml" --limit-xpaths-file
+            # ../test_files/samples/identical_elements.txt --add-extra-file-info
+            # filename --sort-by filename --output-index-file identical_labels.csv
+            # Compare result to golden copy:
+            # test_files/expected/identical_labels_success.csv
             (
                 str(expected_dir / 'identical_labels_success.csv'),
                 'identical_labels.csv',
@@ -263,6 +373,13 @@ labels_dir = test_files_dir / 'labels'
                     '--output-index-file'
                 ]
             ),
+
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "nilled_label.xml" --limit-xpaths-file
+            # ../test_files/samples/elements_nilled.txt --output-index-file
+            # nilled_elements.csv
+            # Compare result to golden copy:
+            # test_files/expected/nilled_element_success.csv
             (
                 str(expected_dir / 'nilled_element_success.csv'),
                 'nilled_element.csv',
@@ -274,6 +391,11 @@ labels_dir = test_files_dir / 'labels'
                     '--output-index-file'
                 ]
             ),
+
+            # Executable command: pds4_create_xml_index ../test_files/labels
+            # "tester_label_1.xml" --fixed-width --output-index-file fixed_width.csv
+            # Compare result to golden copy:
+            # test_files/expected/fixed_width_success.csv
             (
                 str(expected_dir / 'fixed_width_success.csv'),
                 'fixed_width.csv',
@@ -313,6 +435,10 @@ def test_success(golden_file, new_file, cmd_line):
 @pytest.mark.parametrize(
     'cmd_line',
     [
+        # Executable command: pds4_create_xml_index ../test_files/labels
+        # "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml"
+        # --limit-xpaths-file ../test_files/samples/element_1.txt --add-extra-file-info
+        # bad_element --output-headers-file hdout.txt
         (
             str(test_files_dir),
             str(labels_dir.name / Path('tester_label_1.xml')),
@@ -324,15 +450,25 @@ def test_success(golden_file, new_file, cmd_line):
             'bad_element',
             '--output-headers-file',
         ),
+
+        # Executable command: pds4_create_xml_index ../test_files/labels
+        # "bad_directory/labels/tester_label_*.xml"
+        # --limit-xpaths-file ../test_files/samples/element_1.txt --add-extra-file-info
+        # filename --output-headers-file hdout.txt
         (
             str(test_files_dir),  # directory path
-            ' bad_directory/labels/tester_label_*.xml',  # non-existent directory
+            'bad_directory/labels/tester_label_*.xml',  # non-existent directory
             '--limit-xpaths-file',
             str(samples_dir / 'element_1.txt'),  # elements file
             '--add-extra-file-info',  # extra file info
             'filename',
             '--output-headers-file',
         ),
+
+        # Executable command: pds4_create_xml_index ../test_files/labels
+        # "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml"
+        # --limit-xpaths-file ../test_files/samples/element_empty.txt
+        # --output-headers-file hdout.txt
         (
             str(test_files_dir),  # directory path
             str(labels_dir.name / Path('tester_label_1.xml')),
@@ -355,6 +491,9 @@ def test_failures(cmd_line):
 @pytest.mark.parametrize(
     'new_file,cmd_line',
     [
+        # Executable command: pds4_create_xml_index ../test_files/labels
+        # "nilled_label_bad.xml" --limit-xpaths-file
+        # ../test_files/samples/elements_nilled_bad.txt --output-index-file indexout.csv
         (
             'nillable.csv',
             [
