@@ -1169,7 +1169,7 @@ def main(cmd_line=None):
                       help='Turn on verbose mode and show the details of file '
                            'scraping.')
 
-    misc.add_argument('--config-file', type=str, nargs='*',
+    misc.add_argument('--config-file', action='append',
                       metavar='CONFIG_FILEPATH',
                       help='Read in user-specified configuration file(s). The file must '
                            'be in YAML file format.')
