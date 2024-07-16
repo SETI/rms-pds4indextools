@@ -18,34 +18,47 @@ and accessing structured data within PDS4-compliant datasets.
 XPath Syntax and Structure
 --------------------------
 
-Before using the tool, it is imperative that the user becomes comfortable with
-the XPath language and how it is parsed with ``lxml``.
+This tool generates headers that represent the position of each element in the XML
+hierarchy in a manner similar to `the standard XPath format <https://developer.mozilla.org/en-US/docs/Web/XPath>`_. 
+While familiarity with XPath syntax is beneficial, it is not necessary to use this tool
+effectively. Note that for simplicity we call our headers XPaths throughout this document
+and within the command line arguments, despite some minor syntax differences. Below we
+describe the syntax we use for our headers. 
 
-When elements are scraped from a label, they are returned in a format akin to a
-filepath. The absolute XPath contains all parent elements up to the root element
-of the label. Each element after a certain depth can also contain predicates:
-numbers surrounded by square brackets. These predicates give information on the
-location of the element in the label file, in relation to surrounding elements.
+An XPath header is read from left to right, starting with the root element and moving 
+through each subsequent child element. Elements are separated by a forward slash (``/``).
+If an element has multiple instances within a single parent, predicates (numbers within
+angle brackets) are used to specify the exact instance, such as
+``../pds:Observation_Area<1>/pds:version_id<1>``, which selects the first ``version_id``
+element in ``Observation_Area``. The predicate numbers count the instances of the child
+element, rather than its structural position in the file. For example, given the XML
+fragment:
 
-However, this module returns XPath headers that have been reformatted from XPath
-syntax.
+```
+<Product_Observational>
+    <Identification_Area>
+        <logical_identifier>...</logical_identifier>
+        <Citation_Information>
+            <author_list>...</author_list>
+            <publication_year>...</publication_year>
+            <keyword>...</keyword>
+            <keyword>...</keyword>
+            <description>...</description>
+        </Citation_Information>
+    </Identification_Area>
+</Product_Observational>
+```
 
-- Namespaces are replaced by their prefixes. Namespaces are URIs that identify
-  which schema an element belongs to. For readability, the full URI's are
-  replaced by their prefixes.
+the available XPaths are:
 
-- Square brackets are replaced by angled brackets. This module utilizes ``glob``
-  syntax for finding label files and filtering out elements/attributes. Because
-  square brackets have meaning within ``glob`` statements, they needed to be
-  replaced with angled brackets.
-
-- The values within the predicates have been renumbered. In XPath syntax,
-  predicates are used to determine the location of an element in relation to its
-  parent. While this is useful in other applications, this logic fails if
-  multiples of the element and its parent appear within the document. Even if
-  the elements all have different values, all of their XPaths would be the same.
-  Instead, the predicates are renumbered to reflect which instance of the
-  element the value is represented by.
+```
+Product_Observational<1>/Identification_Area<1>/logical_identifier<1>
+Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/author_list<1>
+Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/publication_year<1>
+Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/keyword<1>
+Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/keyword<2>
+Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/description<1>
+```
 
 
 Command Line Arguments
@@ -175,8 +188,9 @@ Label generation
   ``ancillary`` or ``Product_Metadata_Supplemental`` for ``supplemental``. Additional
   customization of the label can be provided with ``--label-user-input``.
 
-- ``--label-user-info``: Provide a file containing customization of the generated label.
-  The file must be in YAML format.
+- ``--label-user-input``: Provide a file containing customization of the generated label.
+  The file must be in YAML format. This file allows for the addition of optional classes
+  within the generated label, such as Modification_History, Citation_Information, etc.
 
 Miscellaneous
 """""""""""""
@@ -185,4 +199,10 @@ Miscellaneous
   be useful for debugging.
 
 - ``--config-file``: Specify a ``.ini``-style configuration file for further customization
-  of the extraction process.
+  of the extraction process. This file allows you to replace the field entry for any
+  element's data type. Its primary purpose is to handle nilled elements. Nilled elements
+  are elements that are intentionally omitted due to inapplicable, missing, unknown, or
+  anticipated values. The following data types are automatically covered by the tool:
+  ``ASCII_Real``, ``ASCII_Integer``, ``ASCII_Short_String_Collapsed``, ``ASCII_Date_YMD``,
+  ``ASCII_Date_Time_YMD``, and ``ASCII_Date_Time_YMD_UTC``. Any additional data types can
+  be covered using the specified configuration file.

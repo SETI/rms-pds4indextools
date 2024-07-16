@@ -1,2 +1,5 @@
 [flake8]
 max-line-length: 90
+per-file-ignores =
+    # line too long
+    tests/test_pds4_create_xml_index_blackbox.py: E501
