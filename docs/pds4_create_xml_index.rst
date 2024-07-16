@@ -188,21 +188,30 @@ Label generation
   ``ancillary`` or ``Product_Metadata_Supplemental`` for ``supplemental``. Additional
   customization of the label can be provided with ``--label-user-input``.
 
-- ``--label-user-input``: Provide a file containing customization of the generated label.
-  The file must be in YAML format. This file allows for the addition of optional classes
-  within the generated label, such as Modification_History, Citation_Information, etc.
-
 Miscellaneous
 """""""""""""
 
 - ``--verbose``: Display detailed information during the file scraping process that may
   be useful for debugging.
 
-- ``--config-file``: Specify a ``.ini``-style configuration file for further customization
-  of the extraction process. This file allows you to replace the field entry for any
-  element's data type. Its primary purpose is to handle nilled elements. Nilled elements
-  are elements that are intentionally omitted due to inapplicable, missing, unknown, or
-  anticipated values. The following data types are automatically covered by the tool:
-  ``ASCII_Real``, ``ASCII_Integer``, ``ASCII_Short_String_Collapsed``, ``ASCII_Date_YMD``,
-  ``ASCII_Date_Time_YMD``, and ``ASCII_Date_Time_YMD_UTC``. Any additional data types can
-  be covered using the specified configuration file.
+- ``--config-file``: Specify one or more ``YAML``-style configuration files for further
+customization of the extraction process. These configuration files allow you to replace
+the field entry for any element's data type during index file generation, particularly
+useful for handling nilled elements. Nilled elements are those intentionally omitted due
+to being inapplicable, missing, unknown, or anticipated.
+
+The tool automatically supports the following data types:
+
+- ``ASCII_Real``
+- ``ASCII_Integer``
+- ``ASCII_Short_String_Collapsed``
+- ``ASCII_Date_YMD``
+- ``ASCII_Date_Time_YMD``
+- ``ASCII_Date_Time_YMD_UTC``
+
+You can cover any additional data types using the specified configuration files.
+
+Moreover, the configuration files can include content for label generation. This feature
+allows you to add optional classes to the generated label file, such as
+``Citation_Information``, ``Modification_History``, and more. Additionally, you can
+override existing values within the generated label file using these configuration files.

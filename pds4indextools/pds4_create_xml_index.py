@@ -1164,12 +1164,6 @@ def main(cmd_line=None):
                                        'Can generate either a Product_Ancillary or '
                                        'Product_Metadata_Supplemental label.')
 
-    label_generation.add_argument('--label-user-input', type=str,
-                                  metavar='USER_INPUT_FILEPATH',
-                                  help='Provide an optional file containing additional '
-                                       'information for the generated label. File must '
-                                       'be in YAML format.')
-
     misc = parser.add_argument_group('Miscellaneous')
     misc.add_argument('--verbose', action='store_true',
                       help='Turn on verbose mode and show the details of file '
@@ -1177,8 +1171,8 @@ def main(cmd_line=None):
 
     misc.add_argument('--config-file', type=str, nargs='*',
                       metavar='CONFIG_FILEPATH',
-                      help='Read a user-specified configuration file. The file must be '
-                           'in YAML file format.')
+                      help='Read in user-specified configuration file(s). The file must '
+                           'be in YAML file format.')
 
     args = parser.parse_args(cmd_line)
 
