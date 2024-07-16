@@ -273,17 +273,26 @@ def load_config_file(
         dict: The contents of the YAML configuration files as a dictionary.
     """
 
+    config = {}
+
     try:
-        config = load_yaml_file(default_config_file)
+        default_config = load_yaml_file(default_config_file)
+        if isinstance(default_config, list):
+            default_config = {k: v for d in default_config for k, v in d.items()}
+        config.update(default_config)
     except OSError:
         print(f'Unable to read the default configuration file: {default_config_file}')
         sys.exit(1)
 
+    # Load specified configuration files
     if specified_config_files:
         for file in specified_config_files:
             try:
                 specified_config = load_yaml_file(file)
-                config = {**config, **specified_config}
+                if isinstance(specified_config, list):
+                    specified_config = {
+                        k: v for d in specified_config for k, v in d.items()}
+                config.update(specified_config)
             except OSError:
                 print(f'Unable to read configuration file: {file}')
                 sys.exit(1)
@@ -1175,8 +1184,6 @@ def main(cmd_line=None):
 
     verboseprint = print if args.verbose else lambda *a, **k: None
 
-    print(args.config_file)
-
     config = load_config_file(specified_config_files=args.config_file)
 
     directory_path = Path(args.directorypath)
@@ -1384,7 +1391,6 @@ def main(cmd_line=None):
             all_results[i]['Results'] = new_label_results
 
     if output_csv_path:
-        verboseprint(f'Index file generated at {output_csv_path}')
         write_results_to_csv(all_results, args, output_csv_path)
 
     # To instead receive a list of available information available within a label or set
@@ -1514,7 +1520,7 @@ def main(cmd_line=None):
 
         # The pre-determined contents of the generated label file. Any additional
         # information is derived from either the default_values.yaml or the specified
-        # .yaml file from --label-user-input
+        # .yaml file from --config-file
         label_content = {
             'logical_identifier': 'urn:nasa:pds:rms_metadata:document_opus:' + filename,
             'creation_date_time': str(creation_date),
@@ -1537,9 +1543,12 @@ def main(cmd_line=None):
         else:
             label_content['Table_Delimited'] = True
 
-        additional_data = config
-        unnested_data = {k: v for d in additional_data for k, v in d.items()}
+        data = load_yaml_file(
+            Path(__file__).resolve().parent/'default_values.yaml')
+
+        unnested_data = {k: v for d in data for k, v in d.items()}
         label_content.update(unnested_data)
+        label_content.update(config)
 
         output_subdir = Path(output_csv_path).parent
 

@@ -28,7 +28,7 @@ $END_IF
             <keyword>$VALUE$</keyword> 
         $END_FOR
             <description>$Citation_Information['description']$</description> 
-        $IF(Citation_Information.get('Funding_Acknowledgement']))
+        $IF(Citation_Information.get('Funding_Acknowledgement'))
             <Funding_Acknowledgement>
                 <funding_source>$Funding_Acknowledgement['funding_source']$</funding_source> 
                 <funding_year>$Funding_Acknowledgement['funding_year']$</funding_year> 
