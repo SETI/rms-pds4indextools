@@ -12,7 +12,6 @@ python pds4_create_xml_index.py --help
 import argparse
 from collections import namedtuple
 import csv
-import configparser
 from datetime import datetime
 import fnmatch
 import functools
@@ -155,11 +154,7 @@ def default_value_for_nil(config, data_type, nil_value):
     Returns:
         Any: Default replacement value of correct data type.
     """
-    if data_type == 'pds:ASCII_Integer':
-        default = config[data_type].getint(nil_value)
-    elif data_type == 'pds:ASCII_Real':
-        default = config[data_type].getfloat(nil_value)
-    elif data_type is None:
+    if data_type is None:
         default = None
     else:
         default = config[data_type][nil_value]
@@ -259,12 +254,12 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, valid_add_extra_file
 
 
 def load_config_file(
-        default_config_file=Path(__file__).resolve().parent/'pds4indextools.ini',
-        specified_config_file=None):
+        default_config_file=Path(__file__).resolve().parent/'pds4indextools.yaml',
+        specified_config_files=None):
     """
     Create a config object from a given configuration file.
 
-    This will always load in the default configuration file 'pds4indextools.ini'. In the
+    This will always load in the default configuration file 'pds4indextools.yaml'. In the
     event a specified configuration file is given, the contents of that file will
     override what is in the default configuration file.
 
@@ -275,22 +270,23 @@ def load_config_file(
             configuration file.
 
     Returns:
-        configparser.ConfigParser: A ConfigParser object.
+        dict: The contents of the YAML configuration files as a dictionary.
     """
-    config = configparser.ConfigParser()
 
     try:
-        config.read_file(open(default_config_file))
+        config = load_yaml_file(default_config_file)
     except OSError:
         print(f'Unable to read the default configuration file: {default_config_file}')
         sys.exit(1)
 
-    if specified_config_file:
-        try:
-            config.read_file(open(specified_config_file))
-        except OSError:
-            print(f'Unable to read configuration file: {specified_config_file}')
-            sys.exit(1)
+    if specified_config_files:
+        for file in specified_config_files:
+            try:
+                specified_config = load_yaml_file(file)
+                config = {**config, **specified_config}
+            except OSError:
+                print(f'Unable to read configuration file: {file}')
+                sys.exit(1)
 
     return config
 
@@ -1170,16 +1166,18 @@ def main(cmd_line=None):
                       help='Turn on verbose mode and show the details of file '
                            'scraping.')
 
-    misc.add_argument('--config-file', type=str,
+    misc.add_argument('--config-file', type=str, nargs='*',
                       metavar='CONFIG_FILEPATH',
                       help='Read a user-specified configuration file. The file must be '
-                           'in .ini file format.')
+                           'in YAML file format.')
 
     args = parser.parse_args(cmd_line)
 
     verboseprint = print if args.verbose else lambda *a, **k: None
 
-    config = load_config_file(specified_config_file=args.config_file)
+    print(args.config_file)
+
+    config = load_config_file(specified_config_files=args.config_file)
 
     directory_path = Path(args.directorypath)
     verboseprint(f'Top level directory to scrape: {directory_path}')
@@ -1421,9 +1419,8 @@ def main(cmd_line=None):
     if args.generate_label:
         index_file = output_csv_path
 
-        # The template label file and the default_values.yaml file are initialized.
+        # The template label file is initialized.
         module_dir = Path(__file__).resolve().parent
-        yaml_file = module_dir / 'default_values.yaml'
         tempfile = str(module_dir / 'index_label_template_pds.xml')
         template = ps.PdsTemplate(tempfile)
 
@@ -1464,9 +1461,13 @@ def main(cmd_line=None):
                     header = header.strip()
                 if (header in valid_add_extra_file_info and 'lid' in header):
                     true_type = 'pds:ASCII_LID'
-                elif (header in valid_add_extra_file_info
-                      and 'file' in header):
-                    true_type = 'pds:ASCII_File_Specification_Name'
+                elif header == 'filename':
+                    true_type = 'pds:ASCII_File_Name'
+                elif header == filepath:
+                    if len(header) > 255:
+                        true_type = 'pds:ASCII_Text_Preserved'
+                    else:
+                        true_type = 'pds:ASCII_File_Specification_Name'
                 elif header == 'bundle':
                     true_type = 'pds:ASCII_Text_Preserved'
                 else:
@@ -1536,7 +1537,7 @@ def main(cmd_line=None):
         else:
             label_content['Table_Delimited'] = True
 
-        additional_data = load_yaml_file(yaml_file)
+        additional_data = config
         unnested_data = {k: v for d in additional_data for k, v in d.items()}
         label_content.update(unnested_data)
 
