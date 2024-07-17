@@ -1254,6 +1254,10 @@ def main(cmd_line=None):
             update_nillable_elements_from_xsd_file(url, nillable_elements_info)
 
         filepath = str(label_file.relative_to(args.directorypath)).replace('\\', '/')
+        # PDS4 compliant filepaths must be less than 255 characters.
+        if len(filepath) > 255:
+            print(f'Filepath {filepath} exceeds 255 character limit.')
+            sys.exit(1)
 
         # Creates two dictionaries: one for the namespaces, and one for their
         # associated prefixes.
@@ -1464,10 +1468,7 @@ def main(cmd_line=None):
                 elif header == 'filename':
                     true_type = 'pds:ASCII_File_Name'
                 elif header == filepath:
-                    if len(header) > 255:
-                        true_type = 'pds:ASCII_Text_Preserved'
-                    else:
-                        true_type = 'pds:ASCII_File_Specification_Name'
+                    true_type = 'pds:ASCII_File_Specification_Name'
                 elif header == 'bundle':
                     true_type = 'pds:ASCII_Text_Preserved'
                 else:
