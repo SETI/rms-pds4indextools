@@ -215,3 +215,22 @@ Moreover, the configuration files can include content for label generation. This
 allows you to add optional classes to the generated label file, such as
 ``Citation_Information``, ``Modification_History``, and more. Additionally, you can
 override existing values within the generated label file using these configuration files.
+
+Below is an example of a configuration file in ``YAML`` format:
+
+```
+"pds:ASCII_Integer":
+  inapplicable: -9999
+  missing: -9988
+  unknown: -9977
+  anticipated: -9966
+
+"pds:ASCII_Real":
+  inapplicable: -9999.0
+  missing: -9988.0
+  unknown: -9977.0
+  anticipated: -9966.0
+```
+
+This will replace the values for nilled elements with the data types ``pds:ASCII_Integer``
+and ``pds:ASCII_Real`` with alternate values.
