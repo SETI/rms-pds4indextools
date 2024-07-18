@@ -32,33 +32,29 @@ angle brackets) are used to specify the exact instance, such as
 ``../pds:Observation_Area<1>/pds:version_id<1>``, which selects the first ``version_id``
 element in ``Observation_Area``. The predicate numbers count the instances of the child
 element, rather than its structural position in the file. For example, given the XML
-fragment:
+fragment::
 
-```
-<Product_Observational>
-    <Identification_Area>
-        <logical_identifier>...</logical_identifier>
-        <Citation_Information>
-            <author_list>...</author_list>
-            <publication_year>...</publication_year>
-            <keyword>...</keyword>
-            <keyword>...</keyword>
-            <description>...</description>
-        </Citation_Information>
-    </Identification_Area>
-</Product_Observational>
-```
+  <Product_Observational>
+      <Identification_Area>
+          <logical_identifier>...</logical_identifier>
+          <Citation_Information>
+              <author_list>...</author_list>
+              <publication_year>...</publication_year>
+              <keyword>...</keyword>
+              <keyword>...</keyword>
+              <description>...</description>
+          </Citation_Information>
+      </Identification_Area>
+  </Product_Observational>
 
-the available XPaths are:
+the available XPaths are::
 
-```
-Product_Observational<1>/Identification_Area<1>/logical_identifier<1>
-Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/author_list<1>
-Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/publication_year<1>
-Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/keyword<1>
-Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/keyword<2>
-Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/description<1>
-```
+  Product_Observational<1>/Identification_Area<1>/logical_identifier<1>
+  Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/author_list<1>
+  Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/publication_year<1>
+  Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/keyword<1>
+  Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/keyword<2>
+  Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/description<1>
 
 
 Command Line Arguments
@@ -195,42 +191,186 @@ Miscellaneous
   be useful for debugging.
 
 - ``--config-file``: Specify one or more ``YAML``-style configuration files for further
-customization of the extraction process. These configuration files allow you to replace
-the field entry for any element's data type during index file generation, particularly
-useful for handling nilled elements. Nilled elements are those intentionally omitted due
-to being inapplicable, missing, unknown, or anticipated.
+customization of the extraction process. See the below section for details.
 
-The tool automatically supports the following data types:
 
-- ``ASCII_Real``
-- ``ASCII_Integer``
-- ``ASCII_Short_String_Collapsed``
-- ``ASCII_Date_YMD``
-- ``ASCII_Date_Time_YMD``
-- ``ASCII_Date_Time_YMD_UTC``
 
-You can cover any additional data types using the specified configuration files.
+Configuration Files
+^^^^^^^^^^^^^^^^^^^
+
+This tool allows for the use of YAML configuration files to alter specific contents of
+index files and generated label files. 
+
+Nillable Elements
+"""""""""""""""""
+
+The first application of configuration files is to cover instances of nilled elements.
+Nilled elements are those intentionally omitted due to being inapplicable, missing,
+unknown, or anticipated. The tool has a default configuration file that contains values
+for a set of nilled elements. Below is the ``nillable`` section of the ``YAML`` file that
+covers these values::
+
+  nillable:
+    pds:ASCII_Date_YMD: 
+      inapplicable: '0001-01-01'
+      missing: '0002-01-01'
+      unknown: '0003-01-01'
+      anticipated: '0004-01-01'
+
+
+    pds:ASCII_Date_Time_YMD: 
+      inapplicable: 0001-01-01T12:00
+      missing: 0002-01-01T12:00
+      unknown: 0003-01-01T12:00
+      anticipated: 0004-01-01T12:00
+
+
+    pds:ASCII_Date_Time_YMD_UTC:
+      inapplicable: 0001-01-01T12:00Z
+      missing: 0002-01-01T12:00Z
+      unknown: 0003-01-01T12:00Z
+      anticipated: 0004-01-01T12:00Z
+
+
+    pds:ASCII_Integer:
+      inapplicable: -999
+      missing: -998
+      unknown: -997
+      anticipated: -996
+
+
+    pds:ASCII_Real:
+      inapplicable: -999.0
+      missing: -998.0
+      unknown: -997.0
+      anticipated: -996.0
+
+
+    pds:ASCII_Short_String_Collapsed:
+      inapplicable: inapplicable
+      missing: missing
+      unknown: unknown
+      anticipated: anticipated
+
+**NOTE**: ``YAML`` considers the ``000X-0X-0X`` format as a datetime object. As such,
+assigned values for ``ASCII_Date_YMD`` and other data types that use this format need to
+be surrounded by quotes.
+
+You can cover any additional data types using specified configuration files. Below is an
+example of how you can write an configuration file to override the contents of the
+default file::
+
+  nillable:
+    pds:ASCII_Integer:
+      inapplicable: -9999
+      missing: -9988
+      unknown: -9977
+      anticipated: -9966
+
+    pds:ASCII_Real:
+      inapplicable: -9999.0
+      missing: -9988.0
+      unknown: -9977.0
+      anticipated: -9966.0
+
+    pds:ASCII_Short_String_Collapsed:
+      inapplicable: inapplicable_alt
+      missing: missing_alt
+      unknown: unknown_alt
+      anticipated: anticipated_alt
+
+
+This will replace the values for nilled elements with the data types
+``pds:ASCII_Integer``, ``pds:ASCII_Real``, ans ``ASCII_Short_String_Collapsed``
+
+
+Label Contents
+""""""""""""""
 
 Moreover, the configuration files can include content for label generation. This feature
 allows you to add optional classes to the generated label file, such as
 ``Citation_Information``, ``Modification_History``, and more. Additionally, you can
 override existing values within the generated label file using these configuration files.
 
-Below is an example of a configuration file in ``YAML`` format:
+Below is the ``label-content`` section of the default ``YAML`` file::
 
-```
-"pds:ASCII_Integer":
-  inapplicable: -9999
-  missing: -9988
-  unknown: -9977
-  anticipated: -9966
+  label-contents:
+    version_id: 1.0
+    title: Index File
+    Citation_Information: 
+    Modification_Detail: 
+    Internal_Reference: 
+    External_Reference: 
+    Source_Product_Internal: 
+    Source_Product_External: 
 
-"pds:ASCII_Real":
-  inapplicable: -9999.0
-  missing: -9988.0
-  unknown: -9977.0
-  anticipated: -9966.0
-```
+Each listed value with an empty dictionary is an optional field the user can include in
+their generated label. If the user does decide to include one of these fields, **they must
+also include all elements within that field in their configuration file, even if the
+element will remain empty**. 
 
-This will replace the values for nilled elements with the data types ``pds:ASCII_Integer``
-and ``pds:ASCII_Real`` with alternate values.
+For reference, provided below are the full contents of the optional label classes::
+
+  Citation_Information:
+    author_list
+    editor_list
+    publication_year
+    doi
+    keyword
+    description
+    Funding_Acknowledgement:
+      funding_source
+      funding_year
+      funding_award
+      funding_acknowledgement_text
+  Modification_History:
+    Modification_Detail:
+      modification_date
+      version_id
+      description
+  Internal_Reference:
+    lid_reference
+    reference_type
+    comment
+  External_Reference:
+    doi
+    reference_text
+    description
+  Source_Product_Internal:
+    lidvid_reference
+    reference_type
+    comment
+  Source_Product_External:
+    external_source_product_identifier
+    reference_type
+    doi
+    curating_facility
+    description
+
+
+If no new contents are specified for label generation, the label will contain the
+following classes::
+
+  <Identification_Area>
+    <logical_identifier>
+    <version_id>
+    <title>
+    <information_model_version>
+    <product_class>
+    <License_Information>
+      <name>Creative Common Public License CC0 1.0 (2024)</name>
+      <description>Creative Commons Zero (CC0) license information.</description>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:system_bundle:document_pds4_standards:creative_commons_1.0.0::1.0</lid_reference>
+        <reference_type>product_to_license</reference_type>
+      </Internal_Reference>
+    </License_Information>
+  </Identification_Area>
+  <Reference_List>
+  </Reference_List>
+
+Depending on the chosen input for ``--generate-label``, the label will be given either the 
+``File_Area_Ancillary`` or ``File_Area_Metadata`` class, which will then contain either
+``Table_Character`` for fixed-width index files or ``Table_Delimited`` for variable-length
+files. These classes are populated by the label generation code and cannot be altered
+with configuration files (except in the case of nilled elements).

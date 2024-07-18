@@ -157,7 +157,7 @@ def default_value_for_nil(config, data_type, nil_value):
     if data_type is None:
         default = None
     else:
-        default = config[data_type][nil_value]
+        default = config['nillable'][data_type][nil_value]
 
     return default
 
@@ -254,14 +254,14 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, valid_add_extra_file
 
 
 def load_config_file(
-        default_config_file=Path(__file__).resolve().parent/'pds4indextools.yaml',
+        default_config_file=Path(__file__).resolve().parent/'default_config.yaml',
         specified_config_files=None):
     """
     Create a config object from a given configuration file.
 
-    This will always load in the default configuration file 'pds4indextools.yaml'. In the
-    event a specified configuration file is given, the contents of that file will
-    override what is in the default configuration file.
+    This will always load in the default configuration file 'default_config.yaml'. In the
+    event additional specified configuration files are given, the contents of those files
+    will override the contents of the default configuration file in order.
 
     Parameters:
         default_config_file (str, optional): Name of or path to the default configuration
@@ -273,13 +273,14 @@ def load_config_file(
         dict: The contents of the YAML configuration files as a dictionary.
     """
 
-    config = {}
+    config = {'nillable': {},
+              'label-contents': {}}
 
     try:
         default_config = load_yaml_file(default_config_file)
-        if isinstance(default_config, list):
-            default_config = {k: v for d in default_config for k, v in d.items()}
-        config.update(default_config)
+        config['nillable'].update(default_config['nillable'])
+        config['label-contents'].update(default_config['label-contents'])
+        # config.update(default_config['label-contents'])
     except OSError:
         print(f'Unable to read the default configuration file: {default_config_file}')
         sys.exit(1)
@@ -289,14 +290,12 @@ def load_config_file(
         for file in specified_config_files:
             try:
                 specified_config = load_yaml_file(file)
-                if isinstance(specified_config, list):
-                    specified_config = {
-                        k: v for d in specified_config for k, v in d.items()}
-                config.update(specified_config)
+                config['nillable'].update(specified_config['nillable'])
+                config['label-contents'].update(specified_config['label-contents'])
+                # config['label-contents'].update(specified_config['label-contents'])
             except OSError:
                 print(f'Unable to read configuration file: {file}')
                 sys.exit(1)
-
     return config
 
 
@@ -1171,8 +1170,11 @@ def main(cmd_line=None):
 
     misc.add_argument('--config-file', action='append',
                       metavar='CONFIG_FILEPATH',
-                      help='Read in user-specified configuration file(s). The file must '
-                           'be in YAML file format.')
+                      help='Read a user-specified configuration file. The file must be '
+                           'in YAML format. You may specify more than one configuration '
+                           'file using additional --config-file arguments, in which case '
+                           'each subsequent configuration file augments and overrides '
+                           'the previous files.')
 
     args = parser.parse_args(cmd_line)
 
@@ -1514,7 +1516,7 @@ def main(cmd_line=None):
         creation_date = get_creation_date(index_file)
 
         # The pre-determined contents of the generated label file. Any additional
-        # information is derived from either the default_values.yaml or the specified
+        # information is derived from either the default_config.yaml or the specified
         # .yaml file from --config-file
         label_content = {
             'logical_identifier': 'urn:nasa:pds:rms_metadata:document_opus:' + filename,
@@ -1538,12 +1540,7 @@ def main(cmd_line=None):
         else:
             label_content['Table_Delimited'] = True
 
-        data = load_yaml_file(
-            Path(__file__).resolve().parent/'default_values.yaml')
-
-        unnested_data = {k: v for d in data for k, v in d.items()}
-        label_content.update(unnested_data)
-        label_content.update(config)
+        label_content.update(config['label-contents'])
 
         output_subdir = Path(output_csv_path).parent
 
