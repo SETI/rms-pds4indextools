@@ -280,7 +280,6 @@ def load_config_file(
         default_config = load_yaml_file(default_config_file)
         config['nillable'].update(default_config['nillable'])
         config['label-contents'].update(default_config['label-contents'])
-        # config.update(default_config['label-contents'])
     except OSError:
         print(f'Unable to read the default configuration file: {default_config_file}')
         sys.exit(1)
@@ -290,12 +289,13 @@ def load_config_file(
         for file in specified_config_files:
             try:
                 specified_config = load_yaml_file(file)
-                config['nillable'].update(specified_config['nillable'])
-                config['label-contents'].update(specified_config['label-contents'])
-                # config['label-contents'].update(specified_config['label-contents'])
             except OSError:
                 print(f'Unable to read configuration file: {file}')
                 sys.exit(1)
+            if 'nillable' in specified_config:
+                config['nillable'].update(specified_config['nillable'])
+            if 'label-contents' in specified_config:
+                config['label-contents'].update(specified_config['label-contents'])
     return config
 
 

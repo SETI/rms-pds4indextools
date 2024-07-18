@@ -15,11 +15,3 @@ Welcome to ``pds4indextools``'s documentation!
    :caption: Contents:
 
    pds4_create_xml_index
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

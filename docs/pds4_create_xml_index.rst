@@ -1,6 +1,9 @@
 ``pds4_create_xml_index`` Program
 =================================
 
+Introduction
+------------
+
 The RMS Node's PDS4 Index Creation Tool (``pds4_create_xml_index``) is designed to
 facilitate the extraction and indexing of information from `Planetary Data System (PDS)
 <https://pds.nasa.gov>`_ `PDS4-format <https://pds.nasa.gov/datastandards/documents/>`_
@@ -18,14 +21,15 @@ and accessing structured data within PDS4-compliant datasets.
 XPath Syntax and Structure
 --------------------------
 
-This tool generates headers that represent the position of each element in the XML
-hierarchy in a manner similar to `the standard XPath format <https://developer.mozilla.org/en-US/docs/Web/XPath>`_. 
-While familiarity with XPath syntax is beneficial, it is not necessary to use this tool
-effectively. Note that for simplicity we call our headers XPaths throughout this document
-and within the command line arguments, despite some minor syntax differences. Below we
-describe the syntax we use for our headers. 
+``pds4_create_xml_index`` generates index file headers that represent the position of each
+element in the XML hierarchy in a manner similar to `the standard XPath format
+<https://developer.mozilla.org/en-US/docs/Web/XPath>`_. While familiarity with XPath
+syntax is beneficial, it is not necessary to use this tool effectively. Note that for
+simplicity we call our headers XPaths throughout this document and within the command line
+arguments, despite some minor syntax differences. Here we describe the syntax we use for
+our headers.
 
-An XPath header is read from left to right, starting with the root element and moving 
+An XPath header is read from left to right, starting with the root element and moving
 through each subsequent child element. Elements are separated by a forward slash (``/``).
 If an element has multiple instances within a single parent, predicates (numbers within
 angle brackets) are used to specify the exact instance, such as
@@ -47,7 +51,7 @@ fragment::
       </Identification_Area>
   </Product_Observational>
 
-the available XPaths are::
+the available XPath headers are::
 
   Product_Observational<1>/Identification_Area<1>/logical_identifier<1>
   Product_Observational<1>/Identification_Area<1>/Citation_Information<1>/author_list<1>
@@ -107,14 +111,14 @@ Index file generation
   columns in the index file. One or more column names can be specified separated by
   commas. The available column names are:
 
-  - ``filename``: The base filename of the label file.
-  - ``filepath``: The path of the label file relative to the top-level directory.
-  - ``bundle_lid``: The LID of the bundle containing the label file.
-  - ``bundle``: The name of the bundle containing the label file.
+  - ``filename``: The base filename of the label file
+  - ``filepath``: The path of the label file relative to the top-level directory
+  - ``bundle_lid``: The LID of the bundle containing the label file
+  - ``bundle``: The name of the bundle containing the label file
 
-- ``--sort-by COMMA_SEPARATED_HEADER_NAME(s)``: Sort the resulting index file by the value
-  in one or more columns. The column names are those that appear in the final index file,
-  as modified by ``--simplify-xpaths``, ``--limit-xpaths-file``, or
+- ``--sort-by COMMA_SEPARATED_HEADER_NAME(s)``: Sort the resulting index file by the
+  value(s) in one or more columns. The column names are those that appear in the final
+  index file, as modified by ``--simplify-xpaths``, ``--limit-xpaths-file``, or
   ``--clean-header-field-names``, and include any additional columns added with
   ``--add-extra-file-info``. To see a list of available column names, use
   ``--output-headers-file``. More than one sort key can be specified by separating them by
@@ -124,7 +128,7 @@ Index file generation
 
   Example::
 
-    pds4_create_xml_index <...> --sort-by "pds:Product_Observational/pds:Identification_Area<1>/pds:version_id<1>,pds:logical_identifier,"
+    pds4_create_xml_index <...> --sort-by "pds:Product_Observational/pds:Identification_Area<1>/pds:version_id<1>,pds:logical_identifier"
 
 - ``--fixed-width``: Format the index file using fixed-width columns.
 
@@ -140,10 +144,10 @@ Limiting results
 """"""""""""""""
 
 - ``--limit-xpaths-file XPATHS_FILEPATH``: Specify a text file containing a list of
-  specific XPaths to extract from the label files. If not specified, all elements found in
-  the label files will be included. The given text file can specify XPaths using
-  ``glob``-style syntax, where each XPath level is treated as if it were a directory in a
-  filesystem. Available wildcards are:
+  specific XPaths to extract from the label files. If this argument is not specified, all
+  elements found in the label files will be included. The given text file can specify
+  XPaths using ``glob``-style syntax, where each XPath level is treated as if it were a
+  directory in a filesystem. Available wildcards are:
 
   - ``?`` matches any single character within an XPath level
   - ``*`` matches any series of characters within an XPath level
@@ -190,47 +194,47 @@ Miscellaneous
 - ``--verbose``: Display detailed information during the file scraping process that may
   be useful for debugging.
 
-- ``--config-file``: Specify one or more ``YAML``-style configuration files for further
-customization of the extraction process. See the below section for details.
-
+- ``--config-file``: Specify one or more YAML-style configuration files for further
+  customization of the extraction process. See the section below for details.
 
 
 Configuration Files
-^^^^^^^^^^^^^^^^^^^
+-------------------
 
-This tool allows for the use of YAML configuration files to alter specific contents of
-index files and generated label files. 
+``pds4_create_xml_index`` allows for the use of `YAML <https://yaml.org/spec/1.2.2/>`_
+configuration files to alter specific contents of index files and generated label files.
+Configuration files can specify information for "nillable elements" and details to be
+included in the generated label file. Because you can specify multiple configuration
+files, you have the option of separating different types of configuration data into
+separate files, or including it all in a single file.
 
 Nillable Elements
-"""""""""""""""""
+^^^^^^^^^^^^^^^^^
 
 The first application of configuration files is to cover instances of nilled elements.
 Nilled elements are those intentionally omitted due to being inapplicable, missing,
-unknown, or anticipated. The tool has a default configuration file that contains values
-for a set of nilled elements. Below is the ``nillable`` section of the ``YAML`` file that
-covers these values::
+unknown, or anticipated. ``pds4_create_xml_index`` has a default configuration file that
+contains values for a common set of nilled elements. Below is the ``nillable`` section of
+the default configuration file that covers these values::
 
   nillable:
-    pds:ASCII_Date_YMD: 
+    pds:ASCII_Date_YMD:
       inapplicable: '0001-01-01'
       missing: '0002-01-01'
       unknown: '0003-01-01'
       anticipated: '0004-01-01'
 
-
-    pds:ASCII_Date_Time_YMD: 
-      inapplicable: 0001-01-01T12:00
-      missing: 0002-01-01T12:00
-      unknown: 0003-01-01T12:00
-      anticipated: 0004-01-01T12:00
-
+    pds:ASCII_Date_Time_YMD:
+      inapplicable: '0001-01-01T12:00'
+      missing: '0002-01-01T12:00'
+      unknown: '0003-01-01T12:00'
+      anticipated: '0004-01-01T12:00'
 
     pds:ASCII_Date_Time_YMD_UTC:
-      inapplicable: 0001-01-01T12:00Z
-      missing: 0002-01-01T12:00Z
-      unknown: 0003-01-01T12:00Z
-      anticipated: 0004-01-01T12:00Z
-
+      inapplicable: '0001-01-01T12:00Z'
+      missing: '0002-01-01T12:00Z'
+      unknown: '0003-01-01T12:00Z'
+      anticipated: '0004-01-01T12:00Z'
 
     pds:ASCII_Integer:
       inapplicable: -999
@@ -238,13 +242,11 @@ covers these values::
       unknown: -997
       anticipated: -996
 
-
     pds:ASCII_Real:
       inapplicable: -999.0
       missing: -998.0
       unknown: -997.0
       anticipated: -996.0
-
 
     pds:ASCII_Short_String_Collapsed:
       inapplicable: inapplicable
@@ -252,13 +254,14 @@ covers these values::
       unknown: unknown
       anticipated: anticipated
 
-**NOTE**: ``YAML`` considers the ``000X-0X-0X`` format as a datetime object. As such,
+**NOTE**: YAML considers the ``000X-0X-0X`` format as a datetime object. As such,
 assigned values for ``ASCII_Date_YMD`` and other data types that use this format need to
 be surrounded by quotes.
 
-You can cover any additional data types using specified configuration files. Below is an
-example of how you can write an configuration file to override the contents of the
-default file::
+You can support any additional nillable data types, or override the default values, by
+supplying additional configuration files with the ``--config-file`` option. Below is an
+example of a configuration file that overrides the default values for three of the six
+common data types::
 
   nillable:
     pds:ASCII_Integer:
@@ -280,34 +283,30 @@ default file::
       anticipated: anticipated_alt
 
 
-This will replace the values for nilled elements with the data types
-``pds:ASCII_Integer``, ``pds:ASCII_Real``, ans ``ASCII_Short_String_Collapsed``
-
-
 Label Contents
-""""""""""""""
+^^^^^^^^^^^^^^
 
 Moreover, the configuration files can include content for label generation. This feature
 allows you to add optional classes to the generated label file, such as
-``Citation_Information``, ``Modification_History``, and more. Additionally, you can
-override existing values within the generated label file using these configuration files.
+``Citation_Information``, and ``Modification_History``. Additionally, you can override
+existing values within the generated label file.
 
-Below is the ``label-content`` section of the default ``YAML`` file::
+Below is the ``label-contents`` section of the default configuration file::
 
   label-contents:
     version_id: 1.0
     title: Index File
-    Citation_Information: 
-    Modification_Detail: 
-    Internal_Reference: 
-    External_Reference: 
-    Source_Product_Internal: 
-    Source_Product_External: 
+    Citation_Information:
+    Modification_Detail:
+    Internal_Reference:
+    External_Reference:
+    Source_Product_Internal:
+    Source_Product_External:
 
 Each listed value with an empty dictionary is an optional field the user can include in
 their generated label. If the user does decide to include one of these fields, **they must
 also include all elements within that field in their configuration file, even if the
-element will remain empty**. 
+element will remain empty**.
 
 For reference, provided below are the full contents of the optional label classes::
 
@@ -323,11 +322,10 @@ For reference, provided below are the full contents of the optional label classe
       funding_year
       funding_award
       funding_acknowledgement_text
-  Modification_History:
-    Modification_Detail:
-      modification_date
-      version_id
-      description
+  Modification_Detail:
+    modification_date
+    version_id
+    description
   Internal_Reference:
     lid_reference
     reference_type
@@ -352,11 +350,11 @@ If no new contents are specified for label generation, the label will contain th
 following classes::
 
   <Identification_Area>
-    <logical_identifier>
-    <version_id>
-    <title>
-    <information_model_version>
-    <product_class>
+    <logical_identifier>...</logical_identifier>
+    <version_id>...</version_id>
+    <title>...</title>
+    <information_model_version>...</information_model_version>
+    <product_class>...</product_class>
     <License_Information>
       <name>Creative Common Public License CC0 1.0 (2024)</name>
       <description>Creative Commons Zero (CC0) license information.</description>
@@ -369,8 +367,25 @@ following classes::
   <Reference_List>
   </Reference_List>
 
-Depending on the chosen input for ``--generate-label``, the label will be given either the 
-``File_Area_Ancillary`` or ``File_Area_Metadata`` class, which will then contain either
-``Table_Character`` for fixed-width index files or ``Table_Delimited`` for variable-length
-files. These classes are populated by the label generation code and cannot be altered
-with configuration files (except in the case of nilled elements).
+Depending on the chosen argument for ``--generate-label`` (``ancillary`` or ``metadata``),
+the label will be given either the ``File_Area_Ancillary`` or ``File_Area_Metadata``
+class, which will then contain either ``Table_Character`` for fixed-width index files or
+``Table_Delimited`` for variable-length files. These classes are populated by the label
+generation code and cannot be altered with configuration files (except in the case of
+nilled elements).
+
+Here is an example of a configuration file that overrides the default title and adds
+modification history::
+
+  label-contents:
+    title: Index file for my occultation bundle
+    Modification_Detail:
+      - modification_date: '2024-01-01'
+        version_id: 1.1
+        description: |
+          This is a lengthy description of what this modification
+          changed in the bundle.
+          There were lots of changes.
+      - modification_date: '2023-01-01'
+        version_id: 1.0
+        description: Initial release.
