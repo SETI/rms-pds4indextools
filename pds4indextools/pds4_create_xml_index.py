@@ -183,6 +183,48 @@ def extract_logical_identifier(tree):
     return logical_identifier.text.strip()
 
 
+def match_dict_keys(data, pattern):
+    """
+    Match dictionary keys against a pattern with support for `**` as a recursive wildcard.
+
+    Parameters:
+        data (dict): The dictionary whose keys are to be matched against the pattern.
+                     Keys are expected to be strings.
+        pattern (str): The pattern to match against dictionary keys. Supports Unix
+                       shell-style wildcards including `**` for recursive matching.
+
+    Returns:
+        list: A list of keys from the input dictionary that match the given pattern.
+    """
+    def match_segment(segment, pattern):
+        return fnmatch.fnmatch(segment, pattern)
+
+    def match_recursive_helper(segments, patterns):
+        if not patterns:
+            return not segments
+
+        pattern = patterns[0]
+        if pattern == '**':
+            if match_recursive_helper(segments, patterns[1:]):
+                return True
+            return bool(segments) and match_recursive_helper(segments[1:], patterns)
+        elif segments:
+            return match_segment(segments[0], pattern) and match_recursive_helper(
+                segments[1:], patterns[1:])
+        else:
+            return False
+
+    pattern_segments = pattern.split('/')
+    matched_keys = []
+
+    for key in data.keys():
+        key_segments = key.split('/')
+        if match_recursive_helper(key_segments, pattern_segments):
+            matched_keys.append(key)
+
+    return matched_keys
+
+
 def filter_dict_by_glob_patterns(input_dict, glob_patterns, valid_add_extra_file_info,
                                  verboseprint):
     """
@@ -197,7 +239,7 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, valid_add_extra_file
         glob_patterns (list): A list of glob patterns to match against dictionary keys.
             Patterns starting with '!' indicate keys that should be excluded from the
             result.
-        valid_extra_file_info (list): A list of allowed values that cannot be excluded
+        valid_add_extra_file_info (list): A list of allowed values that cannot be excluded
             from the result.
         verboseprint (function): A function for printing verbose messages.
 
@@ -240,14 +282,15 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, valid_add_extra_file
     for pattern in glob_patterns:
         if not pattern.startswith('!'):
             verboseprint(f'Adding elements according to: {pattern}')
-            for key, value in input_dict.items():
-                if fnmatch.fnmatch(key, pattern):
-                    filtered_dict[key] = value
+            matched_keys = match_dict_keys(input_dict, pattern)
+            for key in matched_keys:
+                filtered_dict[key] = input_dict[key]
         else:
             verboseprint(f'Removing elements according to: {pattern}')
             pattern = pattern[1:]
-            for key, value in list(filtered_dict.items()):
-                if fnmatch.fnmatch(key, pattern) and key not in valid_add_extra_file_info:
+            matched_keys = match_dict_keys(filtered_dict, pattern)
+            for key in matched_keys:
+                if key not in valid_add_extra_file_info:
                     del filtered_dict[key]
 
     return filtered_dict
