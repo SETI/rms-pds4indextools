@@ -54,9 +54,10 @@ may install `pds4indextools` with:
 pipx install rms-pds4indextools
 ```
 
-# Getting Started With `pds4_create_xml_index`
+# Getting Started With [`pds4_create_xml_index`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_xml_index.html)
 
-Once `pds4indextools` has been installed, you may access the `pds4_create_index_tools`
+Once `pds4indextools` has been installed, you may access the
+[`pds4_create_xml_index`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_xml_index.html)
 program directly from the command line.
 
 The simplest use scrapes all XML labels from a collection and generates an index file:
@@ -66,7 +67,7 @@ pds4_create_xml_index <collection_dir> "**/*.xml"
 ```
 
 Many options are available to customize the scraping and generation process, including
-limiting which XML elements are scrape, changing the format of the resulting index file,
+limiting which XML elements are scraped, changing the format of the resulting index file,
 and generating a PDS4-compliant label. A summary of available options is available
 by typing:
 

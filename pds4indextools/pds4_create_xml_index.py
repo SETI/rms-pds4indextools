@@ -12,7 +12,6 @@ python pds4_create_xml_index.py --help
 import argparse
 from collections import namedtuple
 import csv
-import configparser
 from datetime import datetime
 import fnmatch
 import functools
@@ -155,14 +154,10 @@ def default_value_for_nil(config, data_type, nil_value):
     Returns:
         Any: Default replacement value of correct data type.
     """
-    if data_type == 'pds:ASCII_Integer':
-        default = config[data_type].getint(nil_value)
-    elif data_type == 'pds:ASCII_Real':
-        default = config[data_type].getfloat(nil_value)
-    elif data_type is None:
+    if data_type is None:
         default = None
     else:
-        default = config[data_type][nil_value]
+        default = config['nillable'][data_type][nil_value]
 
     return default
 
@@ -259,14 +254,14 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, valid_add_extra_file
 
 
 def load_config_file(
-        default_config_file=Path(__file__).resolve().parent/'pds4indextools.ini',
-        specified_config_file=None):
+        default_config_file=Path(__file__).resolve().parent/'default_config.yaml',
+        specified_config_files=None):
     """
     Create a config object from a given configuration file.
 
-    This will always load in the default configuration file 'pds4indextools.ini'. In the
-    event a specified configuration file is given, the contents of that file will
-    override what is in the default configuration file.
+    This will always load in the default configuration file 'default_config.yaml'. In the
+    event additional specified configuration files are given, the contents of those files
+    will override the contents of the default configuration file in order.
 
     Parameters:
         default_config_file (str, optional): Name of or path to the default configuration
@@ -275,23 +270,32 @@ def load_config_file(
             configuration file.
 
     Returns:
-        configparser.ConfigParser: A ConfigParser object.
+        dict: The contents of the YAML configuration files as a dictionary.
     """
-    config = configparser.ConfigParser()
+
+    config = {'nillable': {},
+              'label-contents': {}}
 
     try:
-        config.read_file(open(default_config_file))
+        default_config = load_yaml_file(default_config_file)
+        config['nillable'].update(default_config['nillable'])
+        config['label-contents'].update(default_config['label-contents'])
     except OSError:
         print(f'Unable to read the default configuration file: {default_config_file}')
         sys.exit(1)
 
-    if specified_config_file:
-        try:
-            config.read_file(open(specified_config_file))
-        except OSError:
-            print(f'Unable to read configuration file: {specified_config_file}')
-            sys.exit(1)
-
+    # Load specified configuration files
+    if specified_config_files:
+        for file in specified_config_files:
+            try:
+                specified_config = load_yaml_file(file)
+            except OSError:
+                print(f'Unable to read configuration file: {file}')
+                sys.exit(1)
+            if 'nillable' in specified_config:
+                config['nillable'].update(specified_config['nillable'])
+            if 'label-contents' in specified_config:
+                config['label-contents'].update(specified_config['label-contents'])
     return config
 
 
@@ -1159,27 +1163,24 @@ def main(cmd_line=None):
                                        'Can generate either a Product_Ancillary or '
                                        'Product_Metadata_Supplemental label.')
 
-    label_generation.add_argument('--label-user-input', type=str,
-                                  metavar='USER_INPUT_FILEPATH',
-                                  help='Provide an optional file containing additional '
-                                       'information for the generated label. File must '
-                                       'be in YAML format.')
-
     misc = parser.add_argument_group('Miscellaneous')
     misc.add_argument('--verbose', action='store_true',
                       help='Turn on verbose mode and show the details of file '
                            'scraping.')
 
-    misc.add_argument('--config-file', type=str,
+    misc.add_argument('--config-file', action='append',
                       metavar='CONFIG_FILEPATH',
                       help='Read a user-specified configuration file. The file must be '
-                           'in .ini file format.')
+                           'in YAML format. You may specify more than one configuration '
+                           'file using additional --config-file arguments, in which case '
+                           'each subsequent configuration file augments and overrides '
+                           'the previous files.')
 
     args = parser.parse_args(cmd_line)
 
     verboseprint = print if args.verbose else lambda *a, **k: None
 
-    config = load_config_file(specified_config_file=args.config_file)
+    config = load_config_file(specified_config_files=args.config_file)
 
     directory_path = Path(args.directorypath)
     verboseprint(f'Top level directory to scrape: {directory_path}')
@@ -1255,6 +1256,10 @@ def main(cmd_line=None):
             update_nillable_elements_from_xsd_file(url, nillable_elements_info)
 
         filepath = str(label_file.relative_to(args.directorypath)).replace('\\', '/')
+        # PDS4 compliant filepaths must be less than 255 characters.
+        if len(filepath) > 255:
+            print(f'Filepath {filepath} exceeds 255 character limit.')
+            sys.exit(1)
 
         # Creates two dictionaries: one for the namespaces, and one for their
         # associated prefixes.
@@ -1386,7 +1391,6 @@ def main(cmd_line=None):
             all_results[i]['Results'] = new_label_results
 
     if output_csv_path:
-        verboseprint(f'Index file generated at {output_csv_path}')
         write_results_to_csv(all_results, args, output_csv_path)
 
     # To instead receive a list of available information available within a label or set
@@ -1421,9 +1425,8 @@ def main(cmd_line=None):
     if args.generate_label:
         index_file = output_csv_path
 
-        # The template label file and the default_values.yaml file are initialized.
+        # The template label file is initialized.
         module_dir = Path(__file__).resolve().parent
-        yaml_file = module_dir / 'default_values.yaml'
         tempfile = str(module_dir / 'index_label_template_pds.xml')
         template = ps.PdsTemplate(tempfile)
 
@@ -1464,8 +1467,9 @@ def main(cmd_line=None):
                     header = header.strip()
                 if (header in valid_add_extra_file_info and 'lid' in header):
                     true_type = 'pds:ASCII_LID'
-                elif (header in valid_add_extra_file_info
-                      and 'file' in header):
+                elif header == 'filename':
+                    true_type = 'pds:ASCII_File_Name'
+                elif header == filepath:
                     true_type = 'pds:ASCII_File_Specification_Name'
                 elif header == 'bundle':
                     true_type = 'pds:ASCII_Text_Preserved'
@@ -1512,8 +1516,8 @@ def main(cmd_line=None):
         creation_date = get_creation_date(index_file)
 
         # The pre-determined contents of the generated label file. Any additional
-        # information is derived from either the default_values.yaml or the specified
-        # .yaml file from --label-user-input
+        # information is derived from either the default_config.yaml or the specified
+        # .yaml file from --config-file
         label_content = {
             'logical_identifier': 'urn:nasa:pds:rms_metadata:document_opus:' + filename,
             'creation_date_time': str(creation_date),
@@ -1536,9 +1540,7 @@ def main(cmd_line=None):
         else:
             label_content['Table_Delimited'] = True
 
-        additional_data = load_yaml_file(yaml_file)
-        unnested_data = {k: v for d in additional_data for k, v in d.items()}
-        label_content.update(unnested_data)
+        label_content.update(config['label-contents'])
 
         output_subdir = Path(output_csv_path).parent
 
