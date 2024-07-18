@@ -98,7 +98,7 @@ def correct_duplicates(label_results):
 
     Example:
             # XPaths in label_results shortened for readability
-        >>> keys = list(label_result.keys())
+        >>> keys = list(label_result)
         >>> keys = [
                 ../geom:SPICE_Kernel_Identification<1>/geom:kernel_type<1>,
                 ../geom:SPICE_Kernel_Identification<1>/geom:kernel_type_1<1>,
@@ -107,7 +107,7 @@ def correct_duplicates(label_results):
                 ../geom:SPICE_Kernel_Identification<1>/geom:kernel_type_4<1>
                 ]
         >>> correct_duplicate(label_results)
-        >>> keys = list(label_result.keys())
+        >>> keys = list(label_result)
         >>> keys = [
                 ../geom:SPICE_Kernel_Identification<1>/geom:kernel_type<1>,
                 ../geom:SPICE_Kernel_Identification<2>/geom:kernel_type<1>,
@@ -117,7 +117,7 @@ def correct_duplicates(label_results):
                 ]
     """
     element_names = set()
-    for key in list(label_results.keys()):
+    for key in list(label_results):
         tag = key.split('/')[-1].split('<')[0]
         number = tag.split('_')[-1]
         if number.isdigit():
@@ -209,15 +209,15 @@ def match_dict_keys(data, pattern):
                 return True
             return bool(segments) and match_recursive_helper(segments[1:], patterns)
         elif segments:
-            return match_segment(segments[0], pattern) and match_recursive_helper(
-                segments[1:], patterns[1:])
+            return (match_segment(segments[0], pattern) and
+                    match_recursive_helper(segments[1:], patterns[1:]))
         else:
             return False
 
     pattern_segments = pattern.split('/')
     matched_keys = []
 
-    for key in data.keys():
+    for key in data:
         key_segments = key.split('/')
         if match_recursive_helper(key_segments, pattern_segments):
             matched_keys.append(key)
@@ -390,7 +390,7 @@ def process_headers(label_results, key, root, namespaces, prefixes):
     key_new = convert_header_to_xpath(root, key, namespaces)
 
     # Replace namespaces with prefixes
-    for namespace in prefixes.keys():
+    for namespace in prefixes:
         if namespace in key_new:
             key_new = key_new.replace('{' + namespace + '}', prefixes[namespace] + ':')
 
@@ -591,7 +591,7 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
         xpath = tree.getpath(element)
         tag = element.xpath('local-name()')
         nil_value = element.get('nilReason')
-        if tag in nillable_elements_info.keys():
+        if tag in nillable_elements_info:
             data_type = nillable_elements_info[tag]
             default = default_value_for_nil(config, data_type, nil_value)
             results_dict[xpath] = default
@@ -679,7 +679,7 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
     for element in elements_with_nillable:
         name = element.get('name')
         type_attribute = element.get('type')
-        if type_attribute not in nillable_elements_info.keys():
+        if type_attribute not in nillable_elements_info:
             if type_attribute:
                 # Split the type attribute to handle namespace:typename format
                 type_parts = type_attribute.split(':')
@@ -1071,7 +1071,7 @@ def validate_label_type(arg_value, valid_choices):
     value = arg_value.lower()
     if value not in valid_choices:
         raise argparse.ArgumentTypeError(f'Invalid choice: "{arg_value}" (choose '
-                                         f'from {list(valid_choices.keys())})')
+                                         f'from {list(valid_choices)})')
     return valid_choices[value]
 
 
@@ -1319,15 +1319,15 @@ def main(cmd_line=None):
         # improve readability. Each XPath's namespace is replaced with its prefix for
         # faster reference. Duplicate XPaths are made unique to ensure all results are
         # present in the final product.
-        for key in list(label_results.keys()):
+        for key in list(label_results):
             process_headers(label_results, key, root, namespaces, prefixes)
 
-        for key in list(label_results.keys()):
+        for key in list(label_results):
             key_new = key.replace('[', '<')
             key_new = key_new.replace(']', '>')
             label_results[key_new] = label_results.pop(key)
 
-        for key in list(label_results.keys()):
+        for key in list(label_results):
             parts = key.split('/')
             new_parts = []
             for part in parts:
@@ -1339,7 +1339,7 @@ def main(cmd_line=None):
             key_new = '/'.join(new_parts[1:])
             label_results[key_new] = label_results.pop(key)
 
-        for key in list(label_results.keys()):
+        for key in list(label_results):
             if 'cyfunction' in key:
                 del label_results[key]
 
@@ -1347,7 +1347,7 @@ def main(cmd_line=None):
         # the column refers to. At this stage, duplicate XPaths may exist again due to
         # the reformatting. These duplicates are corrected to preserve the contents of
         # each element's value.
-        xpath_map = renumber_xpaths(label_results.keys())
+        xpath_map = renumber_xpaths(label_results)
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
 
@@ -1402,7 +1402,7 @@ def main(cmd_line=None):
             names = []
 
             # Step 1: Gather all tags from keys
-            for key in label_results.keys():
+            for key in label_results:
                 elements = key.split('/')
                 tag = elements[-1]
                 name = tag.split('<')[0]
@@ -1444,7 +1444,7 @@ def main(cmd_line=None):
         xpaths = []
         for label in all_results:
             for values in label.values():
-                for xpath in values.keys():
+                for xpath in values:
                     if xpath not in xpaths:
                         xpaths.append(xpath)
 
