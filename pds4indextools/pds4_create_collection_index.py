@@ -15,7 +15,9 @@ from lxml import etree
 from pathlib import Path
 import csv
 
+
 def main():
+
     # Parse command line arguments
     parser = argparse.ArgumentParser()
 
@@ -64,14 +66,16 @@ def main():
         data.append([member_status, lidvid])
 
     # Determine the output file path
-    collprod_filepath = (args.collection_product_file if args.collection_product_file else
-                collection_path / f'collection_{args.collection}.csv')
+    collprod_filepath = (
+        args.collection_product_file if args.collection_product_file else
+        collection_path / f'collection_{args.collection}.csv')
 
     # Write data to CSV file
     with open(collprod_filepath, mode='w', newline='') as collprod_file:
         writer = csv.writer(collprod_file)
         writer.writerow(['Member Status', 'LIDVID'])
         writer.writerows(data)
+
 
 if __name__ == '__main__':
     main()
