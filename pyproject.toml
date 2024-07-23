@@ -47,6 +47,7 @@ Issues = "https://github.com/SETI/rms-pds4indextools/issues"
 
 [project.scripts]
 pds4_create_xml_index = "pds4indextools.pds4_create_xml_index:main"
+pds4_create_collection_product = "pds4indextools.pds4_create_collection_product:main"
 
 [tool.setuptools]
 packages = ["pds4indextools"]
