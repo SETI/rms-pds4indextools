@@ -6,7 +6,7 @@ Introduction
 The RMS Node's PDS4 Collection Product Creation Tool (``pds4_create_collection_product``)
 is designed to create bespoke collection product files from
 `Planetary Data System (PDS) <https://pds.nasa.gov>`_ `PDS4-format
-<https://pds.nasa.gov/datastandards/documents/>`_label files. This tool automates the
+<https://pds.nasa.gov/datastandards/documents/>`_ label files. This tool automates the
 creation of collection products by recursively searching for all label files within a
 specified directory and extracting their identifying information. This information is then
 compared against user-provided details (the bundle and collection names) to determine
@@ -14,6 +14,14 @@ which label files are primary members and which are secondary members. The resul
 compiled into a CSV file and placed in the user's specified location, or in the
 collection's location if no specific destination is provided. This allows for a quick and
 efficient way to check the contents of collections.
+
+**NOTE**: This tool is intended to be used on pre-existing label files. This tool does not
+include/create label files for collections. The use of this tool does not assign the Ring
+Moon Systems Node the responsibility of creating collections for the data provider. This
+tool also does not generate the associated collection product label file. All data
+providers are advised to work with their assigned Node to create the collection product
+label file.
+
 
 Command Line Arguments
 ----------------------
@@ -48,5 +56,5 @@ Optional arguments
 of the collection product. This allows for the collection product to be generated outside
 of the collection it represents. It is recommended that the file have the suffix ``.csv``.
 If no directory is specified, the collection product will be written to the current
-directory. If this command is not used, the collection product will be written to the path
-to the collection.
+directory. If this argument is not specified, the collection product will be written to
+the top-level directory of the collection with the name ``collection_*.csv``

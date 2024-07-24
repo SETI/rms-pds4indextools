@@ -11,9 +11,11 @@ python pds4_create_collection_product.py --help
 """
 
 import argparse
+import csv
 from lxml import etree
 from pathlib import Path
-import csv
+import sys
+
 
 
 def main():
@@ -23,9 +25,9 @@ def main():
 
     parser.add_argument('collectionpath', type=str, metavar='COLLECTION_PATH',
                         help='The path to the collection product')
-    parser.add_argument('bundle', type=str, metavar='BUNDLE_NAME',
+    parser.add_argument('--bundle', type=str, metavar='BUNDLE_NAME',
                         help='The name of the bundle')
-    parser.add_argument('collection', type=str, metavar='COLLECTION_NAME',
+    parser.add_argument('--collection', type=str, metavar='COLLECTION_NAME',
                         help='The name of the collection')
     parser.add_argument('--collection-product-file', type=str,
                         metavar='COLLECTION_PRODUCT_FILEPATH',
@@ -33,13 +35,30 @@ def main():
 
     args = parser.parse_args()
 
-    collection_path = Path(args.collectionpath)
+    collection_path = Path(args.collectionpath).absolute()
+    print(f"Creating collection product for: {collection_path}")
     label_files = []
-    primary = f"{args.bundle}:{args.collection}"
+
+    if args.bundle:
+        bundle = args.bundle
+    else:
+        bundle = collection_path.parent.name
+
+    if args.collection:
+        collection = args.collection
+    else:
+        collection = collection_path.name
+
+    print(f"Bundle name: {bundle}")
+    print(f"Collection name: {collection}")
+
+    primary = f"{bundle}:{collection}"
 
     # Gather all XML files in the collection path, sort by directory structure
     label_files = collection_path.glob('**/*.xml')
-    label_files = sorted(label_files, key=lambda x: x.parent)
+    if not label_files:
+        print(f'No label files found in directory: {collection_path}')
+        sys.exit(1)
 
     # Initialize list to hold rows of data
     data = []
@@ -54,8 +73,12 @@ def main():
         namespaces['pds'] = namespaces.pop(None)
 
         # Extract LID and VID
-        lid = tree.find('.//pds:logical_identifier', namespaces=namespaces).text
-        vid = tree.find('.//pds:version_id', namespaces=namespaces).text
+        try:
+            lid = tree.find('.//pds:logical_identifier', namespaces=namespaces).text
+            vid = tree.find('.//pds:version_id', namespaces=namespaces).text
+        except AttributeError:
+            print(f"XML file {label_file} does not contain expected contents.")
+            sys.exit(1)
 
         lidvid = f"{lid}::{vid}"
 
@@ -65,12 +88,15 @@ def main():
         # Append the data to the list
         data.append([member_status, lidvid])
 
+    # Sorting the list of results
+    data.sort()
     # Determine the output file path
     collprod_filepath = (
         args.collection_product_file if args.collection_product_file else
         collection_path / f'collection_{args.collection}.csv')
 
     # Write data to CSV file
+    print(f"Writing out to: {collprod_filepath}")
     with open(collprod_filepath, mode='w', newline='') as collprod_file:
         writer = csv.writer(collprod_file)
         writer.writerow(['Member Status', 'LIDVID'])
