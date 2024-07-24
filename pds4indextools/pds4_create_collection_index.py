@@ -17,7 +17,6 @@ from pathlib import Path
 import sys
 
 
-
 def main():
 
     # Parse command line arguments
