@@ -34,7 +34,8 @@ The following tools are currently available:
   A command-line program to scrape information from a series of PDS4 XML labels, usually
   in a single collection, and generate a summary index file.
 - [`pds4_create_collection_index`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_collection_index.html):
-  A command-line program to create collection products for collections of PDS4 XML labels.
+  A command-line program to create a collection product from a collection of PDS4 XML
+  labels.
 
 # Installation
 
@@ -99,7 +100,7 @@ instructions on usage can be found here:
 pds4_create_collection_index --help
 ```
 
-Complete documentation is available [here](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_xml_index.html)
+Complete documentation is available [here](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_collection_index.html)
 
 
 # Contributing

@@ -74,9 +74,14 @@ def main():
         # Extract LID and VID
         try:
             lid = tree.find('.//pds:logical_identifier', namespaces=namespaces).text
+        except AttributeError:
+            print(f'{label_file} does not contain logical_identifier attribute.')
+            sys.exit(1)
+
+        try:
             vid = tree.find('.//pds:version_id', namespaces=namespaces).text
         except AttributeError:
-            print(f"XML file {label_file} does not contain expected contents.")
+            print(f'{label_file} does not contain version_id attribute.')
             sys.exit(1)
 
         lidvid = f"{lid}::{vid}"
