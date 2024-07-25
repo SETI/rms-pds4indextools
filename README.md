@@ -98,7 +98,7 @@ The simplest use scrapes all XML labels from a collection and generates a collec
 pds4_create_collection_product <collection_dir> --bundle bundle_name --collection collection_name
 ```
 
-This will generate a collection product call ``collection_<collection_name>.csv`` in the
+This will generate a collection product called ``collection_<collection_name>.csv`` in the
 given collection directory. Full instructions on usage can be found here:
 
 ```sh
