@@ -17,9 +17,13 @@ location, or in the collection's top-level directory if no specific destination 
 provided. The resulting collection product is sorted by ``Member Status`` and then by
 ``LIDVID``.
 
-**NOTE**: This tool does not generate the associated collection product label file.
-All data providers are advised to work with their assigned Node to create the collection
-product label file.
+**NOTE**: Due to the specialized contents of each collection product label, this tool does
+not generate a collection product label file to accompany the generated CSV file; all data
+providers are advised to work with their assigned PDS Node to create an appropriate
+collection product label file. However, to avoid any collection product label that may be
+present from accidentally being included as a member of the collection itself, label files
+with the name ``collection_<collection_name>.xml`` are ignored when producing the
+collection product.
 
 
 Command Line Arguments
