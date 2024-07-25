@@ -64,6 +64,8 @@ def main():
 
     # Process each XML file
     for label_file in label_files:
+        if label_file.name == f'collection_{collection}.xml':
+            continue
         tree = etree.parse(str(label_file))
         root = tree.getroot()
 
@@ -84,7 +86,7 @@ def main():
             print(f'{label_file} does not contain version_id attribute.')
             sys.exit(1)
 
-        lidvid = f"{lid}::{vid}"
+        lidvid = f'{lid}::{vid}'
 
         # Determine member status
         member_status = 'P' if primary in lid else 'S'
