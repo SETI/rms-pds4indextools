@@ -31,8 +31,15 @@ of NASA's [Planetary Data System (PDS)](https://pds.nasa.gov).
 The following tools are currently available:
 
 - [`pds4_create_xml_index`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_xml_index.html):
-  A command-line program to scrape information from a series of PDS4 XML labels, usually
-  in a single collection, and generate a summary index file.
+  A command-line program to scrape all metadata information from a series of PDS4 XML
+  labels, usually in a single collection, and generate a summary index file. Such summary
+  index files may be optionally provided as part of a PDS4 delivery by a data provider,
+  or may be created by end users to aid in their searching and processing of PDS4
+  data products.
+- [`pds4_create_collection_product`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_collection_product.html):
+  A command-line program to create a collection product from a collection of PDS4 XML
+  labels. Collection products are a required part of PDS4 collections and are created by
+  data providers.
 
 # Installation
 
@@ -44,14 +51,30 @@ pip install rms-pds4indextools
 ```
 
 Note that this will install `pds4indextools` into your current system Python, or into your
-currently activated virtual environment (venv), if any. You may also install using `pipx`,
-which will isolate the installation from your system Python without requiring the creation
-of a virtual environment. To install `pipx`, please see the [installation
+currently activated virtual environment (venv), if any.
+
+If you already have the `rms-pds4indextools` package installed but wish to upgrade to a
+more recent version, you can use:
+
+```sh
+pip install --upgrade rms-pds4indextools
+```
+
+You may also install the index tools using `pipx`, which will isolate the installation
+from your system Python without requiring the creation of a virtual environment. To
+install `pipx`, please see the [installation
 instructions](https://pipx.pypa.io/stable/installation/). Once `pipx` is available, you
 may install `pds4indextools` with:
 
 ```sh
 pipx install rms-pds4indextools
+```
+
+If you already have the `rms-pds4indextools` package installed with `pipx`, you may
+upgrade to a more recent version with:
+
+```sh
+pipx upgrade rms-pds4indextools
 ```
 
 # Getting Started With [`pds4_create_xml_index`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_xml_index.html)
@@ -60,7 +83,8 @@ Once `pds4indextools` has been installed, you may access the
 [`pds4_create_xml_index`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_xml_index.html)
 program directly from the command line.
 
-The simplest use scrapes all XML labels from a collection and generates an index file:
+The simplest use scrapes all metadata from all XML labels in a collection and generates an
+index file:
 
 ```sh
 pds4_create_xml_index <collection_dir> "**/*.xml"
@@ -76,6 +100,28 @@ pds4_create_xml_index --help
 ```
 
 Complete documentation is available [here](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_xml_index.html)
+
+
+# Getting Started With [`pds4_create_collection_product`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_collection_product.html)
+
+Once `pds4indextools` has been installed, you may access the
+[`pds4_create_collection_product`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_collection_product.html)
+program directly from the command line.
+
+The simplest use scrapes all XML labels from a collection and generates a collection product:
+
+```sh
+pds4_create_collection_product <collection_dir> --bundle bundle_name --collection collection_name
+```
+
+This will generate a collection product called ``collection_<collection_name>.csv`` in the
+given collection directory. Full instructions on usage can be found here:
+
+```sh
+pds4_create_collection_product --help
+```
+
+Complete documentation is available [here](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_collection_product.html)
 
 
 # Contributing

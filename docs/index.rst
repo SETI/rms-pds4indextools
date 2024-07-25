@@ -15,3 +15,4 @@ Welcome to ``pds4indextools``'s documentation!
    :caption: Contents:
 
    pds4_create_xml_index
+   pds4_create_collection_product
