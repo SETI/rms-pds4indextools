@@ -103,7 +103,6 @@ def main():
     print(f"Writing out to: {collprod_filepath}")
     with open(collprod_filepath, mode='w', newline='') as collprod_file:
         writer = csv.writer(collprod_file)
-        writer.writerow(['Member Status', 'LIDVID'])
         writer.writerows(data)
 
 
