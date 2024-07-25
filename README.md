@@ -51,14 +51,30 @@ pip install rms-pds4indextools
 ```
 
 Note that this will install `pds4indextools` into your current system Python, or into your
-currently activated virtual environment (venv), if any. You may also install using `pipx`,
-which will isolate the installation from your system Python without requiring the creation
-of a virtual environment. To install `pipx`, please see the [installation
+currently activated virtual environment (venv), if any.
+
+If you already have the `rms-pds4indextools` package installed but wish to upgrade to a
+more recent version, you can use:
+
+```sh
+pip install --upgrade rms-pds4indextools
+```
+
+You may also install the index tools using `pipx`, which will isolate the installation
+from your system Python without requiring the creation of a virtual environment. To
+install `pipx`, please see the [installation
 instructions](https://pipx.pypa.io/stable/installation/). Once `pipx` is available, you
 may install `pds4indextools` with:
 
 ```sh
 pipx install rms-pds4indextools
+```
+
+If you already have the `rms-pds4indextools` package installed with `pipx`, you may
+upgrade to a more recent version with:
+
+```sh
+pipx upgrade rms-pds4indextools
 ```
 
 # Getting Started With [`pds4_create_xml_index`](https://rms-pds4indextools.readthedocs.io/en/latest/pds4_create_xml_index.html)
