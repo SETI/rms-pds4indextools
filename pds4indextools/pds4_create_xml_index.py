@@ -123,6 +123,12 @@ def correct_duplicates(label_results):
         if number.isdigit():
             cropped = tag.replace('_'+number, '')
             if cropped in element_names:
+                if str(cropped+'_'+number+'<1>') in key:
+                    key_new = key.replace((cropped+'_'+str((int(number)+1))+'<1>'),
+                                          cropped+'<1>')
+                else:
+                    key_new = key.replace((cropped+'_'+str((int(number)+1))),
+                                          cropped+'<1>')
                 key_new = key.replace(('_' + number + '<1>'), '<1>')
                 parent = key_new.split('/')[-2].split('<')[0]
                 key_new = key_new.replace(parent+'<1>', parent+'<'+str(int(number)+1)+'>')
@@ -406,7 +412,7 @@ def process_headers(label_results, key, root, namespaces, prefixes):
     label_results[key_new] = label_results.pop(key)
 
 
-def renumber_xpaths(xpaths):
+def renumber_xpaths(xpaths, args):
     """
     Renumber a list of XPaths to be sequential at each level.
 
@@ -458,6 +464,8 @@ def renumber_xpaths(xpaths):
 
     Parameters:
         xpaths (list): The list of XPaths or XPath fragments.
+        args (argparse.Namespace): Arguments parsed from command line using argparse.
+
 
     Returns:
         dict: A dictionary containing a mapping from the original XPaths to the
@@ -511,7 +519,10 @@ def renumber_xpaths(xpaths):
         # increasing starting at 1. We also add a special entry for the empty
         # suffix when there is no number.
         unique_nums = sorted({x.num for x in prefix_group_list if x.num is not None})
-        renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
+        if args.dont_number_unique_tags and len(unique_nums) == 1:
+            renumber_map = {x: '' for x in unique_nums}
+        else:
+            renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
         renumber_map[None] = ''
 
         # We further group these by unique parent (including the number)
@@ -527,7 +538,7 @@ def renumber_xpaths(xpaths):
             # down.
             children = [x for x in parent_group_list if x.child is not None]
             if children:
-                child_map = renumber_xpaths([x.child for x in children])
+                child_map = renumber_xpaths([x.child for x in children], args)
                 xpath_map.update(
                     {
                         f'{x.parent}/{x.child}': (
@@ -567,6 +578,20 @@ def split_into_elements(xpath):
             elements.append(part[0])
 
     return elements
+
+
+def replace_columns(filepath, df):
+    # Create an empty dictionary to store column mappings
+    column_mappings = {}
+
+    # Read the file and populate the dictionary
+    with open(filepath, 'r') as file:
+        for line in file:
+            old_name, new_name = line.strip().split(', ')
+            column_mappings[old_name] = new_name
+
+    # Step 2: Rename the columns using the mappings
+    df.rename(columns=column_mappings, inplace=True)
 
 
 def store_element_text(element, tree, results_dict, xsd_files, nillable_elements_info,
@@ -761,6 +786,9 @@ def write_results_to_csv(results_list, args, output_csv_path):
         rows.append(result_dict['Results'])
 
     df = pd.DataFrame(rows)
+
+    if args.rename_headers:
+        replace_columns(args.rename_headers, df)
 
     if args.sort_by:
         sort_values = str(args.sort_by).split(',')
@@ -1176,6 +1204,15 @@ def main(cmd_line=None):
                                             'contain characters permissible in variable '
                                             'names.')
 
+    index_file_generation.add_argument('--rename-headers', type=str,
+                                       metavar='NEW_HEADERS_FILEPATH',
+                                       help='Rename headers in the generated index file'
+                                            'according to a given mapping file.')
+
+    index_file_generation.add_argument('--dont-number-unique-tags', action='store_true',
+                                       help='Removes the predicates of unique XPath '
+                                            'headers.')
+
     index_file_generation.add_argument(
         '--simplify-xpaths',
         action='store_true',
@@ -1347,11 +1384,12 @@ def main(cmd_line=None):
         # the column refers to. At this stage, duplicate XPaths may exist again due to
         # the reformatting. These duplicates are corrected to preserve the contents of
         # each element's value.
-        xpath_map = renumber_xpaths(label_results)
+        correct_duplicates(label_results)
+        xpath_map = renumber_xpaths(label_results, args)
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
 
-        correct_duplicates(label_results)
+        # correct_duplicates(label_results)
 
         # Collect metadata about the label file. The label file's lid is scraped and
         # broken into multiple parts. This metadata can then be requested as additional
