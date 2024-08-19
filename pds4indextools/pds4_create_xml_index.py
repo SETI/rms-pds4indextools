@@ -54,7 +54,7 @@ def convert_header_to_xpath(root, xml_header_path, namespaces):
     Parameters:
         root (Element): The root element of the XML document.
         xml_header_path (str): Original XML header path.
-        namespaces (dict): Dictionary of XML namespace mappings.
+        namespaces (dict): A dictionary containing XML namespace mappings.
 
     Returns:
         str: Converted XPath expression.
@@ -300,20 +300,32 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, valid_add_extra_file
 
 
 def get_true_type(xsd_files, tag, namespaces):
+    """
+    Determines the true type of a specified tag by searching through a list of XSD files.
+
+    This function iterates through the provided list of XSD files and attempts to find the 
+    "true type" of the given XML tag by examining its attributes and base types. If the
+    type is not found with the original tag, a modified version of the tag is also
+    checked.
+
+    Parameters:
+        xsd_files (list): A list of file paths or URLs to the XSD files.
+        tag (str): The XML tag to search for within the XSD files.
+        namespaces (dict): A dictionary containing XML namespace mappings.
+
+    Returns:
+        str or None: The "true type" of the tag if found, otherwise `None`.
+    """
     def search_type(xsd_file, tag, namespaces):
-        print(f"Processing file: {xsd_file}")
         xsd_tree = download_xsd_file(xsd_file)
         namespaces = scrape_namespaces(xsd_tree)
         true_type = find_base_attribute(xsd_tree, tag, namespaces)
         if true_type:
-            print(f"Found true_type for tag '{tag}' in file: {xsd_file}")
             return true_type
 
         # Check for modified tag if the first search does not find a match
         modified_tag = tag + "_WO_Units"
         true_type = find_base_attribute(xsd_tree, modified_tag, namespaces)
-        if true_type:
-            print(f"Found true_type for modified tag '{modified_tag}' in file: {xsd_file}")
         return true_type  # This will return either the found type or None
 
     for xsd_file in xsd_files:
@@ -322,8 +334,7 @@ def get_true_type(xsd_files, tag, namespaces):
             print(f"Returning true_type found in file: {xsd_file}")
             return true_type
 
-    print("No true_type found in any file.")
-    return None  # Return None if no match is found in any file
+    return None
 
 
 def load_config_file(
@@ -926,11 +937,44 @@ def scrape_namespaces(tree):
 
 
 def sort_dataframe(df, sort_keys):
-        try:
-            df.sort_values(by=sort_keys, inplace=True)
-        except KeyError as bad_sort:
-            raise ValueError(f'Unknown sort key {bad_sort}. For a list of available sort '
-                             f'keys, use the --output-headers-file option.')
+    """
+    Sorts a DataFrame based on specified keys.
+
+    This function sorts the input DataFrame in place using the provided sort keys. 
+    If an invalid key is provided, a `ValueError` is raised with a message indicating 
+    the unknown key and suggesting how to obtain a list of valid keys.
+
+    Parameters:
+        df (pandas.DataFrame): The DataFrame to be sorted.
+        sort_keys (str or list of str): The column name(s) to sort the DataFrame by. 
+                                        Can be a single string or a list of strings.
+
+    Raises:
+        ValueError: If any of the provided sort keys are not found in the DataFrame, 
+                    a `ValueError` is raised with a descriptive error message.
+
+    Example:
+        >>> df = pd.DataFrame({
+        ...     'name': ['Alice', 'Bob', 'Charlie'],
+        ...     'age': [25, 30, 22]
+        ... })
+        >>> sort_keys = ['age']
+        >>> sort_dataframe(df, sort_keys)
+        >>> print(df)
+             name  age
+        2  Charlie   22
+        0    Alice   25
+        1      Bob   30
+
+    Notes:
+        - The sorting is done in place, so the original DataFrame is modified.
+        - The function will raise an error if any of the specified sort keys are invalid.
+    """
+    try:
+        df.sort_values(by=sort_keys, inplace=True)
+    except KeyError as bad_sort:
+        raise ValueError(f'Unknown sort key {bad_sort}. For a list of available sort '
+                            f'keys, use the --output-headers-file option.')
 
 
 def get_creation_date(file_path): 
