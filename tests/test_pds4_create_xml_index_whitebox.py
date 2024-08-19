@@ -6,7 +6,9 @@ import pandas as pd
 from pathlib import Path
 import pytest
 import pds4indextools.pds4_create_xml_index as tools
+import textwrap as _textwrap
 from unittest import mock
+from unittest.mock import patch
 
 
 # These two variables are the same for all tests, so we can either declare them as
@@ -96,7 +98,8 @@ def test_load_config_object():
         specified_config_files=[str(expected_dir/'tester_config_label.yaml'),])
 
     assert config_object['label-contents']['version_id'] == '1.0'
-    assert config_object['label-contents']['title'] == 'Index file for my occultation bundle'
+    assert (config_object['label-contents']['title'] ==
+            'Index file for my occultation bundle')
 
     # A bad default config file
     with pytest.raises(SystemExit):
@@ -153,9 +156,9 @@ def test_default_value_for_nil():
             '0004-01-01T12:00Z')
     assert tools.default_value_for_nil(config_object, datetime_ymd_utc,
                                        'anticipated') == '0004-01-01T12:00Z'
-    
+
     # Testing None
-    assert tools.default_value_for_nil(config_object, None, 'anticipated') == None
+    assert tools.default_value_for_nil(config_object, None, 'anticipated') is None
 
 
 def test_default_value_for_nil_ascii_date_time_ymd_utc():
@@ -292,7 +295,7 @@ def test_correct_duplicates():
         '../geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name_4<1>': 5,
         '../geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name_5': 6
         }
-    
+
     tools.correct_duplicates(label_results)
 
     assert label_results == {
@@ -304,12 +307,13 @@ def test_correct_duplicates():
         '../geom:SPICE_Kernel_Identification<6>/geom:spice_kernel_file_name<1>': 6
         }
 
+
 def test_update_nillable_elements_from_xsd_file():
     xsd_files = []
     nillable_elements_info = {}
     label_files = ['test_files/labels/tester_label_1.xml',
                    'test_files/labels/tester_label_2.xml']
-    
+
     for label_file in label_files:
         xml_urls = tools.process_schema_location(label_file)
         for url in xml_urls:
@@ -335,7 +339,7 @@ def test_update_nillable_elements_from_xsd_file():
 def test_update_nillable_elements_from_xsd_file_with_edge_cases():
     # Scenario 1: Testing with a type attribute that is None or already in
     # nillable_elements_info
-    
+
     # Mock XSD content with an element that doesn't have a 'type' attribute
     xsd_content_missing_type = """
     <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
@@ -356,7 +360,9 @@ def test_update_nillable_elements_from_xsd_file_with_edge_cases():
     tree_duplicate_type = etree.fromstring(xsd_content_duplicate_type)
 
     # Mock the download_xsd_file function to return these trees based on input
-    with mock.patch('pds4indextools.pds4_create_xml_index.download_xsd_file') as mock_download:
+    with mock.patch(
+        'pds4indextools.pds4_create_xml_index.download_xsd_file'
+                   ) as mock_download:
         # Define the behavior of the mock for each file
         mock_download.side_effect = (
             lambda url: tree_missing_type if 'missing_type' in url
@@ -382,7 +388,7 @@ def test_clean_header_field_names():
         'normal_column': [10, 11, 12]
         }
     df = pd.DataFrame(data)
-    
+
     tools.clean_headers(df)
     new = df.to_dict()
 
@@ -392,7 +398,8 @@ def test_clean_header_field_names():
         '_column3': {0: 7, 1: 8, 2: 9},
         'normal_column': {0: 10, 1: 11, 2: 12}
         }
-    
+
+
 def test_compute_max_field_lengths():
 
     lengths = tools.compute_max_field_lengths(
@@ -406,12 +413,11 @@ def test_compute_max_field_lengths():
         'pds:Product_Observational/pds:Identification_Area<1>/pds:version_id<1>': 3,
         'pds:Product_Observational/pds:Identification_Area<1>/pds:title<1>': 132
         }
-    
+
     # failure
     with pytest.raises(SystemExit):
-        lengths = tools.compute_max_field_lengths(
-        str(expected_dir / 'fake_file.csv'))
-    
+        lengths = tools.compute_max_field_lengths(str(expected_dir / 'fake_file.csv'))
+
 
 def test_sort_dataframe_key_error():
     df = pd.DataFrame({
@@ -420,9 +426,11 @@ def test_sort_dataframe_key_error():
     })
     sort_keys = ['height']  # Non-existent column
 
-    with pytest.raises(ValueError, match=f"Unknown sort key '{sort_keys[0]}'. For a list of available sort "
-                                         f"keys, use the --output-headers-file option."):
+    with pytest.raises(ValueError, match=f"Unknown sort key '{sort_keys[0]}'. For a list "
+                                         f"of available sort keys, use the "
+                                         f"--output-headers-file option."):
         tools.sort_dataframe(df, sort_keys)
+
 
 def test_validate_label_type():
     arg = 'ancillary'
@@ -446,13 +454,12 @@ def test_generate_unique_filename(mock_exists):
     result = tools.generate_unique_filename(base_name)
 
     # Assert that the result is what we expect given the mocked behavior
-    assert result == "file2.txt"  # Since the first two checks return True, the counter reaches 2
+    # Since the first two checks return True, the counter reaches 2
+    assert result == "file2.txt"
 
     # Ensure os.path.exists was called the expected number of times
     assert mock_exists.call_count == 3
 
-
-import textwrap as _textwrap
 
 def test_fill_text():
     # Create an instance of MultilineFormatter
@@ -466,8 +473,10 @@ def test_fill_text():
     indent = "    "  # 4 spaces
 
     expected_output = (
-        _textwrap.fill("This is a long text that should be wrapped.", width, initial_indent=indent, subsequent_indent=indent) + '\n' +
-        _textwrap.fill("This is a new paragraph.", width, initial_indent=indent, subsequent_indent=indent) + '\n'
+        _textwrap.fill("This is a long text that should be wrapped.",
+                       width, initial_indent=indent, subsequent_indent=indent) + '\n' +
+        _textwrap.fill("This is a new paragraph.", width, initial_indent=indent,
+                       subsequent_indent=indent) + '\n'
     )
 
     # Run the _fill_text method
@@ -476,39 +485,40 @@ def test_fill_text():
     # Assert the result matches the expected output
     assert result == expected_output
 
-from unittest.mock import patch
 
 # Assume the get_true_type function is imported from the relevant module.
 # from pds4indextools.pds4_create_xml_index import get_true_type
-
 @patch('pds4indextools.pds4_create_xml_index.download_xsd_file')
 @patch('pds4indextools.pds4_create_xml_index.scrape_namespaces')
 @patch('pds4indextools.pds4_create_xml_index.find_base_attribute')
-def test_true_type_found_in_first_file(mock_find_base_attribute, mock_scrape_namespaces, mock_download_xsd_file):
+def test_true_type_found_in_first_file(mock_find_base_attribute, mock_scrape_namespaces,
+                                       mock_download_xsd_file):
     # Setup mocks
     mock_download_xsd_file.return_value = "mock_xsd_tree"
     mock_scrape_namespaces.return_value = {"mock_namespace": "mock_value"}
-    mock_find_base_attribute.side_effect = ["mock_true_type", None]  # Found in the first file
+    mock_find_base_attribute.side_effect = ["mock_true_type", None]
 
     xsd_files = ["file1.xsd", "file2.xsd"]
     tag = "mock_tag"
     namespaces = {"existing_namespace": "value"}
-    
+
     result = tools.get_true_type(xsd_files, tag, namespaces)
-    
+
     assert result == "mock_true_type"
     mock_download_xsd_file.assert_called_once_with("file1.xsd")
-    mock_find_base_attribute.assert_called_once_with("mock_xsd_tree", tag, {"mock_namespace": "mock_value"})
+    mock_find_base_attribute.assert_called_once_with("mock_xsd_tree", tag,
+                                                     {"mock_namespace": "mock_value"})
 
 
 @patch('pds4indextools.pds4_create_xml_index.download_xsd_file')
 @patch('pds4indextools.pds4_create_xml_index.scrape_namespaces')
 @patch('pds4indextools.pds4_create_xml_index.find_base_attribute')
-def test_true_type_found_in_second_file(mock_find_base_attribute, mock_scrape_namespaces, mock_download_xsd_file):
+def test_true_type_found_in_second_file(mock_find_base_attribute, mock_scrape_namespaces,
+                                        mock_download_xsd_file):
     # Setup mocks
     mock_download_xsd_file.return_value = "mock_xsd_tree"
     mock_scrape_namespaces.return_value = {"mock_namespace": "mock_value"}
-    
+
     # First file returns None for both original and modified tags
     # Second file returns the true_type for the original tag
     mock_find_base_attribute.side_effect = [None, None, "mock_true_type"]
@@ -516,43 +526,47 @@ def test_true_type_found_in_second_file(mock_find_base_attribute, mock_scrape_na
     xsd_files = ["file1.xsd", "file2.xsd"]
     tag = "mock_tag"
     namespaces = {"existing_namespace": "value"}
-    
+
     result = tools.get_true_type(xsd_files, tag, namespaces)
 
     print(f"Download called: {mock_download_xsd_file.call_count} times")
     print(f"Find base attribute called: {mock_find_base_attribute.call_count} times")
 
-    # Check if the loop iterates over both files and correctly identifies the type in the second file
+    # Check if the loop iterates over both files and correctly identifies the type in
+    # the second file
     assert result == "mock_true_type"
-    assert mock_download_xsd_file.call_count == 2  # Should be called for both files
-    assert mock_find_base_attribute.call_count == 3  # Should be called twice for file1 (original + modified) and once for file2
-
-
+    assert mock_download_xsd_file.call_count == 2
+    assert mock_find_base_attribute.call_count == 3
 
 
 @patch('pds4indextools.pds4_create_xml_index.download_xsd_file')
 @patch('pds4indextools.pds4_create_xml_index.scrape_namespaces')
 @patch('pds4indextools.pds4_create_xml_index.find_base_attribute')
-def test_true_type_found_with_modified_tag(mock_find_base_attribute, mock_scrape_namespaces, mock_download_xsd_file):
+def test_true_type_found_with_modified_tag(mock_find_base_attribute,
+                                           mock_scrape_namespaces,
+                                           mock_download_xsd_file):
     # Setup mocks
     mock_download_xsd_file.return_value = "mock_xsd_tree"
     mock_scrape_namespaces.return_value = {"mock_namespace": "mock_value"}
-    mock_find_base_attribute.side_effect = [None, "mock_true_type"]  # Found after modifying the tag
+    # Found after modifying the tag
+    mock_find_base_attribute.side_effect = [None, "mock_true_type"]
 
     xsd_files = ["file1.xsd"]
     tag = "mock_tag"
     namespaces = {"existing_namespace": "value"}
-    
+
     result = tools.get_true_type(xsd_files, tag, namespaces)
-    
+
     assert result == "mock_true_type"
-    mock_find_base_attribute.assert_any_call("mock_xsd_tree", "mock_tag_WO_Units", {"mock_namespace": "mock_value"})
+    mock_find_base_attribute.assert_any_call("mock_xsd_tree", "mock_tag_WO_Units",
+                                             {"mock_namespace": "mock_value"})
 
 
 @patch('pds4indextools.pds4_create_xml_index.download_xsd_file')
 @patch('pds4indextools.pds4_create_xml_index.scrape_namespaces')
 @patch('pds4indextools.pds4_create_xml_index.find_base_attribute')
-def test_true_type_not_found(mock_find_base_attribute, mock_scrape_namespaces, mock_download_xsd_file):
+def test_true_type_not_found(mock_find_base_attribute, mock_scrape_namespaces,
+                             mock_download_xsd_file):
     # Setup mocks
     mock_download_xsd_file.return_value = "mock_xsd_tree"
     mock_scrape_namespaces.return_value = {"mock_namespace": "mock_value"}
@@ -561,9 +575,9 @@ def test_true_type_not_found(mock_find_base_attribute, mock_scrape_namespaces, m
     xsd_files = ["file1.xsd", "file2.xsd"]
     tag = "mock_tag"
     namespaces = {"existing_namespace": "value"}
-    
+
     result = tools.get_true_type(xsd_files, tag, namespaces)
-    
-    assert result == None
+
+    assert result is None
     assert mock_download_xsd_file.call_count == 2
-    assert mock_find_base_attribute.call_count == 4  # Both original and modified tags are checked for both files
+    assert mock_find_base_attribute.call_count == 4

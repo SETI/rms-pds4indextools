@@ -303,7 +303,7 @@ def get_true_type(xsd_files, tag, namespaces):
     """
     Determines the true type of a specified tag by searching through a list of XSD files.
 
-    This function iterates through the provided list of XSD files and attempts to find the 
+    This function iterates through the provided list of XSD files and attempts to find the
     "true type" of the given XML tag by examining its attributes and base types. If the
     type is not found with the original tag, a modified version of the tag is also
     checked.
@@ -725,7 +725,7 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
 
             # Attempt to find the type definition in the document
             type_definition_xpath = (f'//xs:simpleType[@name="{type_name}"] | '
-                                        f'//xs:complexType[@name="{type_name}"]')
+                                     f'//xs:complexType[@name="{type_name}"]')
             type_definition = tree.xpath(
                 type_definition_xpath, namespaces=namespace)
 
@@ -737,12 +737,12 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
 
                 try:
                     restriction = type_definition.find('.//xs:restriction',
-                                        namespaces=namespace)
+                                                       namespaces=namespace)
                     base_type = restriction.get('base')
 
                 except AttributeError:
                     extension = type_definition.find('.//xs:extension',
-                                    namespaces=namespace)
+                                                     namespaces=namespace)
                     base_type = extension.get('base')
 
                 nillable_elements_info[name] = (
@@ -793,7 +793,6 @@ def write_results_to_csv(results_list, args, output_csv_path):
 
         return padded_df
 
-
     rows = []
     for result_dict in results_list:
         rows.append(result_dict)
@@ -807,7 +806,6 @@ def write_results_to_csv(results_list, args, output_csv_path):
         except ValueError as bad_sort:
             print(bad_sort)
             sys.exit(1)
-
 
     if args.clean_header_field_names:
         clean_headers(df)
@@ -847,7 +845,6 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
         'pds': 'http://pds.nasa.gov/pds4/pds/v1'
     }
     namespaces.update(new_namespaces)
-
 
     def get_base_type(query):
         """
@@ -940,17 +937,17 @@ def sort_dataframe(df, sort_keys):
     """
     Sorts a DataFrame based on specified keys.
 
-    This function sorts the input DataFrame in place using the provided sort keys. 
-    If an invalid key is provided, a `ValueError` is raised with a message indicating 
+    This function sorts the input DataFrame in place using the provided sort keys.
+    If an invalid key is provided, a `ValueError` is raised with a message indicating
     the unknown key and suggesting how to obtain a list of valid keys.
 
     Parameters:
         df (pandas.DataFrame): The DataFrame to be sorted.
-        sort_keys (str or list of str): The column name(s) to sort the DataFrame by. 
+        sort_keys (str or list of str): The column name(s) to sort the DataFrame by.
                                         Can be a single string or a list of strings.
 
     Raises:
-        ValueError: If any of the provided sort keys are not found in the DataFrame, 
+        ValueError: If any of the provided sort keys are not found in the DataFrame,
                     a `ValueError` is raised with a descriptive error message.
 
     Example:
@@ -974,10 +971,10 @@ def sort_dataframe(df, sort_keys):
         df.sort_values(by=sort_keys, inplace=True)
     except KeyError as bad_sort:
         raise ValueError(f'Unknown sort key {bad_sort}. For a list of available sort '
-                            f'keys, use the --output-headers-file option.')
+                         f'keys, use the --output-headers-file option.')
 
 
-def get_creation_date(file_path): 
+def get_creation_date(file_path):
     """
     Returns the creation date of a file in ISO 8601 format.
 
@@ -995,7 +992,7 @@ def get_creation_date(file_path):
         stat = os.stat(file_path)
         try:
             creation_time = stat.st_birthtime
-        except AttributeError: # pragma: no coverage
+        except AttributeError:  # pragma: no coverage
             # Fallback to the last modification time if birth time is not available
             creation_time = stat.st_mtime
 
@@ -1168,7 +1165,7 @@ class MultilineFormatter(argparse.HelpFormatter):
 
 def main(cmd_line=None):
     epilog_sfx = ''
-    if __version__ != 'Version unspecified': # pragma: no coverage
+    if __version__ != 'Version unspecified':  # pragma: no coverage
         epilog_sfx = f'|nVersion: {__version__}'
     parser = argparse.ArgumentParser(
         formatter_class=MultilineFormatter,
@@ -1312,14 +1309,14 @@ def main(cmd_line=None):
 
     for pattern in patterns:
         files = directory_path.glob(pattern)
-    
+
         # Create an iterator from the generator
         files_iter = iter(files)
-        
+
         # Use a sentinel object to check if there's any item
         sentinel = object()
         first_file = next(files_iter, sentinel)
-        
+
         if first_file is sentinel:
             print(f"No files found for pattern: {pattern}")
         else:
@@ -1368,7 +1365,7 @@ def main(cmd_line=None):
 
         filepath = str(label_file.relative_to(args.directorypath)).replace('\\', '/')
         # PDS4 compliant filepaths must be less than 255 characters.
-        if len(filepath) > 255: # pragma: no coverage
+        if len(filepath) > 255:  # pragma: no coverage
             print(f'Filepath {filepath} exceeds 255 character limit.')
             sys.exit(1)
 
@@ -1382,7 +1379,7 @@ def main(cmd_line=None):
         label_results = {}
         traverse_and_store(root, tree, label_results, xsd_files,
                            nillable_elements_info, config, label_file)
-                           
+
         # # The XPath headers in the label_results dictionary are reformatted to
         # # improve readability. Each XPath's namespace is replaced with its prefix for
         # # faster reference. Duplicate XPaths are made unique to ensure all results are
@@ -1444,7 +1441,6 @@ def main(cmd_line=None):
 
         all_results.append(label_results)
 
-
     if args.add_extra_file_info and elements_to_scrape is not None:
         elements_to_scrape = args.add_extra_file_info + elements_to_scrape
 
@@ -1452,7 +1448,7 @@ def main(cmd_line=None):
     # of the --limit-xpaths-file input file. If this command is not used, the original
     # dictionary will be returned. Glob patterns are processed sequentially, with the
     # first pattern having the highest priority.
-    
+
     for label_results in all_results:
         ind = all_results.index(label_results)
         label_results_new = filter_dict_by_glob_patterns(
@@ -1471,7 +1467,7 @@ def main(cmd_line=None):
         headers = {}
         unique_tags_master = []
 
-         # Step 1: Gather all possible tags from labels
+        # Step 1: Gather all possible tags from labels
         for label_results in all_results:
             keys = label_results.keys()
             for key in keys:
@@ -1495,11 +1491,9 @@ def main(cmd_line=None):
             for tag in tags:
                 name = tag.split('<')[0]
                 if (tags.count(tag) == 1 and names.count(name) == 1
-                    and tag not in unique_tags):
+                        and tag not in unique_tags):
                     unique_tags.append(tag)
-                # if tags.count(tag) > 1 and tag in unique_tags_master:
-                #     unique_tags_master.remove(tag)
-                
+
             for tag in unique_tags:
                 unique_tags_master.append(tag)
 
@@ -1514,7 +1508,6 @@ def main(cmd_line=None):
                     new_label_results[key] = value
 
             all_results[ind] = new_label_results
-
 
     if output_csv_path:
         write_results_to_csv(all_results, args, output_csv_path)
@@ -1663,5 +1656,5 @@ def main(cmd_line=None):
         template.write(label_content, str(output_subdir / filename) + '.xml')
 
 
-if __name__ == '__main__': # pragma: no coverage
+if __name__ == '__main__':  # pragma: no coverage
     main()

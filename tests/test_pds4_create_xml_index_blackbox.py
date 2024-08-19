@@ -2,7 +2,6 @@ from pathlib import Path
 import pytest
 import os
 import tempfile
-import shutil
 import pds4indextools.pds4_create_xml_index as tools
 
 
@@ -18,14 +17,14 @@ labels_dir = test_files_dir / 'labels'
 @pytest.mark.parametrize(
         'golden_file,new_file_index,new_file_headers,cmd_line',
         [
-            #Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml"
+            # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml"
             (
                 str(expected_dir / 'index_file_success.csv'),
                 None, None,
                 []
             ),
 
-            #Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --generate-label ancillary
+            # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --generate-label ancillary
             (
                 str(expected_dir / 'index_file_success.csv'),
                 None, None,
@@ -455,7 +454,7 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
     with tempfile.TemporaryDirectory(dir=test_files_dir.parent) as temp_dir:
         temp_dir_path = Path(temp_dir)
 
-        if new_file_index == None and new_file_headers == None:
+        if new_file_index is None and new_file_headers is None:
             os.chdir(temp_dir_path)
             cmd_line.append(str(test_files_dir))
             cmd_line.append(str(labels_dir.name / Path('tester_label_1.xml')))
@@ -572,9 +571,9 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
             'hdout.txt'
         ),
 
-        #Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --simplify-xpaths --sort-by bad_sort --output-headers-file hdout.csv
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --simplify-xpaths --sort-by bad_sort --output-headers-file hdout.csv
         (
-            str(test_files_dir), 
+            str(test_files_dir),
             str(labels_dir.name / Path('tester_label_1.xml')),
             '--simplify-xpaths',
             '--sort-by',
@@ -583,17 +582,17 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
             'hdout.csv'
         ),
 
-        #Executable command: pds4_create_xml_index ../test_files/labels "nonexistent.xml" --output-headers-file hdout.txt
+        # Executable command: pds4_create_xml_index ../test_files/labels "nonexistent.xml" --output-headers-file hdout.txt
         (
-            str(test_files_dir), 
+            str(test_files_dir),
             str(labels_dir.name / Path('nonexistent.xml')),
             '--output-headers-file',
             'hdout.txt',
         ),
 
-        #Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --limit-xpaths-file ../test_files/samples/elements_xpath_simplify_3.txt --output-headers-file hdout.txt
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --limit-xpaths-file ../test_files/samples/elements_xpath_simplify_3.txt --output-headers-file hdout.txt
         (
-            str(test_files_dir), 
+            str(test_files_dir),
             str(labels_dir.name / Path('tester_label_1.xml')),
             '--limit-xpaths-file',
             str(samples_dir / 'elements_xpath_simplify_3.txt'),
@@ -601,9 +600,9 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
             'hdout.txt',
         ),
 
-        #Executable command: pds4_create_xml_index ../test_files/labels "tester_label_*.xml" --generate-label ancillary --output-headers-file hdout.txt
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_*.xml" --generate-label ancillary --output-headers-file hdout.txt
         (
-            str(test_files_dir), 
+            str(test_files_dir),
             str(labels_dir.name / Path('tester_label_*.xml')),
             '--generate-label',
             'ancillary',
@@ -611,9 +610,9 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
             'hdout.txt',
         ),
 
-        #Executable command: pds4_create_xml_index ../test_files/labels "bad_lid_label.xml" --output-headers-file hdout.txt
+        # Executable command: pds4_create_xml_index ../test_files/labels "bad_lid_label.xml" --output-headers-file hdout.txt
         (
-            str(test_files_dir), 
+            str(test_files_dir),
             str(labels_dir.name / Path('bad_lid_label.xml')),
             '--output-headers-file',
             'hdout.txt',
@@ -629,6 +628,7 @@ def test_failures(cmd_line):
     assert e.value.code != 0  # Check that the exit code indicates failure
     if os.path.isfile('hdout.txt'):
         os.remove('hdout.txt')
+
 
 @pytest.mark.parametrize(
     'new_file,cmd_line',
@@ -665,6 +665,7 @@ def test_failure_message(capfd, new_file, cmd_line):
 
         expected_message = ("Non-nillable element in")
         assert expected_message in captured.out or expected_message in captured.err
+
 
 def test_invalid_arguments():
     with pytest.raises(SystemExit):  # Assuming argparse will call sys.exit on failure
