@@ -466,10 +466,10 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
             assert os.path.isfile(path_to_file)
 
             # Open and compare the two files
-            with open(path_to_file, 'rb') as created:
+            with open(path_to_file, 'r') as created:
                 formed = created.read()
 
-            with open(golden_file, 'rb') as new:
+            with open(golden_file, 'r') as new:
                 expected = new.read()
 
             assert formed == expected
@@ -488,10 +488,10 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
                 assert os.path.isfile(path_to_file)
 
                 # Open and compare the two files
-                with open(path_to_file, 'rb') as created:
+                with open(path_to_file, 'r') as created:
                     formed = created.read()
 
-                with open(golden_file, 'rb') as new:
+                with open(golden_file, 'r') as new:
                     expected = new.read()
 
                 assert formed == expected
@@ -502,10 +502,10 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
                     assert os.path.isfile(label_path)
 
                     # Open and compare the two files
-                    with open(label_path, 'rb') as created:
+                    with open(label_path, 'r') as created:
                         formed = created.read()
 
-                    with open(golden_label, 'rb') as new:
+                    with open(golden_label, 'r') as new:
                         expected = new.read()
 
                     assert formed == expected
@@ -521,10 +521,10 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
                 assert os.path.isfile(path_to_file)
 
                 # Open and compare the two files
-                with open(path_to_file, 'rb') as created:
+                with open(path_to_file, 'r') as created:
                     formed = created.read()
 
-                with open(golden_file, 'rb') as new:
+                with open(golden_file, 'r') as new:
                     expected = new.read()
 
                 assert formed == expected
