@@ -16,8 +16,3 @@ nillable:
     missing: missing_alt
     unknown: unknown_alt
     anticipated: anticipated_alt
-
-label-contents:
-  version_id: 1.1
-  File:
-    creation_date_time: '00:00:00'

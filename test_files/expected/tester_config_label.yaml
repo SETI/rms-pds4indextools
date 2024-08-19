@@ -1,0 +1,13 @@
+
+label-contents:
+  title: Index file for my occultation bundle
+  Modification_Detail:
+    - modification_date: '2024-01-01'
+      version_id: 1.1
+      description: |
+        This is a lengthy description of what this modification
+        changed in the bundle.
+        There were lots of changes.
+    - modification_date: '2023-01-01'
+      version_id: 1.0
+      description: Initial release.
