@@ -331,7 +331,6 @@ def get_true_type(xsd_files, tag, namespaces):
     for xsd_file in xsd_files:
         true_type = search_type(xsd_file, tag, namespaces)
         if true_type:  # Only return if true_type is not None
-            print(f"Returning true_type found in file: {xsd_file}")
             return true_type
 
     return None
@@ -1222,15 +1221,6 @@ def main(cmd_line=None):
                                        help='Rename column headers such that they only '
                                             'contain characters permissible in variable '
                                             'names.')
-
-    index_file_generation.add_argument('--rename-headers', type=str,
-                                       metavar='NEW_HEADERS_FILEPATH',
-                                       help='Rename headers in the generated index file'
-                                            'according to a given mapping file.')
-
-    index_file_generation.add_argument('--dont-number-unique-tags', action='store_true',
-                                       help='Removes the predicates of unique XPath '
-                                            'headers.')
 
     index_file_generation.add_argument(
         '--simplify-xpaths',
