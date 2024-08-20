@@ -812,11 +812,11 @@ def write_results_to_csv(results_list, args, output_csv_path):
     if args.fixed_width:
         padded_df = pad_column_values_and_headers(df)
         print(f'Fixed-width index file generated at {output_csv_path}')
-        padded_df.to_csv(output_csv_path, index=False, na_rep='')
+        padded_df.to_csv(output_csv_path, index=False, na_rep='', lineterminator='\n')
 
     else:
         print(f'Index file generated at {output_csv_path}')
-        df.to_csv(output_csv_path, index=False, na_rep='')
+        df.to_csv(output_csv_path, index=False, na_rep='', lineterminator='\n')
 
 
 def find_base_attribute(xsd_tree, target_name, new_namespaces):
