@@ -31,7 +31,7 @@ def compare_files(path_to_file, golden_file):
 
 
 @pytest.mark.parametrize(
-    'GOLDEN_FILE,NEW_FILE_INDEX,NEW_FILE_HEADERS,CMD_LINE',
+    'golden_file,new_file_index,new_file_headers,cmd_line',
     [
         # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml"
         (
@@ -465,55 +465,55 @@ def compare_files(path_to_file, golden_file):
         )
     ]
 )
-def test_success(GOLDEN_FILE, NEW_FILE_INDEX, NEW_FILE_HEADERS, CMD_LINE):
+def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
     # Create a temporary directory
     with tempfile.TemporaryDirectory(dir=TEST_FILES_DIR.parent) as temp_dir:
         temp_dir_path = Path(temp_dir)
 
-        if NEW_FILE_INDEX is None and NEW_FILE_HEADERS is None:
+        if new_file_index is None and new_file_headers is None:
             shutil.copy(LABELS_DIR / 'tester_label_1.xml', temp_dir_path)
-            CMD_LINE.append(str(temp_dir_path))
-            CMD_LINE.append('tester_label_1.xml')
-            CMD_LINE.append('--output-index-file')
-            CMD_LINE.append(str(temp_dir_path / 'index.csv'))
+            cmd_line.append(str(temp_dir_path))
+            cmd_line.append('tester_label_1.xml')
+            cmd_line.append('--output-index-file')
+            cmd_line.append(str(temp_dir_path / 'index.csv'))
             # Call main() function with the simulated command line arguments
-            tools.main(CMD_LINE)
+            tools.main(cmd_line)
 
             path_to_file = temp_dir_path / 'index.csv'
 
-            compare_files(path_to_file, GOLDEN_FILE)
+            compare_files(path_to_file, golden_file)
 
         else:
             # THE PATH TO THE NEW FILE
-            if NEW_FILE_INDEX:
-                path_to_file = temp_dir_path / NEW_FILE_INDEX
-                CMD_LINE.append('--output-index-file')
-                CMD_LINE.append(str(path_to_file))
+            if new_file_index:
+                path_to_file = temp_dir_path / new_file_index
+                cmd_line.append('--output-index-file')
+                cmd_line.append(str(path_to_file))
                 # Call main() function with the simulated command line arguments
-                tools.main(CMD_LINE)
+                tools.main(cmd_line)
 
-                compare_files(path_to_file, GOLDEN_FILE)
+                compare_files(path_to_file, golden_file)
 
-                if '--generate-label' in CMD_LINE:
+                if '--generate-label' in cmd_line:
                     label_path = str(path_to_file).replace('.csv', '.xml')
-                    golden_label = str(GOLDEN_FILE).replace('.csv', '.xml')
+                    golden_label = str(golden_file).replace('.csv', '.xml')
                     assert os.path.isfile(label_path)
 
                     compare_files(label_path, golden_label)
 
-            if NEW_FILE_HEADERS:
-                path_to_file = temp_dir_path / NEW_FILE_HEADERS
-                GOLDEN_FILE = str(GOLDEN_FILE).replace('.csv', '.txt')
-                CMD_LINE.append('--output-headers-file')
-                CMD_LINE.append(str(path_to_file))
+            if new_file_headers:
+                path_to_file = temp_dir_path / new_file_headers
+                golden_file = str(golden_file).replace('.csv', '.txt')
+                cmd_line.append('--output-headers-file')
+                cmd_line.append(str(path_to_file))
                 # Call main() function with the simulated command line arguments
-                tools.main(CMD_LINE)
+                tools.main(cmd_line)
 
-                compare_files(path_to_file, GOLDEN_FILE)
+                compare_files(path_to_file, golden_file)
 
 
 @pytest.mark.parametrize(
-    'CMD_LINE',
+    'cmd_line',
     [
         # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml" --limit-xpaths-file ../test_files/samples/element_1.txt --add-extra-file-info bad_element --output-headers-file hdout.txt
         (
@@ -602,10 +602,10 @@ def test_success(GOLDEN_FILE, NEW_FILE_INDEX, NEW_FILE_HEADERS, CMD_LINE):
 
     ]
 )
-def test_failures(CMD_LINE):
+def test_failures(cmd_line):
     # Call main() function with the simulated command line arguments
     with pytest.raises(SystemExit) as e:
-        tools.main(CMD_LINE)
+        tools.main(cmd_line)
     assert e.type == SystemExit
     assert e.value.code != 0  # Check that the exit code indicates failure
     if os.path.isfile('hdout.txt'):
@@ -613,7 +613,7 @@ def test_failures(CMD_LINE):
 
 
 @pytest.mark.parametrize(
-    'NEW_FILE,CMD_LINE',
+    'NEW_FILE,cmd_line',
     [
         # Executable command: pds4_create_xml_index ../test_files/labels "nilled_label_bad.xml" --limit-xpaths-file ../test_files/samples/elements_nilled_bad.txt --output-index-file indexout.csv
         (
@@ -628,17 +628,17 @@ def test_failures(CMD_LINE):
         )
     ]
 )
-def test_failure_message(capfd, NEW_FILE, CMD_LINE):
+def test_failure_message(capfd, NEW_FILE, cmd_line):
     with tempfile.TemporaryDirectory(dir=TEST_FILES_DIR.parent) as temp_dir:
         temp_dir_path = Path(temp_dir)
 
         # THE PATH TO THE NEW FILE
         path_to_file = temp_dir_path / NEW_FILE
         # Call main() function with the simulated command line arguments
-        CMD_LINE.append(str(path_to_file))
+        cmd_line.append(str(path_to_file))
 
         # Capture the output
-        tools.main(CMD_LINE)
+        tools.main(cmd_line)
         captured = capfd.readouterr()
 
         # Check if the expected statement is printed in stdout or stderr

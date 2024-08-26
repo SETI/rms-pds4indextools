@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import pds4indextools.pds4_create_xml_index as tools
 import textwrap as _textwrap
-from unittest.mock import patch as PATCH
+from unittest.mock import patch
 
 
 # These two variables are the same for all tests, so we can either declare them as
@@ -278,7 +278,7 @@ def create_temp_file():
 @pytest.mark.parametrize('platform_name', ['Windows', 'Linux', 'Darwin'])
 def test_get_creation_date(create_temp_file, platform_name):
     # Mock platform.system() to simulate different platforms
-    with PATCH('platform.system', return_value=platform_name):
+    with patch('platform.system', return_value=platform_name):
         creation_date = tools.get_creation_date(create_temp_file)
         assert isinstance(creation_date, str)
         # Assert that the returned date is in ISO 8601 format
@@ -359,7 +359,7 @@ def test_update_nillable_elements_from_xsd_file_with_edge_cases():
     tree_duplicate_type = etree.fromstring(xsd_content_duplicate_type)
 
     # Mock the download_xsd_file function to return these trees based on input
-    with PATCH(
+    with patch(
         'pds4indextools.pds4_create_xml_index.download_xsd_file'
                    ) as mock_download:
         # Define the behavior of the mock for each file
@@ -443,7 +443,7 @@ def test_validate_label_type():
         assert tools.validate_label_type(arg, valid_choices) == 'Product_Ancillary'
 
 
-@PATCH('os.path.exists')
+@patch('os.path.exists')
 def test_generate_unique_filename(mock_exists):
     # Setup the mock to return True for the first two checks and False thereafter
     mock_exists.side_effect = [True, True, False]
@@ -487,9 +487,9 @@ def test_fill_text():
 
 # Assume the get_true_type function is imported from the relevant module.
 # from pds4indextools.pds4_create_xml_index import get_true_type
-@PATCH('pds4indextools.pds4_create_xml_index.download_xsd_file')
-@PATCH('pds4indextools.pds4_create_xml_index.scrape_namespaces')
-@PATCH('pds4indextools.pds4_create_xml_index.find_base_attribute')
+@patch('pds4indextools.pds4_create_xml_index.download_xsd_file')
+@patch('pds4indextools.pds4_create_xml_index.scrape_namespaces')
+@patch('pds4indextools.pds4_create_xml_index.find_base_attribute')
 def test_true_type_found_in_first_file(mock_find_base_attribute, mock_scrape_namespaces,
                                        mock_download_xsd_file):
     # Setup mocks
@@ -509,9 +509,9 @@ def test_true_type_found_in_first_file(mock_find_base_attribute, mock_scrape_nam
                                                      {"mock_namespace": "mock_value"})
 
 
-@PATCH('pds4indextools.pds4_create_xml_index.download_xsd_file')
-@PATCH('pds4indextools.pds4_create_xml_index.scrape_namespaces')
-@PATCH('pds4indextools.pds4_create_xml_index.find_base_attribute')
+@patch('pds4indextools.pds4_create_xml_index.download_xsd_file')
+@patch('pds4indextools.pds4_create_xml_index.scrape_namespaces')
+@patch('pds4indextools.pds4_create_xml_index.find_base_attribute')
 def test_true_type_found_in_second_file(mock_find_base_attribute, mock_scrape_namespaces,
                                         mock_download_xsd_file):
     # Setup mocks
@@ -538,9 +538,9 @@ def test_true_type_found_in_second_file(mock_find_base_attribute, mock_scrape_na
     assert mock_find_base_attribute.call_count == 3
 
 
-@PATCH('pds4indextools.pds4_create_xml_index.download_xsd_file')
-@PATCH('pds4indextools.pds4_create_xml_index.scrape_namespaces')
-@PATCH('pds4indextools.pds4_create_xml_index.find_base_attribute')
+@patch('pds4indextools.pds4_create_xml_index.download_xsd_file')
+@patch('pds4indextools.pds4_create_xml_index.scrape_namespaces')
+@patch('pds4indextools.pds4_create_xml_index.find_base_attribute')
 def test_true_type_found_with_modified_tag(mock_find_base_attribute,
                                            mock_scrape_namespaces,
                                            mock_download_xsd_file):
@@ -561,9 +561,9 @@ def test_true_type_found_with_modified_tag(mock_find_base_attribute,
                                              {"mock_namespace": "mock_value"})
 
 
-@PATCH('pds4indextools.pds4_create_xml_index.download_xsd_file')
-@PATCH('pds4indextools.pds4_create_xml_index.scrape_namespaces')
-@PATCH('pds4indextools.pds4_create_xml_index.find_base_attribute')
+@patch('pds4indextools.pds4_create_xml_index.download_xsd_file')
+@patch('pds4indextools.pds4_create_xml_index.scrape_namespaces')
+@patch('pds4indextools.pds4_create_xml_index.find_base_attribute')
 def test_true_type_not_found(mock_find_base_attribute, mock_scrape_namespaces,
                              mock_download_xsd_file):
     # Setup mocks
