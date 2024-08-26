@@ -1532,7 +1532,6 @@ def main(cmd_line=None):
 
     if args.generate_label:
         index_file = output_csv_path
-        print(index_file)
 
         # The template label file is initialized.
         module_dir = Path(__file__).resolve().parent

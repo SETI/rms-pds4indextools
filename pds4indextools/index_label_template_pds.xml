@@ -104,6 +104,28 @@ $END_IF
     $IF(Product_Metadata_Supplemental)
     <File_Area_Metadata>
     $END_IF
+    $IF(Product_Ancillary and isinstance(Product_Ancillary, dict) and 'File_Area_Ancillary' in Product_Ancillary)
+        $IF(EXISTS(File))
+        <File>
+            <file_name>$BASENAME(TEMPFILE)$</file_name>
+            <local_identifier>index-table</local_identifier>
+            <creation_date_time>$File['creation_date_time']$</creation_date_time>
+            <md5_checksum>$File['md5_checksum']$</md5_checksum>
+            <comment></comment>
+        </File>
+        $END_IF
+    $END_IF
+    $IF(Product_Metadata_Supplemental and isinstance(Product_Metadata_Supplemental, dict) and 'File_Area_Ancillary' in Product_Metadata_Supplemental)
+        $IF(File)
+        <File>
+            <file_name>$BASENAME(TEMPFILE)$</file_name>
+            <local_identifier>index-table</local_identifier>
+            <creation_date_time>$File['creation_date_time']$</creation_date_time>
+            <md5_checksum>$File['md5_checksum']$</md5_checksum>
+            <comment></comment>
+        </File>
+        $END_IF
+    $END_IF
         <File>
             <file_name>$BASENAME(TEMPFILE)$</file_name>
             <local_identifier>index-table</local_identifier>

@@ -26,7 +26,7 @@
         <File>
             <file_name>generated_label_3.csv</file_name>
             <local_identifier>index-table</local_identifier>
-            <creation_date_time>00:00:00</creation_date_time>
+            <creation_date_time>0001-01-01T00:00:00.00Z</creation_date_time>
             <md5_checksum>8b2eb69a284938d23748de7f53d2e45b</md5_checksum>
             <comment></comment>
         </File>
