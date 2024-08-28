@@ -344,6 +344,8 @@ For reference, provided below are the full contents of the optional label classe
     doi
     curating_facility
     description
+  File_Area_Ancillary / File_Area_Metadata:
+    creation_date_time
 
 
 If no new contents are specified for label generation, the label will contain the

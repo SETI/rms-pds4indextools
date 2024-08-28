@@ -121,14 +121,15 @@ def correct_duplicates(label_results):
         tag = key.split('/')[-1].split('<')[0]
         number = tag.split('_')[-1]
         if number.isdigit():
-            cropped = tag.replace('_'+number, '')
+            cropped = tag.replace(f'_{number}', '')
             if cropped in element_names:
-                if str(cropped+'_'+number+'<1>') in key:
-                    key_new = key.replace((cropped+'_'+number+'<1>'), cropped+'<1>')
+                if str(f'{cropped}_{number}<1>') in key:
+                    key_new = key.replace((f'{cropped}_{number}<1>'), f'{cropped}<1>')
                 else:
-                    key_new = key.replace(cropped+'_'+number, cropped+'<1>')
+                    key_new = key.replace(f'{cropped}_{number}', f'{cropped}<1>')
                 parent = key_new.split('/')[-2].split('<')[0]
-                key_new = key_new.replace(parent+'<1>', parent+'<'+str(int(number)+1)+'>')
+                key_new = key_new.replace(f'{parent}<1>',
+                                          f'{parent}<{str(int(number)+1)}>')
                 label_results[key_new] = label_results.pop(key)
         element_names.add(tag)
 
@@ -301,7 +302,7 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, valid_add_extra_file
 
 def get_true_type(xsd_files, tag, namespaces):
     """
-    Determines the true type of a specified tag by searching through a list of XSD files.
+    Returns the true type of a specified tag by searching through a list of XSD files.
 
     This function iterates through the provided list of XSD files and attempts to find the
     "true type" of the given XML tag by examining its attributes and base types. If the
@@ -446,7 +447,7 @@ def process_headers(label_results, key, root, namespaces, prefixes):
     label_results[key_new] = label_results.pop(key)
 
 
-def renumber_xpaths(xpaths, args):
+def renumber_xpaths(xpaths):
     """
     Renumber a list of XPaths to be sequential at each level.
 
@@ -498,7 +499,6 @@ def renumber_xpaths(xpaths, args):
 
     Parameters:
         xpaths (list): The list of XPaths or XPath fragments.
-        args (argparse.Namespace): Arguments parsed from command line using argparse.
 
 
     Returns:
@@ -569,7 +569,7 @@ def renumber_xpaths(xpaths, args):
             # down.
             children = [x for x in parent_group_list if x.child is not None]
             if children:
-                child_map = renumber_xpaths([x.child for x in children], args)
+                child_map = renumber_xpaths([x.child for x in children])
                 xpath_map.update(
                     {
                         f'{x.parent}/{x.child}': (
@@ -642,18 +642,7 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
             if not parent_check:
                 print(f'Non-nillable element in {label_filename} '
                       f'has no associated text: {tag}')
-                true_type = None
-                for xsd_file in xsd_files:
-                    xsd_tree = download_xsd_file(xsd_file)
-                    namespaces = scrape_namespaces(xsd_tree)
-                    true_type = find_base_attribute(xsd_tree, tag, namespaces)
-                    if not true_type:
-                        modified_tag = tag + "_WO_Units"
-                        true_type = find_base_attribute(xsd_tree, modified_tag,
-                                                        namespaces)
-                        # if true_type:
-                        #     break
-
+                true_type = get_true_type(xsd_files, tag, tree.getroot().nsmap)
                 default = default_value_for_nil(config, true_type, nil_value)
                 results_dict[xpath] = default
 
@@ -725,8 +714,7 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
             # Attempt to find the type definition in the document
             type_definition_xpath = (f'//xs:simpleType[@name="{type_name}"] | '
                                      f'//xs:complexType[@name="{type_name}"]')
-            type_definition = tree.xpath(
-                type_definition_xpath, namespaces=namespace)
+            type_definition = tree.xpath(type_definition_xpath, namespaces=namespace)
 
             if type_definition:
                 # Take the first match
@@ -744,8 +732,7 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
                                                      namespaces=namespace)
                     base_type = extension.get('base')
 
-                nillable_elements_info[name] = (
-                    base_type or 'External or built-in type')
+                nillable_elements_info[name] = base_type or 'External or built-in type'
             else:
                 # Type definition not found, might be external or built-in type
                 nillable_elements_info[name] = 'External or built-in type'
@@ -947,7 +934,7 @@ def sort_dataframe(df, sort_keys):
 
     Raises:
         ValueError: If any of the provided sort keys are not found in the DataFrame,
-                    a `ValueError` is raised with a descriptive error message.
+        a `ValueError` is raised with a descriptive error message.
 
     Example:
         >>> df = pd.DataFrame({
@@ -961,10 +948,6 @@ def sort_dataframe(df, sort_keys):
         2  Charlie   22
         0    Alice   25
         1      Bob   30
-
-    Notes:
-        - The sorting is done in place, so the original DataFrame is modified.
-        - The function will raise an error if any of the specified sort keys are invalid.
     """
     try:
         df.sort_values(by=sort_keys, inplace=True)
@@ -1299,19 +1282,10 @@ def main(cmd_line=None):
 
     for pattern in patterns:
         files = directory_path.glob(pattern)
-
-        # Create an iterator from the generator
-        files_iter = iter(files)
-
-        # Use a sentinel object to check if there's any item
-        sentinel = object()
-        first_file = next(files_iter, sentinel)
-
-        if first_file is sentinel:
+        prev_len = len(label_files)
+        label_files.extend(files)
+        if len(label_files) == prev_len:
             print(f"No files found for pattern: {pattern}")
-        else:
-            # If not empty, continue processing and include the first file
-            label_files.extend(itertools.chain([first_file], files_iter))
 
     verboseprint(f'{len(label_files)} matching file(s) found')
 
@@ -1370,10 +1344,10 @@ def main(cmd_line=None):
         traverse_and_store(root, tree, label_results, xsd_files,
                            nillable_elements_info, config, label_file)
 
-        # # The XPath headers in the label_results dictionary are reformatted to
-        # # improve readability. Each XPath's namespace is replaced with its prefix for
-        # # faster reference. Duplicate XPaths are made unique to ensure all results are
-        # # present in the final product.
+        # The XPath headers in the label_results dictionary are reformatted to
+        # improve readability. Each XPath's namespace is replaced with its prefix for
+        # faster reference. Duplicate XPaths are made unique to ensure all results are
+        # present in the final product.
         for key in list(label_results):
             process_headers(label_results, key, root, namespaces, prefixes)
 
@@ -1387,7 +1361,7 @@ def main(cmd_line=None):
             new_parts = []
             for part in parts:
                 if not part.endswith('>') and parts.index(part) != 1:
-                    part = part+'<1>'
+                    part = f'{part}<1>'
                     new_parts.append(part)
                 else:
                     new_parts.append(part)
@@ -1402,7 +1376,7 @@ def main(cmd_line=None):
         # the column refers to. At this stage, duplicate XPaths may exist again due to
         # the reformatting. These duplicates are corrected to preserve the contents of
         # each element's value.
-        xpath_map = renumber_xpaths(label_results, args)
+        xpath_map = renumber_xpaths(label_results)
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
 
@@ -1414,8 +1388,8 @@ def main(cmd_line=None):
         try:
             lid = extract_logical_identifier(tree)
         except AttributeError:
-            print(f"Label file {label_file} does not have a "
-                  f"logical_identifier attribute.")
+            print(f'Label file {label_file} does not have a '
+                  f'logical_identifier attribute.')
             sys.exit(1)
 
         # Attach extra columns if asked for.
@@ -1439,20 +1413,19 @@ def main(cmd_line=None):
     # dictionary will be returned. Glob patterns are processed sequentially, with the
     # first pattern having the highest priority.
 
-    for label_results in all_results:
-        ind = all_results.index(label_results)
+    for ind, label_results in enumerate(all_results):
         label_results_new = filter_dict_by_glob_patterns(
             label_results, elements_to_scrape, valid_add_extra_file_info, verboseprint)
         all_results[ind] = label_results_new
 
-    if all(len(set(r)) == 0 for r in all_results):
+    if all(len(r) == 0 for r in all_results):
         print('No results found: glob pattern(s) excluded all matches.')
         sys.exit(1)
 
-    # # If --simplify-xpaths is used, the XPath headers will be shortened to the
-    # # element's tag and namespace prefix. This is contingent on the uniqueness of
-    # # the XPath header; if more than one XPath header shares a tag, a namespace and a
-    # # predicate value, the XPath header will remain whole.
+    # If --simplify-xpaths is used, the XPath headers will be shortened to the
+    # element's tag and namespace prefix. This is contingent on the uniqueness of
+    # the XPath header; if more than one XPath header shares a tag, a namespace and a
+    # predicate value, the XPath header will remain whole.
     if args.simplify_xpaths:
         headers = {}
         unique_tags_master = []
@@ -1487,8 +1460,7 @@ def main(cmd_line=None):
             for tag in unique_tags:
                 unique_tags_master.append(tag)
 
-        for label_results in all_results:
-            ind = all_results.index(label_results)
+        for ind, label_results in enumerate(all_results):
             new_label_results = {}
             for key, value in list(label_results.items()):
                 new_key = headers[key]
