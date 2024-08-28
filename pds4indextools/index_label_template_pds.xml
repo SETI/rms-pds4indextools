@@ -191,13 +191,11 @@ $END_IF
         $END_IF
     $IF(Product_Ancillary)
     </File_Area_Ancillary>
-    $END_IF
-    $IF(Product_Metadata_Supplemental)
+    $ELSE
     </File_Area_Metadata>
     $END_IF
 $IF(Product_Ancillary)
 </Product_Ancillary>
-$END_IF
-$IF(Product_Metadata_Supplemental)
+$ELSE
 </Product_Metadata_Supplemental>
 $END_IF
