@@ -2,7 +2,6 @@ from pathlib import Path
 import pytest
 import os
 import tempfile
-import shutil
 import pds4indextools.pds4_create_xml_index as tools
 
 
