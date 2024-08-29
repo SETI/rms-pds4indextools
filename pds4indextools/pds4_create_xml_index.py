@@ -1263,7 +1263,7 @@ def main(cmd_line=None):
     # will determine which files will be scraped for.
 
     nillable_elements_info = {}
-    label_files = []
+    collected_files = set()
     all_results = []
     tags = []
     xsd_files = []
@@ -1282,13 +1282,15 @@ def main(cmd_line=None):
 
     for pattern in patterns:
         files = directory_path.glob(pattern)
-        prev_len = len(label_files)
-        label_files.extend(files)
-        if len(label_files) == prev_len:
+        prev_len = len(collected_files)
+        collected_files.update(files)
+        if len(collected_files) == prev_len:
             print(f"No files found for pattern: {pattern}")
 
-    verboseprint(f'{len(label_files)} matching file(s) found')
+    verboseprint(f'{len(collected_files)} matching file(s) found')
 
+    label_files = list(collected_files)
+    label_files.sort()
     if label_files == []:
         print(f'No files matching any patterns found in directory: {directory_path}')
         sys.exit(1)
