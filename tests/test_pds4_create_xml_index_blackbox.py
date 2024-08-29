@@ -471,17 +471,15 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
         temp_dir_path = Path(temp_dir)
 
         if new_file_index is None and new_file_headers is None:
-            shutil.copy(LABELS_DIR / 'tester_label_1.xml', temp_dir_path)
-            cmd_line.append(str(temp_dir_path))
+            cmd_line.append(str(LABELS_DIR))
             cmd_line.append('tester_label_1.xml')
-            cmd_line.append('--output-index-file')
-            cmd_line.append(str(temp_dir_path / 'index.csv'))
             # Call main() function with the simulated command line arguments
             tools.main(cmd_line)
 
-            path_to_file = temp_dir_path / 'index.csv'
+            path_to_file = ROOT_DIR / 'index.csv'
 
             compare_files(path_to_file, golden_file)
+            os.remove(path_to_file)
 
         else:
             # THE PATH TO THE NEW FILE

@@ -893,13 +893,15 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
         f"/*[local-name()='extension']/*/*/*/@base"
     ]
 
+    base_type = None
     for query in queries:
         result = get_base_type(query)
         if result:
             base_type = result[0]
-            return base_type
+        else:
+            continue
 
-    return None
+    return base_type
 
 
 def scrape_namespaces(tree):
