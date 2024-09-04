@@ -14,6 +14,7 @@ from unittest.mock import patch
 # global variables, or get the ROOT_DIR at the setup stage before running each test
 ROOT_DIR = Path(__file__).resolve().parent.parent
 TEST_FILES_DIR = ROOT_DIR / 'test_files'
+SAMPLES_DIR = TEST_FILES_DIR / 'samples'
 EXPECTED_DIR = TEST_FILES_DIR / 'expected'
 LABELS_DIR = TEST_FILES_DIR / 'labels'
 
@@ -66,7 +67,7 @@ def test_load_config_object():
 
     # Tests that the config_object is loaded over.
     config_object = tools.load_config_file(
-        specified_config_files=[str(EXPECTED_DIR / 'tester_config_nillable.yaml'),])
+        specified_config_files=[str(SAMPLES_DIR / 'tester_config_nillable.yaml'),])
 
     assert config_object['nillable']['pds:ASCII_Date_YMD']['inapplicable'] == '0001-01-01'
     assert config_object['nillable']['pds:ASCII_Date_YMD']['missing'] == '0002-01-01'
@@ -94,7 +95,7 @@ def test_load_config_object():
 
     # Tests specified configuration files wiht one or the other
     config_object = tools.load_config_file(
-        specified_config_files=[str(EXPECTED_DIR / 'tester_config_label.yaml'),])
+        specified_config_files=[str(SAMPLES_DIR / 'tester_config_label.yaml'),])
 
     assert config_object['label-contents']['version_id'] == '1.0'
     assert (config_object['label-contents']['title'] ==

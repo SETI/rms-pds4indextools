@@ -103,26 +103,26 @@ $END_IF
     $ELSE
     <File_Area_Metadata>
     $END_IF
-    $IF(File_Area_Ancillary)
+        $IF(Product_Ancillary and File_Area_Ancillary)
         <File>
             <file_name>$BASENAME(TEMPFILE)$</file_name>
             <local_identifier>index-table</local_identifier>
-            $IF(creation_date_time)
+            $IF(File_Area_Ancillary['creation_date_time'])
             <creation_date_time>$File_Area_Ancillary['creation_date_time']$</creation_date_time>
             $ELSE
-            <creation_date_time>$DATETIME(creation_date_time)$</creation_date_time>
+            <creation_date_time>$DATETIME(calculated_creation_date_time)$</creation_date_time>
             $END_IF
             <md5_checksum>$FILE_MD5(TEMPFILE)$</md5_checksum>
             <comment></comment>
         </File>
-    $ELSE_IF(File_Area_Metadata)
+        $ELSE_IF(Product_Metadata_Supplemental and File_Area_Metadata)
         <File>
             <file_name>$BASENAME(TEMPFILE)$</file_name>
             <local_identifier>index-table</local_identifier>
-            $IF(creation_date_time)
+            $IF(File_Area_Metadata['creation_date_time'])
             <creation_date_time>$File_Area_Metadata['creation_date_time']$</creation_date_time>
             $ELSE
-            <creation_date_time>$DATETIME(creation_date_time)$</creation_date_time>
+            <creation_date_time>$DATETIME(calculated_creation_date_time)$</creation_date_time>
             $END_IF
             <md5_checksum>$FILE_MD5(TEMPFILE)$</md5_checksum>
             <comment></comment>
@@ -131,7 +131,7 @@ $END_IF
         <File>
             <file_name>$BASENAME(TEMPFILE)$</file_name>
             <local_identifier>index-table</local_identifier>
-            <creation_date_time>$DATETIME(creation_date_time)$</creation_date_time>
+            <creation_date_time>$DATETIME(calculated_creation_date_time)$</creation_date_time>
             <md5_checksum>$FILE_MD5(TEMPFILE)$</md5_checksum>
             <comment></comment>
         </File>

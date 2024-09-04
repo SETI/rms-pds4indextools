@@ -1587,7 +1587,7 @@ def main(cmd_line=None):
         # .yaml file from --config-file
         label_content = {
             'logical_identifier': 'urn:nasa:pds:rms_metadata:document_opus:' + filename,
-            'creation_date_time': str(creation_date),
+            'calculated_creation_date_time': str(creation_date),
             'TEMPFILE': index_file,
             'Field_Content': header_info,
             'fields': len(header_info),
