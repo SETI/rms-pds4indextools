@@ -1588,7 +1588,7 @@ def main(cmd_line=None):
         label_content = {
             'logical_identifier': 'urn:nasa:pds:rms_metadata:document_opus:' + filename,
             'calculated_creation_date_time': str(creation_date),
-            'TEMPFILE': index_file,
+            'index_file_name': index_file,
             'Field_Content': header_info,
             'fields': len(header_info),
             'maximum_record_length': get_longest_row_length(index_file),

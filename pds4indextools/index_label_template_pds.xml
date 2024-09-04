@@ -62,37 +62,37 @@ $END_IF
         $IF(Internal_Reference)
         $FOR(field, k=Internal_Reference)
         <Internal_Reference>
-            <lid_reference></lid_reference>
-            <reference_type></reference_type>
-            <comment></comment>
+            <lid_reference>$field['lid_reference']$</lid_reference>
+            <reference_type>$field['reference_type']$</reference_type>
+            <comment>$field['comment']$</comment>
         </Internal_Reference>
         $END_FOR
         $END_IF
         $IF(External_Reference)
         $FOR(field, k=External_Reference)
         <External_Reference>
-            <doi></doi>
-            <reference_text></reference_text>
-            <description></description>
+            <doi>$field['doi']$</doi>
+            <reference_text>$field['reference_text']$</reference_text>
+            <description>$field['description']$</description>
         </External_Reference>
         $END_FOR
         $END_IF
         $IF(Source_Product_Internal)
         $FOR(field, k=Source_Product_Internal)
         <Source_Product_Internal>
-            <lidvid_reference></lidvid_reference>
-            <reference_type></reference_type>
-            <comment></comment>
+            <lidvid_reference>$field['lidvid_reference']$</lidvid_reference>
+            <reference_type>$field['reference_type']$</reference_type>
+            <comment>$field['comment']$</comment>
         </Source_Product_Internal>
         $END_FOR
         $END_IF
         $IF(Source_Product_External)
         $FOR(field, k=Source_Product_External)
         <Source_Product_External>
-            <external_source_product_identifier></external_source_product_identifier>
-            <reference_type></reference_type>
-            <doi></doi>
-            <curating_facility></curating_facility>
+            <external_source_product_identifier>$external_source_product_identifier']$</external_source_product_identifier>
+            <reference_type>$field['reference_type']$</reference_type>
+            <doi>$field['doi']$</doi>
+            <curating_facility>$field['curating_facility']$</curating_facility>
             <description></description>
         </Source_Product_External>
         $END_FOR
@@ -105,34 +105,34 @@ $END_IF
     $END_IF
         $IF(Product_Ancillary and File_Area_Ancillary)
         <File>
-            <file_name>$BASENAME(TEMPFILE)$</file_name>
+            <file_name>$BASENAME(index_file_name)$</file_name>
             <local_identifier>index-table</local_identifier>
             $IF(File_Area_Ancillary['creation_date_time'])
             <creation_date_time>$File_Area_Ancillary['creation_date_time']$</creation_date_time>
             $ELSE
             <creation_date_time>$DATETIME(calculated_creation_date_time)$</creation_date_time>
             $END_IF
-            <md5_checksum>$FILE_MD5(TEMPFILE)$</md5_checksum>
+            <md5_checksum>$FILE_MD5(index_file_name)$</md5_checksum>
             <comment></comment>
         </File>
         $ELSE_IF(Product_Metadata_Supplemental and File_Area_Metadata)
         <File>
-            <file_name>$BASENAME(TEMPFILE)$</file_name>
+            <file_name>$BASENAME(index_file_name)$</file_name>
             <local_identifier>index-table</local_identifier>
             $IF(File_Area_Metadata['creation_date_time'])
             <creation_date_time>$File_Area_Metadata['creation_date_time']$</creation_date_time>
             $ELSE
             <creation_date_time>$DATETIME(calculated_creation_date_time)$</creation_date_time>
             $END_IF
-            <md5_checksum>$FILE_MD5(TEMPFILE)$</md5_checksum>
+            <md5_checksum>$FILE_MD5(index_file_name)$</md5_checksum>
             <comment></comment>
         </File>
     $ELSE
         <File>
-            <file_name>$BASENAME(TEMPFILE)$</file_name>
+            <file_name>$BASENAME(index_file_name)$</file_name>
             <local_identifier>index-table</local_identifier>
             <creation_date_time>$DATETIME(calculated_creation_date_time)$</creation_date_time>
-            <md5_checksum>$FILE_MD5(TEMPFILE)$</md5_checksum>
+            <md5_checksum>$FILE_MD5(index_file_name)$</md5_checksum>
             <comment></comment>
         </File>
     $END_IF
@@ -146,7 +146,7 @@ $END_IF
         <Table_Character>
             <offset unit="byte"></offset>
             <object_length unit="byte">$object_length_t$</object_length>
-            <records>$FILE_RECORDS(TEMPFILE)$</records>
+            <records>$FILE_RECORDS(index_file_name)$</records>
             <record_delimiter>Line-Feed</record_delimiter>
             <description></description>
             <Record_Character>
@@ -170,7 +170,7 @@ $END_IF
             <offset unit="byte">0</offset>
             <object_length unit="byte">$object_length_t$</object_length>
             <parsing_standard_id>PDS DSV 1</parsing_standard_id>
-            <records>$FILE_RECORDS(TEMPFILE)$</records>
+            <records>$FILE_RECORDS(index_file_name)$</records>
             <record_delimiter>Line-Feed</record_delimiter>
             <field_delimiter>Comma</field_delimiter>
             <Record_Delimited>
