@@ -1,0 +1,36 @@
+
+label-contents:
+  title: Index file for my occultation bundle
+  Modification_Detail:
+    - modification_date: '2024-01-01'
+      version_id: 1.1
+      description: |
+        This is a lengthy description of what this modification
+        changed in the bundle.
+        There were lots of changes.
+    - modification_date: '2023-01-01'
+      version_id: 1.0
+      description: Initial release.
+  Internal_Reference:
+    - lid_reference: urn:nasa:pds:cassini_iss_cruise:data_raw:body-geometry
+      reference_type: data_to_resource
+      comment: The index table of body surface geometry information associated with each observation.
+    - lid_reference: urn:nasa:pds:cassini_iss_cruise:body-inventory
+      reference_type: data_to_resource
+      comment: An index listing every Saturn system body expected to fall within each field of view.
+  External_Reference:
+    - doi: 10.1086/113662
+      reference_text: Elliot et al. (1984). "Structure of the Uranian rings. I. Square-well model and particle-size constraints" Astron J. 89, 1587-1603.
+      description: reference material
+  Source_Product_Internal:
+    - lidvid_reference: urn:nasa:pds:insight-ifg-mars:data-ifg-raw:ifg-raw-sol0014-20181211t021721-20181211t150435-pt2hz::5.0
+      reference_type: data_to_raw_source_product
+      comment: Raw data used in processing
+  Source_Product_External:
+    - external_source_product_identifier: CO-S-UVIS-2-CUBE-V1.4:COUVIS_0056/DATA/D2016_245/EUV2016_245_17_49
+      reference_type: data_to_raw_source_product
+      doi:
+      curating_facility: PDS RMS Node
+      description: The original PDS3 version of this product. The form of the reference is dataset_id:volume_id:directory_path:file_name.
+  File_Area_Ancillary:
+    creation_date_time: '0001-01-01T00:00:00.00Z'

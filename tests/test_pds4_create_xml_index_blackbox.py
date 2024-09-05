@@ -49,6 +49,21 @@ def compare_files(path_to_file, golden_file):
             ]
         ),
 
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --generate-label ancillary --config-file ../test_files/samples/tester_config_reference.yaml --output-index-file label_references_success.csv --simplify-xpaths
+        (
+            str(EXPECTED_DIR / 'label_references_success.csv'),
+            'label_references.csv', None,
+            [
+                str(TEST_FILES_DIR),
+                LABEL_NAME + '/tester_label_1.xml',
+                '--generate-label',
+                'ancillary',
+                '--config-file',
+                str(SAMPLES_DIR / 'tester_config_reference.yaml'),
+                '--simplify-xpaths'
+            ]
+        ),
+
         # Testing --limit-xpaths-file with two outputs
         # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --limit-xpaths-file ../test_files/samples/element_1.txt --output-headers-file limit_xpaths_file.txt --output-index-file limit_xpaths_file.csv
         # Compare result to golden copy:
@@ -403,7 +418,7 @@ def compare_files(path_to_file, golden_file):
             ]
         ),
 
-        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --generate-label ancillary --config ../test_files/samples/tester_config.yaml --output-index-file generated_label_1.csv
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --generate-label ancillary --config-file ../test_files/samples/tester_config.yaml --output-index-file generated_label_1.csv
         # Compare result to golden copy:
         # test_files/expected/label_success_1.csv
         # test_files/expected/label_success_1.xml
@@ -415,12 +430,12 @@ def compare_files(path_to_file, golden_file):
                 LABEL_NAME + '/tester_label_1.xml',
                 '--generate-label',
                 'ancillary',
-                '--config',
+                '--config-file',
                 str(SAMPLES_DIR / 'tester_config.yaml')
             ]
         ),
 
-        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --generate-label metadata --fixed-width --output-index-file generated_label_2.csv --config ../test_files/samples/tester_config.yaml --output-index-file generated_label_2.csv
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --generate-label metadata --fixed-width --output-index-file generated_label_2.csv --config-file ../test_files/samples/tester_config.yaml --output-index-file generated_label_2.csv
         # Compare result to golden copy:
         # test_files/expected/label_success_2.csv
         # test_files/expected/label_success_2.xml
@@ -433,12 +448,12 @@ def compare_files(path_to_file, golden_file):
                 '--generate-label',
                 'metadata',
                 '--fixed-width',
-                '--config',
+                '--config-file',
                 str(SAMPLES_DIR / 'tester_config.yaml')
             ]
         ),
 
-        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml" --limit-xpaths-file ../test_files/samples/element_5.txt --add-extra-file-info filename,filepath,lid,bundle,bundle_lid --generate-label ancillary --config ../test_files/samples/tester_config.yaml --output-index-file generated_label_3.csv
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml" --limit-xpaths-file ../test_files/samples/element_5.txt --add-extra-file-info filename,filepath,lid,bundle,bundle_lid --generate-label ancillary --config-file ../test_files/samples/tester_config.yaml --output-index-file generated_label_3.csv
         # Compare result to golden copy:
         # test_files/expected/label_success_3.csv
         # test_files/expected/label_success_3.xml
@@ -458,7 +473,7 @@ def compare_files(path_to_file, golden_file):
                 'filename',
                 '--generate-label',
                 'ancillary',
-                '--config',
+                '--config-file',
                 str(SAMPLES_DIR / 'tester_config.yaml')
             ]
         )

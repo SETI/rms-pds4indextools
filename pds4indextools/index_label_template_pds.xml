@@ -89,11 +89,11 @@ $END_IF
         $IF(Source_Product_External)
         $FOR(field, k=Source_Product_External)
         <Source_Product_External>
-            <external_source_product_identifier>$external_source_product_identifier']$</external_source_product_identifier>
+            <external_source_product_identifier>$field['external_source_product_identifier']$</external_source_product_identifier>
             <reference_type>$field['reference_type']$</reference_type>
             <doi>$field['doi']$</doi>
             <curating_facility>$field['curating_facility']$</curating_facility>
-            <description></description>
+            <description>$field['description']$</description>
         </Source_Product_External>
         $END_FOR
         $END_IF
