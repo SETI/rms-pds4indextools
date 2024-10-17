@@ -418,6 +418,19 @@ def compare_files(path_to_file, golden_file):
             ]
         ),
 
+        # Executable command: python pds4indextools/pds4_create_xml_index.py ../test_files/labels "nested_label.xml" --output-headers-file headers_nested.txt --simplify-xpaths
+        # Compare result to golden copy:
+        # test_files/expected/nested_label_success.txt
+        (
+            str(EXPECTED_DIR / 'nested_label_success.txt'),
+            None, 'nested_label.txt',
+            [
+                str(TEST_FILES_DIR),
+                LABEL_NAME + '/nested_label.xml',
+                '--simplify-xpaths',
+            ]
+        ),
+
         # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --generate-label ancillary --config-file ../test_files/samples/tester_config.yaml --output-index-file generated_label_1.csv
         # Compare result to golden copy:
         # test_files/expected/label_success_1.csv
@@ -476,7 +489,26 @@ def compare_files(path_to_file, golden_file):
                 '--config-file',
                 str(SAMPLES_DIR / 'tester_config.yaml')
             ]
-        )
+        ),
+
+        # Executable command: pds4_create_xml_index ../test_files/labels "rf-tester-label_*.xml" --generate-label metadata --config-file ../test_files/samples/tester_config.yaml --output-index-file cleaned_headers_label.csv --clean-header-field-names
+        # Compare result to golden copy:
+        # test_files/expected/cleaned_headers_label_success.csv
+        # test_files/expected/cleaned_headers_label_success.xml
+        (
+            str(EXPECTED_DIR / 'cleaned_headers_label_success.csv'),
+            'cleaned_headers_label.csv', None,
+            [
+                str(TEST_FILES_DIR),
+                LABEL_NAME + '/rf-tester-label_*.xml',
+                '--generate-label',
+                'metadata',
+                '--config-file',
+                str(SAMPLES_DIR / 'tester_config.yaml'),
+                '--clean-header-field-names',
+                '--simplify-xpaths'
+            ]
+        ),
     ]
 )
 def test_success(golden_file, new_file_index, new_file_headers, cmd_line):

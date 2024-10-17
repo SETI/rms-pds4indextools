@@ -20,25 +20,35 @@ $END_IF
         <product_class>Product_Ancillary</product_class>
     $IF(Citation_Information)
         <Citation_Information>
+        $IF(Citation_Information['author_list'] and isinstance(Citation_Information['author_list'], list))
+        $FOR(Citation_Information['author_list'])
+            <author_list>$VALUE$</author_list>
+        $END_FOR
+        $ELSE_IF(Citation_Information['author_list'] and not isinstance(Citation_Information['author_list'], list))
             <author_list>$Citation_Information['author_list']$</author_list>
+        $END_IF
             <editor_list>$Citation_Information['editor_list']$</editor_list>
             <publication_year>$Citation_Information['publication_year']$</publication_year>
             <doi>$Citation_Information['doi']$</doi>
+        $IF(Citation_Information['keyword'] and isinstance(Citation_Information['keyword'], list))
         $FOR(Citation_Information['keyword'])
             <keyword>$VALUE$</keyword>
         $END_FOR
+        $ELSE_IF(Citation_Information['keyword'] and not isinstance(Citation_Information['keyword'], list))
+            <keyword>$Citation_Information['keyword']$</keyword>
+        $END_IF
             <description>$Citation_Information['description']$</description>
-        $IF(Citation_Information.get('Funding_Acknowledgement'))
+        $IF(Citation_Information['Funding_Acknowledgement'])
             <Funding_Acknowledgement>
-                <funding_source>$Funding_Acknowledgement['funding_source']$</funding_source>
-                <funding_year>$Funding_Acknowledgement['funding_year']$</funding_year>
-                <funding_award>$Funding_Acknowledgement['funding_award']$</funding_award>
-                <funding_acknowledgement_text>$Funding_Acknowledgement['funding_acknowledgement_text']$</funding_acknowledgement_text>
+                <funding_source>$Citation_Information['Funding_Acknowledgement']['funding_source']$</funding_source>
+                <funding_year>$Citation_Information['Funding_Acknowledgement']['funding_year']$</funding_year>
+                <funding_award>$Citation_Information['Funding_Acknowledgement']['funding_award']$</funding_award>
+                <funding_acknowledgement_text>$Citation_Information['Funding_Acknowledgement']['funding_acknowledgement_text']$</funding_acknowledgement_text>
             </Funding_Acknowledgement>
         $END_IF
         </Citation_Information>
     $END_IF
-    $IF(Modification_Detail)
+    $IF(Modification_Detail and isinstance(Modification_Detail, list))
         <Modification_History>
             $FOR(field, k=Modification_Detail)
             <Modification_Detail>
@@ -47,6 +57,14 @@ $END_IF
                 <description>$field['description']$</description>
             </Modification_Detail>
             $END_FOR
+        </Modification_History>
+    $ELSE_IF(Modification_Detail)
+        <Modification_History>
+            <Modification_Detail>
+                <modification_date>$Modification_Detail['modification_date']$</modification_date>
+                <version_id>$Modification_Detail['version_id']$</version_id>
+                <description>$Modification_Detail['description']$</description>
+            </Modification_Detail>
         </Modification_History>
     $END_IF
         <License_Information>
@@ -58,6 +76,7 @@ $END_IF
             </Internal_Reference>
         </License_Information>
     </Identification_Area>
+    $IF(Internal_Reference or External_Reference or Source_Product_Internal or Source_Product_External)
     <Reference_List>
         $IF(Internal_Reference)
         $FOR(field, k=Internal_Reference)
@@ -98,6 +117,7 @@ $END_IF
         $END_FOR
         $END_IF
     </Reference_List>
+    $END_IF
     $IF(Product_Ancillary)
     <File_Area_Ancillary>
     $ELSE

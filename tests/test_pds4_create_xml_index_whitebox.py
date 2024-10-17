@@ -286,28 +286,6 @@ def test_get_creation_date(create_temp_file, platform_name):
         assert datetime.fromisoformat(creation_date)
 
 
-def test_correct_duplicates():
-    label_results = {
-        '../geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name<1>': 1,
-        '../geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name_1<1>': 2,
-        '../geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name_2<1>': 3,
-        '../geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name_3<1>': 4,
-        '../geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name_4<1>': 5,
-        '../geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name_5': 6
-        }
-
-    tools.correct_duplicates(label_results)
-
-    assert label_results == {
-        '../geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name<1>': 1,
-        '../geom:SPICE_Kernel_Identification<2>/geom:spice_kernel_file_name<1>': 2,
-        '../geom:SPICE_Kernel_Identification<3>/geom:spice_kernel_file_name<1>': 3,
-        '../geom:SPICE_Kernel_Identification<4>/geom:spice_kernel_file_name<1>': 4,
-        '../geom:SPICE_Kernel_Identification<5>/geom:spice_kernel_file_name<1>': 5,
-        '../geom:SPICE_Kernel_Identification<6>/geom:spice_kernel_file_name<1>': 6
-        }
-
-
 def test_update_nillable_elements_from_xsd_file():
     xsd_files = []
     nillable_elements_info = {}
