@@ -83,10 +83,10 @@ def convert_header_to_xpath(root, xml_header_path, namespaces):
         elif any(f'{prefix}:' in sec for prefix in prefixes):
             predicate = sec.split('[')[-1]
             if predicate[0].isdigit():
-                sec = f'[{sec.split('[')[-1]}'
+                sec = f"[{sec.split('[')[-1]}"
             else:
                 sec = ''
-        # xpath_final is the current path, then the tag, then section/
+        # xpath_final is the current path, then the tag, then section
         xpath_final = f'{xpath_final}/{tag}{sec}'
 
     return xpath_final
