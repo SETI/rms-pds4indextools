@@ -54,56 +54,56 @@
                     <Field_Character>
                         <name>pds:Product_Observational/pds:Identification_Area&lt;1&gt;/pds:version_id&lt;1&gt;</name>
                         <field_number>2</field_number>
-                        <field_location unit="byte">79</field_location>
+                        <field_location unit="byte">80</field_location>
                         <data_type>ASCII_Short_String_Collapsed</data_type>
                         <field_length unit="byte">70</field_length>
                     </Field_Character>
                     <Field_Character>
                         <name>pds:Product_Observational/pds:Identification_Area&lt;1&gt;/pds:title&lt;1&gt;</name>
                         <field_number>3</field_number>
-                        <field_location unit="byte">150</field_location>
+                        <field_location unit="byte">151</field_location>
                         <data_type>ASCII_Short_String_Collapsed</data_type>
                         <field_length unit="byte">65</field_length>
                     </Field_Character>
                     <Field_Character>
                         <name>pds:Product_Observational/pds:Identification_Area&lt;1&gt;/pds:information_model_version&lt;1&gt;</name>
                         <field_number>4</field_number>
-                        <field_location unit="byte">216</field_location>
+                        <field_location unit="byte">217</field_location>
                         <data_type>ASCII_Short_String_Collapsed</data_type>
                         <field_length unit="byte">85</field_length>
                     </Field_Character>
                     <Field_Character>
                         <name>pds:Product_Observational/pds:Observing_System&lt;1&gt;/pds:name&lt;1&gt;</name>
                         <field_number>5</field_number>
-                        <field_location unit="byte">302</field_location>
+                        <field_location unit="byte">303</field_location>
                         <data_type>UTF8_Short_String_Collapsed</data_type>
                         <field_length unit="byte">61</field_length>
                     </Field_Character>
                     <Field_Character>
                         <name>pds:Product_Observational/pds:Observing_System&lt;1&gt;/pds:Observing_System_Component&lt;1&gt;/pds:name&lt;1&gt;</name>
                         <field_number>6</field_number>
-                        <field_location unit="byte">364</field_location>
+                        <field_location unit="byte">365</field_location>
                         <data_type>UTF8_Short_String_Collapsed</data_type>
                         <field_length unit="byte">95</field_length>
                     </Field_Character>
                     <Field_Character>
                         <name>pds:Product_Observational/pds:Observing_System&lt;1&gt;/pds:Observing_System_Component&lt;1&gt;/pds:type&lt;1&gt;</name>
                         <field_number>7</field_number>
-                        <field_location unit="byte">460</field_location>
+                        <field_location unit="byte">461</field_location>
                         <data_type>ASCII_Short_String_Collapsed</data_type>
                         <field_length unit="byte">95</field_length>
                     </Field_Character>
                     <Field_Character>
                         <name>pds:Product_Observational/pds:Observing_System&lt;1&gt;/pds:Observing_System_Component&lt;1&gt;/pds:Internal_Reference&lt;1&gt;/pds:lid_reference&lt;1&gt;</name>
                         <field_number>8</field_number>
-                        <field_location unit="byte">556</field_location>
+                        <field_location unit="byte">557</field_location>
                         <data_type>ASCII_LID</data_type>
                         <field_length unit="byte">130</field_length>
                     </Field_Character>
                     <Field_Character>
                         <name>pds:Product_Observational/pds:Observing_System&lt;1&gt;/pds:Observing_System_Component&lt;1&gt;/pds:Internal_Reference&lt;1&gt;/pds:reference_type&lt;1&gt;</name>
                         <field_number>9</field_number>
-                        <field_location unit="byte">687</field_location>
+                        <field_location unit="byte">688</field_location>
                         <data_type>ASCII_Short_String_Collapsed</data_type>
                         <field_length unit="byte">131</field_length>
                     </Field_Character>

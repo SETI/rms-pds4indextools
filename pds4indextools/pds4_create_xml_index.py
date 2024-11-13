@@ -104,10 +104,7 @@ def clean_headers(df):
         dict: A dictionary mapping new headers to old headers.
     """
     # Create a mapping of old to new headers
-    header_map = {col: col.replace(':', '_')
-                          .replace('/', '__')
-                          .replace('<', '_')
-                          .replace('>', '') for col in df.columns}
+    header_map = {col: header_cleaner(col) for col in df.columns}
 
     # Update the DataFrame's headers
     df.rename(columns=header_map, inplace=True)
@@ -306,6 +303,24 @@ def get_true_type(xsd_files, tag, namespaces):
             return true_type
 
     return None
+
+
+def header_cleaner(header):
+    """
+    Clean a header string.
+
+    Parameters:
+        header (str): The header string to be cleaned.
+
+    Returns:
+        str: The cleaned header string.
+    """
+    return (
+        header.replace(':', '_')
+              .replace('/', '__')
+              .replace('<', '_')
+              .replace('>', '')
+    )
 
 
 def load_config_file(
@@ -746,6 +761,17 @@ def write_results_to_csv(results_list, args, output_csv_path):
 
     df = pd.DataFrame(rows)
 
+    if (
+        df.map(lambda x: isinstance(x, str) and ('"' in x or "'" in x))
+        .any()
+        .any()
+        and not args.fixed_width
+    ):
+        print("Warning: scraped contents of labels contains quotes. This is "
+              "against PDS4 data standards. Index file and subsequent label file will "
+              "not be generated.")
+        sys.exit(1)
+
     if args.simplify_xpaths:
         original_headers = df.columns.tolist()
         simplified_headers = simplify_xpaths(original_headers)
@@ -764,12 +790,15 @@ def write_results_to_csv(results_list, args, output_csv_path):
 
     if args.fixed_width:
         padded_df = pad_column_values_and_headers(df)
+
         print(f'Fixed-width index file generated at {output_csv_path}')
-        padded_df.to_csv(output_csv_path, index=False, na_rep='', lineterminator='\n')
+        padded_df.to_csv(output_csv_path, index=False, na_rep='', lineterminator='\n',
+                         quoting=csv.QUOTE_MINIMAL)
 
     else:
         print(f'Index file generated at {output_csv_path}')
-        df.to_csv(output_csv_path, index=False, na_rep='', lineterminator='\n')
+        df.to_csv(output_csv_path, index=False, na_rep='', lineterminator='\n',
+                  quoting=csv.QUOTE_MINIMAL)
 
     if args.clean_header_field_names:
         return clean_header_mapping
@@ -1107,21 +1136,19 @@ def simplify_xpaths(headers):
     namespace prefix, provided the tag is unique.
 
     This function processes a list of XPath-like strings (headers) and attempts to
-    simplify them to their last tag component. If a tag is unique within the list,
-    it replaces the full XPath header with the tag. If the tag is not unique
-    (i.e., multiple headers share the same tag), the full XPath header is retained.
+    simplify them to their last tag component. If --simplify-xpaths is used, the XPath
+    headers will be shortened to the element's tag and namespace prefix. This is
+    contingent on the uniqueness of the XPath header; if more than one XPath header
+    shares a tag, a namespace and a predicate value, the XPath header will remain whole.
 
-    Args:
+    Parameters:
         headers (list of str): A list of strings representing XPath headers.
 
     Returns:
         list of str: A list of strings where unique tags have replaced their
         corresponding full XPath headers, and non-unique tags remain unchanged.
     """
-    # If --simplify-xpaths is used, the XPath headers will be shortened to the
-    # element's tag and namespace prefix. This is contingent on the uniqueness of
-    # the XPath header; if more than one XPath header shares a tag, a namespace and a
-    # predicate value, the XPath header will remain whole.
+    #
     tags = []
     matches = {}
 
@@ -1131,14 +1158,14 @@ def simplify_xpaths(headers):
         tags.append(tag)
         matches[header] = tag
 
+    # Step 2: Count the number of instances of each tag
     term_counts = Counter(tags)
 
+    # Step 3: If a tag occurs only once, shorten it.
     for ind, header in enumerate(headers):
         tag = header.split('/')[-1]
         if term_counts[tag] == 1:
             headers[ind] = tag
-        else:
-            continue
 
     return headers
 
@@ -1300,13 +1327,13 @@ def main(cmd_line=None):
         prev_len = len(collected_files)
         collected_files.update(files)
         if len(collected_files) == prev_len:
-            print(f"No files found for pattern: {pattern}")
+            print(f'No new files found for pattern: {pattern}')
 
     verboseprint(f'{len(collected_files)} matching file(s) found')
 
     label_files = list(collected_files)
     label_files.sort()
-    if label_files == []:
+    if len(label_files) == 0:
         print(f'No files matching any patterns found in directory: {directory_path}')
         sys.exit(1)
 
@@ -1469,8 +1496,7 @@ def main(cmd_line=None):
                 if args.clean_header_field_names:
                     verboseprint(
                         '--clean-header-field-names active. Headers reformatted.')
-                    item = item.replace(
-                        ':', '_').replace('/', '__').replace('<', '_').replace('>', '')
+                    item = header_cleaner(item)
                 output_fp.write("%s\n" % item)
         print(f'XPath headers file generated at {output_txt_path}.')
 
@@ -1559,7 +1585,7 @@ def main(cmd_line=None):
                     offset += whole_header_length + jump
                 else:
                     offset += header_length + jump
-                field_location = offset
+                field_location = offset + 1
 
         # The creation date of the index file is stored for later reference.
         creation_date = get_creation_date(index_file)

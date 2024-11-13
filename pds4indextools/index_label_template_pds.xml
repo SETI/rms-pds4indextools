@@ -38,13 +38,15 @@ $END_IF
             <keyword>$Citation_Information['keyword']$</keyword>
         $END_IF
             <description>$Citation_Information['description']$</description>
-        $IF(Citation_Information['Funding_Acknowledgement'])
+        $IF('Funding_Acknowledgement' in Citation_Information)
+            $IF(Citation_Information['Funding_Acknowledgement'])
             <Funding_Acknowledgement>
                 <funding_source>$Citation_Information['Funding_Acknowledgement']['funding_source']$</funding_source>
                 <funding_year>$Citation_Information['Funding_Acknowledgement']['funding_year']$</funding_year>
                 <funding_award>$Citation_Information['Funding_Acknowledgement']['funding_award']$</funding_award>
                 <funding_acknowledgement_text>$Citation_Information['Funding_Acknowledgement']['funding_acknowledgement_text']$</funding_acknowledgement_text>
             </Funding_Acknowledgement>
+            $END_IF
         $END_IF
         </Citation_Information>
     $END_IF

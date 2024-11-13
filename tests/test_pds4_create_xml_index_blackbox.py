@@ -500,7 +500,7 @@ def compare_files(path_to_file, golden_file):
             'cleaned_headers_label.csv', None,
             [
                 str(TEST_FILES_DIR),
-                LABEL_NAME + '/rf-tester-label_*.xml',
+                LABEL_NAME + '/rf_tester_label_*.xml',
                 '--generate-label',
                 'metadata',
                 '--config-file',
@@ -522,15 +522,16 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
             # Call main() function with the simulated command line arguments
             tools.main(cmd_line)
 
-            path_to_file = ROOT_DIR / 'index.csv'
+            path_to_index_file = ROOT_DIR / 'index.csv'
 
-            compare_files(path_to_file, golden_file)
-            os.remove(path_to_file)
+            compare_files(path_to_index_file, golden_file)
+            os.remove(path_to_index_file)
 
         else:
             # THE PATH TO THE NEW FILE
             if new_file_index:
                 path_to_file = temp_dir_path / new_file_index
+                path_to_label_file = ROOT_DIR / 'index.xml'
                 cmd_line.append('--output-index-file')
                 cmd_line.append(str(path_to_file))
                 # Call main() function with the simulated command line arguments
@@ -544,6 +545,8 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
                     assert os.path.isfile(label_path)
 
                     compare_files(label_path, golden_label)
+                    if os.path.isfile(path_to_label_file):
+                        os.remove(path_to_label_file)
 
             if new_file_headers:
                 path_to_file = temp_dir_path / new_file_headers
@@ -647,13 +650,16 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
     ]
 )
 def test_failures(cmd_line):
-    # Call main() function with the simulated command line arguments
-    with pytest.raises(SystemExit) as e:
-        tools.main(cmd_line)
-    assert e.type == SystemExit
-    assert e.value.code != 0  # Check that the exit code indicates failure
-    if os.path.isfile('hdout.txt'):
-        os.remove('hdout.txt')
+    try:
+        # Call main() function with the simulated command line arguments
+        with pytest.raises(SystemExit) as e:
+            tools.main(cmd_line)
+        assert e.type == SystemExit
+        assert e.value.code != 0  # Check that the exit code indicates failure
+    finally:
+        # Ensure hdout.txt is deleted regardless of test outcome
+        if os.path.isfile('hdout.txt'):
+            os.remove('hdout.txt')
 
 
 @pytest.mark.parametrize(
