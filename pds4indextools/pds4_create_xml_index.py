@@ -762,7 +762,7 @@ def write_results_to_csv(results_list, args, output_csv_path):
     df = pd.DataFrame(rows)
 
     if (
-        df.map(lambda x: isinstance(x, str) and ('"' in x or "'" in x))
+        df.applymap(lambda x: isinstance(x, str) and ('"' in x or "'" in x))
         .any()
         .any()
         and not args.fixed_width
