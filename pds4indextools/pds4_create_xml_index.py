@@ -762,7 +762,7 @@ def write_results_to_csv(results_list, args, output_csv_path):
     df = pd.DataFrame(rows)
 
     if (
-        df.applymap(lambda x: isinstance(x, str) and ('"' in x or "'" in x))
+        df.map(lambda x: isinstance(x, str) and ('"' in x))
         .any()
         .any()
         and not args.fixed_width
@@ -1353,6 +1353,17 @@ def main(cmd_line=None):
 
     else:
         elements_to_scrape = None
+
+    if args.add_extra_file_info:
+        if elements_to_scrape is None:
+            elements_to_scrape = args.add_extra_file_info
+        else:
+            # Ensure add-extra-file-info fields appear first, respecting their order
+            # in the command line
+            elements_to_scrape = args.add_extra_file_info + [
+                xpath for xpath in elements_to_scrape
+                if xpath not in args.add_extra_file_info
+            ]
 
     # For each file in label_files, load in schema files and namespaces for reference.
     # Traverse the label file and scrape the desired contents. Place these contents

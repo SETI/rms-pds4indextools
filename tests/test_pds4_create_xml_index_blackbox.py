@@ -233,7 +233,7 @@ def compare_files(path_to_file, golden_file):
         ),
 
         # Testing --add-extra-file-info
-        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_2.xml" --limit-xpaths-file ../test_files/samples/element_1.txt --add-extra-file-info filename,filepath --output-index-file extra_file_info_1.csv
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_2.xml" --limit-xpaths-file ../test_files/samples/element_extra_file_info.txt --add-extra-file-info filename,filepath --output-index-file extra_file_info_1.csv
         # Compare result to golden copy:
         # test_files/expected/extra_file_info_success_1.csv
         (
