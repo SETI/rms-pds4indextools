@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.sch"
+    schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_Ancillary xmlns="http://pds.nasa.gov/pds4/pds/v1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.xsd">
+    <Identification_Area>
+        <logical_identifier>urn:nasa:pds:rms_metadata:document_opus:generated_label_3</logical_identifier>
+        <version_id>1.1</version_id>
+        <title>Index File</title>
+        <information_model_version>1.21.0.0</information_model_version>
+        <product_class>Product_Ancillary</product_class>
+        <License_Information>
+            <name>Creative Common Public License CC0 1.0 (2024)</name>
+            <description>Creative Commons Zero (CC0) license information.</description>
+            <Internal_Reference>
+                <lid_reference>urn:nasa:pds:system_bundle:document_pds4_standards:creative_commons_1.0.0::1.0</lid_reference>
+                <reference_type>product_to_license</reference_type>
+            </Internal_Reference>
+        </License_Information>
+    </Identification_Area>
+    <File_Area_Ancillary>
+        <File>
+            <file_name>generated_label_3.csv</file_name>
+            <local_identifier>index-table</local_identifier>
+            <creation_date_time>0001-01-01T00:00:00.00Z</creation_date_time>
+            <md5_checksum>8b2eb69a284938d23748de7f53d2e45b</md5_checksum>
+            <comment></comment>
+        </File>
+        <Header>
+            <offset unit="byte">0</offset>
+            <object_length unit="byte">190</object_length>
+            <parsing_standard_id>UTF-8 Text</parsing_standard_id>
+            <description>Provides the column headers, separated by commas, for the data table.</description>
+        </Header>
+        <Table_Delimited>
+            <offset unit="byte">0</offset>
+            <object_length unit="byte">864</object_length>
+            <parsing_standard_id>PDS DSV 1</parsing_standard_id>
+            <records>4</records>
+            <record_delimiter>Line-Feed</record_delimiter>
+            <field_delimiter>Comma</field_delimiter>
+            <Record_Delimited>
+                <fields>7</fields>
+                <groups>0</groups>
+                <maximum_record_length unit="byte">261</maximum_record_length>
+                    <Field_Delimited>
+                        <name>filename</name>
+                        <field_number>1</field_number>
+                        <data_type>ASCII_File_Name</data_type>
+                        <maximum_field_length unit="byte">18</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>filepath</name>
+                        <field_number>2</field_number>
+                        <data_type>ASCII_File_Specification_Name</data_type>
+                        <maximum_field_length unit="byte">25</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>lid</name>
+                        <field_number>3</field_number>
+                        <data_type>ASCII_LID</data_type>
+                        <maximum_field_length unit="byte">72</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>bundle</name>
+                        <field_number>4</field_number>
+                        <data_type>ASCII_Text_Preserved</data_type>
+                        <maximum_field_length unit="byte">26</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>bundle_lid</name>
+                        <field_number>5</field_number>
+                        <data_type>ASCII_LID</data_type>
+                        <maximum_field_length unit="byte">39</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Identification_Area&lt;1&gt;/pds:logical_identifier&lt;1&gt;</name>
+                        <field_number>6</field_number>
+                        <data_type>ASCII_Short_String_Collapsed</data_type>
+                        <maximum_field_length unit="byte">72</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Identification_Area&lt;1&gt;/pds:version_id&lt;1&gt;</name>
+                        <field_number>7</field_number>
+                        <data_type>ASCII_Short_String_Collapsed</data_type>
+                        <maximum_field_length unit="byte">3</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+            </Record_Delimited>
+        </Table_Delimited>
+    </File_Area_Ancillary>
+</Product_Ancillary>

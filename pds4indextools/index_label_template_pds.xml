@@ -20,25 +20,37 @@ $END_IF
         <product_class>Product_Ancillary</product_class>
     $IF(Citation_Information)
         <Citation_Information>
+        $IF(Citation_Information['author_list'] and isinstance(Citation_Information['author_list'], list))
+        $FOR(Citation_Information['author_list'])
+            <author_list>$VALUE$</author_list>
+        $END_FOR
+        $ELSE_IF(Citation_Information['author_list'] and not isinstance(Citation_Information['author_list'], list))
             <author_list>$Citation_Information['author_list']$</author_list>
+        $END_IF
             <editor_list>$Citation_Information['editor_list']$</editor_list>
             <publication_year>$Citation_Information['publication_year']$</publication_year>
             <doi>$Citation_Information['doi']$</doi>
+        $IF(Citation_Information['keyword'] and isinstance(Citation_Information['keyword'], list))
         $FOR(Citation_Information['keyword'])
             <keyword>$VALUE$</keyword>
         $END_FOR
+        $ELSE_IF(Citation_Information['keyword'] and not isinstance(Citation_Information['keyword'], list))
+            <keyword>$Citation_Information['keyword']$</keyword>
+        $END_IF
             <description>$Citation_Information['description']$</description>
-        $IF(Citation_Information.get('Funding_Acknowledgement'))
+        $IF('Funding_Acknowledgement' in Citation_Information)
+            $IF(Citation_Information['Funding_Acknowledgement'])
             <Funding_Acknowledgement>
-                <funding_source>$Funding_Acknowledgement['funding_source']$</funding_source>
-                <funding_year>$Funding_Acknowledgement['funding_year']$</funding_year>
-                <funding_award>$Funding_Acknowledgement['funding_award']$</funding_award>
-                <funding_acknowledgement_text>$Funding_Acknowledgement['funding_acknowledgement_text']$</funding_acknowledgement_text>
+                <funding_source>$Citation_Information['Funding_Acknowledgement']['funding_source']$</funding_source>
+                <funding_year>$Citation_Information['Funding_Acknowledgement']['funding_year']$</funding_year>
+                <funding_award>$Citation_Information['Funding_Acknowledgement']['funding_award']$</funding_award>
+                <funding_acknowledgement_text>$Citation_Information['Funding_Acknowledgement']['funding_acknowledgement_text']$</funding_acknowledgement_text>
             </Funding_Acknowledgement>
+            $END_IF
         $END_IF
         </Citation_Information>
     $END_IF
-    $IF(Modification_Detail)
+    $IF(Modification_Detail and isinstance(Modification_Detail, list))
         <Modification_History>
             $FOR(field, k=Modification_Detail)
             <Modification_Detail>
@@ -47,6 +59,14 @@ $END_IF
                 <description>$field['description']$</description>
             </Modification_Detail>
             $END_FOR
+        </Modification_History>
+    $ELSE_IF(Modification_Detail)
+        <Modification_History>
+            <Modification_Detail>
+                <modification_date>$Modification_Detail['modification_date']$</modification_date>
+                <version_id>$Modification_Detail['version_id']$</version_id>
+                <description>$Modification_Detail['description']$</description>
+            </Modification_Detail>
         </Modification_History>
     $END_IF
         <License_Information>
@@ -58,59 +78,86 @@ $END_IF
             </Internal_Reference>
         </License_Information>
     </Identification_Area>
+    $IF(Internal_Reference or External_Reference or Source_Product_Internal or Source_Product_External)
     <Reference_List>
         $IF(Internal_Reference)
         $FOR(field, k=Internal_Reference)
         <Internal_Reference>
-            <lid_reference></lid_reference>
-            <reference_type></reference_type>
-            <comment></comment>
+            <lid_reference>$field['lid_reference']$</lid_reference>
+            <reference_type>$field['reference_type']$</reference_type>
+            <comment>$field['comment']$</comment>
         </Internal_Reference>
         $END_FOR
         $END_IF
         $IF(External_Reference)
         $FOR(field, k=External_Reference)
         <External_Reference>
-            <doi></doi>
-            <reference_text></reference_text>
-            <description></description>
+            <doi>$field['doi']$</doi>
+            <reference_text>$field['reference_text']$</reference_text>
+            <description>$field['description']$</description>
         </External_Reference>
         $END_FOR
         $END_IF
         $IF(Source_Product_Internal)
         $FOR(field, k=Source_Product_Internal)
         <Source_Product_Internal>
-            <lidvid_reference></lidvid_reference>
-            <reference_type></reference_type>
-            <comment></comment>
+            <lidvid_reference>$field['lidvid_reference']$</lidvid_reference>
+            <reference_type>$field['reference_type']$</reference_type>
+            <comment>$field['comment']$</comment>
         </Source_Product_Internal>
         $END_FOR
         $END_IF
         $IF(Source_Product_External)
         $FOR(field, k=Source_Product_External)
         <Source_Product_External>
-            <external_source_product_identifier></external_source_product_identifier>
-            <reference_type></reference_type>
-            <doi></doi>
-            <curating_facility></curating_facility>
-            <description></description>
+            <external_source_product_identifier>$field['external_source_product_identifier']$</external_source_product_identifier>
+            <reference_type>$field['reference_type']$</reference_type>
+            <doi>$field['doi']$</doi>
+            <curating_facility>$field['curating_facility']$</curating_facility>
+            <description>$field['description']$</description>
         </Source_Product_External>
         $END_FOR
         $END_IF
     </Reference_List>
+    $END_IF
     $IF(Product_Ancillary)
     <File_Area_Ancillary>
-    $END_IF
-    $IF(Product_Metadata_Supplemental)
+    $ELSE
     <File_Area_Metadata>
     $END_IF
+        $IF(Product_Ancillary and File_Area_Ancillary)
         <File>
-            <file_name>$BASENAME(TEMPFILE)$</file_name>
+            <file_name>$BASENAME(index_file_name)$</file_name>
             <local_identifier>index-table</local_identifier>
-            <creation_date_time>$DATETIME(creation_date_time)$</creation_date_time>
-            <md5_checksum>$FILE_MD5(TEMPFILE)$</md5_checksum>
+            $IF(File_Area_Ancillary['creation_date_time'])
+            <creation_date_time>$File_Area_Ancillary['creation_date_time']$</creation_date_time>
+            $ELSE
+            <creation_date_time>$DATETIME(calculated_creation_date_time)$</creation_date_time>
+            $END_IF
+            <md5_checksum>$FILE_MD5(index_file_name)$</md5_checksum>
             <comment></comment>
         </File>
+        $ELSE_IF(Product_Metadata_Supplemental and File_Area_Metadata)
+        <File>
+            <file_name>$BASENAME(index_file_name)$</file_name>
+            <local_identifier>index-table</local_identifier>
+            $IF(File_Area_Metadata['creation_date_time'])
+            <creation_date_time>$File_Area_Metadata['creation_date_time']$</creation_date_time>
+            $ELSE
+            <creation_date_time>$DATETIME(calculated_creation_date_time)$</creation_date_time>
+            $END_IF
+            <md5_checksum>$FILE_MD5(index_file_name)$</md5_checksum>
+            <comment></comment>
+        </File>
+    $ELSE
+        <File>
+            <file_name>$BASENAME(index_file_name)$</file_name>
+            <local_identifier>index-table</local_identifier>
+            <creation_date_time>$DATETIME(calculated_creation_date_time)$</creation_date_time>
+            <md5_checksum>$FILE_MD5(index_file_name)$</md5_checksum>
+            <comment></comment>
+        </File>
+    $END_IF
         <Header>
             <offset unit="byte">0</offset>
             <object_length unit="byte">$object_length_h$</object_length>
@@ -121,7 +168,7 @@ $END_IF
         <Table_Character>
             <offset unit="byte"></offset>
             <object_length unit="byte">$object_length_t$</object_length>
-            <records>$FILE_RECORDS(TEMPFILE)$</records>
+            <records>$FILE_RECORDS(index_file_name)$</records>
             <record_delimiter>Line-Feed</record_delimiter>
             <description></description>
             <Record_Character>
@@ -145,7 +192,7 @@ $END_IF
             <offset unit="byte">0</offset>
             <object_length unit="byte">$object_length_t$</object_length>
             <parsing_standard_id>PDS DSV 1</parsing_standard_id>
-            <records>$FILE_RECORDS(TEMPFILE)$</records>
+            <records>$FILE_RECORDS(index_file_name)$</records>
             <record_delimiter>Line-Feed</record_delimiter>
             <field_delimiter>Comma</field_delimiter>
             <Record_Delimited>
@@ -166,13 +213,11 @@ $END_IF
         $END_IF
     $IF(Product_Ancillary)
     </File_Area_Ancillary>
-    $END_IF
-    $IF(Product_Metadata_Supplemental)
+    $ELSE
     </File_Area_Metadata>
     $END_IF
 $IF(Product_Ancillary)
 </Product_Ancillary>
-$END_IF
-$IF(Product_Metadata_Supplemental)
+$ELSE
 </Product_Metadata_Supplemental>
 $END_IF

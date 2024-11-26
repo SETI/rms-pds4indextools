@@ -11,11 +11,11 @@ python pds4_create_xml_index.py --help
 
 import argparse
 from collections import namedtuple
+from collections import Counter
 import csv
 from datetime import datetime
 import fnmatch
 import functools
-import itertools
 from itertools import groupby
 from lxml import etree
 import os
@@ -54,7 +54,7 @@ def convert_header_to_xpath(root, xml_header_path, namespaces):
     Parameters:
         root (Element): The root element of the XML document.
         xml_header_path (str): Original XML header path.
-        namespaces (dict): Dictionary of XML namespace mappings.
+        namespaces (dict): A dictionary containing XML namespace mappings.
 
     Returns:
         str: Converted XPath expression.
@@ -68,78 +68,50 @@ def convert_header_to_xpath(root, xml_header_path, namespaces):
         'pds:Product_Observational/pds:Identification_Area[1]/pds:version_id[2]'
     """
     sections = xml_header_path.split('/')
+    prefixes = namespaces.keys()
     xpath_final = ''
     portion = ''
     for sec in sections[1:]:
+        # portion = portion + section
         portion = f'{portion}/{sec}'
+        # grab the tag of that portion.
         tag = str(root.xpath(portion, namespaces=namespaces)[0].tag)
+        # if the section starts with '*', it's everything after the '*'
         if sec.startswith('*'):
             sec = sec[1:]
-        if ':' in sec:
-            sec = ''
+        # if sec starts with :, make it blank
+        elif any(f'{prefix}:' in sec for prefix in prefixes):
+            predicate = sec.split('[')[-1]
+            if predicate[0].isdigit():
+                sec = f"[{sec.split('[')[-1]}"
+            else:
+                sec = ''
+        # xpath_final is the current path, then the tag, then section
         xpath_final = f'{xpath_final}/{tag}{sec}'
 
     return xpath_final
 
 
-def correct_duplicates(label_results):
-    """
-    Correct numbering of XPaths to have correct predicates.
-
-    Some namespaces do not contain predicates, and as a result, must be made artificially
-    unique via injected substrings. This function aids in the reformatting of these
-    strings so they match the syntax of the renumbering function. Note that this function
-    does not affect elements or attributes that natively contain the '_num' substring
-    (e.g., cassini:filter_name_1 and cassini:filter_name_2).
-
-    Parameters:
-        label_results (dict): The dictionary of XML results. This argument will be
-            mutated by the function.
-
-    Example:
-            # XPaths in label_results shortened for readability
-        >>> keys = list(label_result)
-        >>> keys = [
-                ../geom:SPICE_Kernel_Identification<1>/geom:kernel_type<1>,
-                ../geom:SPICE_Kernel_Identification<1>/geom:kernel_type_1<1>,
-                ../geom:SPICE_Kernel_Identification<1>/geom:kernel_type_2<1>,
-                ../geom:SPICE_Kernel_Identification<1>/geom:kernel_type_3<1>,
-                ../geom:SPICE_Kernel_Identification<1>/geom:kernel_type_4<1>
-                ]
-        >>> correct_duplicate(label_results)
-        >>> keys = list(label_result)
-        >>> keys = [
-                ../geom:SPICE_Kernel_Identification<1>/geom:kernel_type<1>,
-                ../geom:SPICE_Kernel_Identification<2>/geom:kernel_type<1>,
-                ../geom:SPICE_Kernel_Identification<3>/geom:kernel_type<1>,
-                ../geom:SPICE_Kernel_Identification<4>/geom:kernel_type<1>,
-                ../geom:SPICE_Kernel_Identification<5>/geom:kernel_type<1>
-                ]
-    """
-    element_names = set()
-    for key in list(label_results):
-        tag = key.split('/')[-1].split('<')[0]
-        number = tag.split('_')[-1]
-        if number.isdigit():
-            cropped = tag.replace('_'+number, '')
-            if cropped in element_names:
-                key_new = key.replace(('_' + number + '<1>'), '<1>')
-                parent = key_new.split('/')[-2].split('<')[0]
-                key_new = key_new.replace(parent+'<1>', parent+'<'+str(int(number)+1)+'>')
-                label_results[key_new] = label_results.pop(key)
-        element_names.add(tag)
-
-
 def clean_headers(df):
     """
     Clean the headers of a DataFrame by replacing certain characters with safer
-    alternatives.
+    alternatives and return a mapping of new to old headers.
 
     Parameters:
         df (pandas.DataFrame): The DataFrame whose headers need to be cleaned.
+
+    Returns:
+        dict: A dictionary mapping new headers to old headers.
     """
-    return df.rename(columns=lambda x: x.replace(
-            ':', '_').replace('/', '__').replace('<', '_').replace('>', ''), inplace=True)
+    # Create a mapping of old to new headers
+    header_map = {col: header_cleaner(col) for col in df.columns}
+
+    # Update the DataFrame's headers
+    df.rename(columns=header_map, inplace=True)
+
+    header_map = {v: k for k, v in list(header_map.items())}
+
+    return header_map
 
 
 def default_value_for_nil(config, data_type, nil_value):
@@ -296,6 +268,61 @@ def filter_dict_by_glob_patterns(input_dict, glob_patterns, valid_add_extra_file
     return filtered_dict
 
 
+def get_true_type(xsd_files, tag, namespaces):
+    """
+    Returns the true type of a specified tag by searching through a list of XSD files.
+
+    This function iterates through the provided list of XSD files and attempts to find the
+    "true type" of the given XML tag by examining its attributes and base types. If the
+    type is not found with the original tag, a modified version of the tag is also
+    checked.
+
+    Parameters:
+        xsd_files (list): A list of file paths or URLs to the XSD files.
+        tag (str): The XML tag to search for within the XSD files.
+        namespaces (dict): A dictionary containing XML namespace mappings.
+
+    Returns:
+        str or None: The "true type" of the tag if found, otherwise `None`.
+    """
+    def search_type(xsd_file, tag, namespaces):
+        xsd_tree = download_xsd_file(xsd_file)
+        namespaces = scrape_namespaces(xsd_tree)
+        true_type = find_base_attribute(xsd_tree, tag, namespaces)
+        if true_type:
+            return true_type
+
+        # Check for modified tag if the first search does not find a match
+        modified_tag = tag + "_WO_Units"
+        true_type = find_base_attribute(xsd_tree, modified_tag, namespaces)
+        return true_type  # This will return either the found type or None
+
+    for xsd_file in xsd_files:
+        true_type = search_type(xsd_file, tag, namespaces)
+        if true_type:  # Only return if true_type is not None
+            return true_type
+
+    return None
+
+
+def header_cleaner(header):
+    """
+    Clean a header string.
+
+    Parameters:
+        header (str): The header string to be cleaned.
+
+    Returns:
+        str: The cleaned header string.
+    """
+    return (
+        header.replace(':', '_')
+              .replace('/', '__')
+              .replace('<', '_')
+              .replace('>', '')
+    )
+
+
 def load_config_file(
         default_config_file=Path(__file__).resolve().parent/'default_config.yaml',
         specified_config_files=None):
@@ -388,20 +415,10 @@ def process_headers(label_results, key, root, namespaces, prefixes):
         prefixes (dict): A dictionary containing XML namespace prefixes.
     """
     key_new = convert_header_to_xpath(root, key, namespaces)
-
     # Replace namespaces with prefixes
     for namespace in prefixes:
         if namespace in key_new:
             key_new = key_new.replace('{' + namespace + '}', prefixes[namespace] + ':')
-
-    # Check if key_new already exists in label_results, append suffix if necessary
-    if key_new in label_results:
-        suffix_gen = itertools.count(start=1, step=1)
-        while True:
-            trial_key = f"{key_new}_{next(suffix_gen)}"
-            if trial_key not in label_results:
-                key_new = trial_key
-                break
 
     label_results[key_new] = label_results.pop(key)
 
@@ -458,6 +475,7 @@ def renumber_xpaths(xpaths):
 
     Parameters:
         xpaths (list): The list of XPaths or XPath fragments.
+
 
     Returns:
         dict: A dictionary containing a mapping from the original XPaths to the
@@ -600,23 +618,7 @@ def store_element_text(element, tree, results_dict, xsd_files, nillable_elements
             if not parent_check:
                 print(f'Non-nillable element in {label_filename} '
                       f'has no associated text: {tag}')
-                true_type = None
-                for xsd_file in xsd_files:
-                    xsd_tree = download_xsd_file(xsd_file)
-                    namespaces = scrape_namespaces(xsd_tree)
-                    true_type = find_base_attribute(xsd_tree, tag, namespaces)
-                    if true_type:
-                        break  # Exit the loop once true_type is found
-
-                if not true_type:
-                    modified_tag = tag + "_WO_Units"
-                    for xsd_file in xsd_files:
-                        namespaces = scrape_namespaces(xsd_tree)
-                        true_type = find_base_attribute(xsd_tree, modified_tag,
-                                                        namespaces)
-                        if true_type:
-                            break
-
+                true_type = get_true_type(xsd_files, tag, tree.getroot().nsmap)
                 default = default_value_for_nil(config, true_type, nil_value)
                 results_dict[xpath] = default
 
@@ -679,43 +681,40 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
     for element in elements_with_nillable:
         name = element.get('name')
         type_attribute = element.get('type')
-        if type_attribute not in nillable_elements_info:
-            if type_attribute:
-                # Split the type attribute to handle namespace:typename format
-                type_parts = type_attribute.split(':')
-                # Take the last part as the type name
-                type_name = type_parts[-1]
+        if type_attribute:
+            # Split the type attribute to handle namespace:typename format
+            type_parts = type_attribute.split(':')
+            # Take the last part as the type name
+            type_name = type_parts[-1]
 
-                # Attempt to find the type definition in the document
-                type_definition_xpath = (f'//xs:simpleType[@name="{type_name}"] | '
-                                         f'//xs:complexType[@name="{type_name}"]')
-                type_definition = tree.xpath(
-                    type_definition_xpath, namespaces=namespace)
+            # Attempt to find the type definition in the document
+            type_definition_xpath = (f'//xs:simpleType[@name="{type_name}"] | '
+                                     f'//xs:complexType[@name="{type_name}"]')
+            type_definition = tree.xpath(type_definition_xpath, namespaces=namespace)
 
-                if type_definition:
-                    # Take the first match
-                    type_definition = type_definition[0]
-                    base_type = None
-                    # For complexType with simpleContent or simpleType, find base attr
-                    if type_definition.tag.endswith('simpleType'):
-                        restriction = type_definition.find('.//xs:restriction',
-                                                           namespaces=namespace)
-                        if restriction is not None:
-                            base_type = restriction.get('base')
-                    elif type_definition.tag.endswith('complexType'):
-                        extension = type_definition.find('.//xs:extension',
-                                                         namespaces=namespace)
-                        if extension is not None:
-                            base_type = extension.get('base')
+            if type_definition:
+                # Take the first match
+                type_definition = type_definition[0]
+                base_type = None
+                # For complexType with simpleContent or simpleType, find base attr
 
-                    nillable_elements_info[name] = (
-                        base_type or 'External or built-in type')
-                else:
-                    # Type definition not found, might be external or built-in type
-                    nillable_elements_info[name] = 'External or built-in type'
+                try:
+                    restriction = type_definition.find('.//xs:restriction',
+                                                       namespaces=namespace)
+                    base_type = restriction.get('base')
+
+                except AttributeError:
+                    extension = type_definition.find('.//xs:extension',
+                                                     namespaces=namespace)
+                    base_type = extension.get('base')
+
+                nillable_elements_info[name] = base_type or 'External or built-in type'
+            else:
+                # Type definition not found, might be external or built-in type
+                nillable_elements_info[name] = 'External or built-in type'
 
 
-def write_results_to_csv(results_list, args, output_csv_path):
+def write_results_to_csv(results_list, new_columns, args, output_csv_path):
     """
     Write results from a list of dictionaries to a CSV file.
 
@@ -758,30 +757,64 @@ def write_results_to_csv(results_list, args, output_csv_path):
 
     rows = []
     for result_dict in results_list:
-        rows.append(result_dict['Results'])
+        rows.append(result_dict)
 
     df = pd.DataFrame(rows)
+
+    if new_columns is not None:
+        new_columns_sorted = sorted(new_columns.items(), key=lambda x: x[1][0])
+
+        for col_name, (index, col_values) in new_columns_sorted:
+            # If the column already exists, remove it temporarily
+            if col_name in df.columns:
+                df = df.drop(columns=[col_name])
+
+            # Insert the column at the desired index
+            df.insert(index, col_name, col_values)
+
+    if (
+        df.map(lambda x: isinstance(x, str) and ('"' in x))
+        .any()
+        .any()
+        and not args.fixed_width
+    ):
+        print("Warning: scraped contents of labels contains quotes. This is "
+              "against PDS4 data standards. Index file and subsequent label file will "
+              "not be generated.")
+        sys.exit(1)
+
+    if args.simplify_xpaths:
+        original_headers = df.columns.tolist()
+        simplified_headers = simplify_xpaths(original_headers)
+        df.columns = simplified_headers
+
+    if args.clean_header_field_names:
+        clean_header_mapping = clean_headers(df)
 
     if args.sort_by:
         sort_values = str(args.sort_by).split(',')
         try:
-            df.sort_values(by=sort_values, inplace=True)
-        except KeyError as bad_sort:
-            print(f'Unknown sort key {bad_sort}. For a list of available sort keys, use '
-                  f'the --output-headers-file option.')
+            sort_dataframe(df, sort_values)
+        except ValueError as bad_sort:
+            print(bad_sort)
             sys.exit(1)
-
-    if args.clean_header_field_names:
-        clean_headers(df)
 
     if args.fixed_width:
         padded_df = pad_column_values_and_headers(df)
+
         print(f'Fixed-width index file generated at {output_csv_path}')
-        padded_df.to_csv(output_csv_path, index=False, na_rep='')
+        padded_df.to_csv(output_csv_path, index=False, na_rep='', lineterminator='\n',
+                         quoting=csv.QUOTE_MINIMAL)
 
     else:
         print(f'Index file generated at {output_csv_path}')
-        df.to_csv(output_csv_path, index=False, na_rep='')
+        df.to_csv(output_csv_path, index=False, na_rep='', lineterminator='\n',
+                  quoting=csv.QUOTE_MINIMAL)
+
+    if args.clean_header_field_names:
+        return clean_header_mapping
+    else:
+        return None
 
 
 def find_base_attribute(xsd_tree, target_name, new_namespaces):
@@ -810,33 +843,6 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
     }
     namespaces.update(new_namespaces)
 
-    def follow_base_type(base_type):
-        """
-        Recursively follows the base type definitions to find the final base type.
-
-        Parameters:
-            base_type (str): The initial base type to follow.
-
-        Returns:
-            str: The final base type.
-        """
-        while True:
-            if 'ASCII' in base_type or 'UTF8' in base_type:
-                return base_type
-
-            next_query = (
-                f".//xs:simpleType[@name='{base_type.split(':')[-1]}']"
-                f"//xs:restriction/@base"
-            )
-            try:
-                next_result = xsd_tree.xpath(next_query, namespaces=namespaces)
-            except etree.XPathEvalError:
-                break
-            if not next_result:
-                break
-            base_type = next_result[0]
-        return base_type
-
     def get_base_type(query):
         """
         Executes an XPath query to find the base type.
@@ -847,11 +853,8 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
         Returns:
             list: The result of the XPath query.
         """
-        try:
-            result = xsd_tree.xpath(query, namespaces=namespaces)
-            return result
-        except etree.XPathEvalError:
-            return None
+        result = xsd_tree.xpath(query, namespaces=namespaces)
+        return result
 
     queries = [
         f".//xs:complexType[@name='{target_name}']//xs:extension/@base",
@@ -901,13 +904,15 @@ def find_base_attribute(xsd_tree, target_name, new_namespaces):
         f"/*[local-name()='extension']/*/*/*/@base"
     ]
 
+    base_type = None
     for query in queries:
         result = get_base_type(query)
         if result:
             base_type = result[0]
-            return follow_base_type(base_type)
+        else:
+            continue
 
-    return None
+    return base_type
 
 
 def scrape_namespaces(tree):
@@ -925,6 +930,43 @@ def scrape_namespaces(tree):
     namespaces = tree.nsmap
 
     return namespaces
+
+
+def sort_dataframe(df, sort_keys):
+    """
+    Sorts a DataFrame based on specified keys.
+
+    This function sorts the input DataFrame in place using the provided sort keys.
+    If an invalid key is provided, a `ValueError` is raised with a message indicating
+    the unknown key and suggesting how to obtain a list of valid keys.
+
+    Parameters:
+        df (pandas.DataFrame): The DataFrame to be sorted.
+        sort_keys (str or list of str): The column name(s) to sort the DataFrame by.
+                                        Can be a single string or a list of strings.
+
+    Raises:
+        ValueError: If any of the provided sort keys are not found in the DataFrame,
+        a `ValueError` is raised with a descriptive error message.
+
+    Example:
+        >>> df = pd.DataFrame({
+        ...     'name': ['Alice', 'Bob', 'Charlie'],
+        ...     'age': [25, 30, 22]
+        ... })
+        >>> sort_keys = ['age']
+        >>> sort_dataframe(df, sort_keys)
+        >>> print(df)
+             name  age
+        2  Charlie   22
+        0    Alice   25
+        1      Bob   30
+    """
+    try:
+        df.sort_values(by=sort_keys, inplace=True)
+    except KeyError as bad_sort:
+        raise ValueError(f'Unknown sort key {bad_sort}. For a list of available sort '
+                         f'keys, use the --output-headers-file option.')
 
 
 def get_creation_date(file_path):
@@ -945,7 +987,7 @@ def get_creation_date(file_path):
         stat = os.stat(file_path)
         try:
             creation_time = stat.st_birthtime
-        except AttributeError:
+        except AttributeError:  # pragma: no coverage
             # Fallback to the last modification time if birth time is not available
             creation_time = stat.st_mtime
 
@@ -1099,6 +1141,46 @@ def generate_unique_filename(base_name):
     return new_filename
 
 
+def simplify_xpaths(headers):
+    """
+    Simplifies a list of XPath headers by shortening each header to its tag and
+    namespace prefix, provided the tag is unique.
+
+    This function processes a list of XPath-like strings (headers) and attempts to
+    simplify them to their last tag component. If --simplify-xpaths is used, the XPath
+    headers will be shortened to the element's tag and namespace prefix. This is
+    contingent on the uniqueness of the XPath header; if more than one XPath header
+    shares a tag, a namespace and a predicate value, the XPath header will remain whole.
+
+    Parameters:
+        headers (list of str): A list of strings representing XPath headers.
+
+    Returns:
+        list of str: A list of strings where unique tags have replaced their
+        corresponding full XPath headers, and non-unique tags remain unchanged.
+    """
+    #
+    tags = []
+    matches = {}
+
+    # Step 1: Gather all possible tags from labels
+    for header in headers:
+        tag = header.split('/')[-1]
+        tags.append(tag)
+        matches[header] = tag
+
+    # Step 2: Count the number of instances of each tag
+    term_counts = Counter(tags)
+
+    # Step 3: If a tag occurs only once, shorten it.
+    for ind, header in enumerate(headers):
+        tag = header.split('/')[-1]
+        if term_counts[tag] == 1:
+            headers[ind] = tag
+
+    return headers
+
+
 class MultilineFormatter(argparse.HelpFormatter):
     """Class to allow multi-line help messages with argparse.
 
@@ -1118,7 +1200,7 @@ class MultilineFormatter(argparse.HelpFormatter):
 
 def main(cmd_line=None):
     epilog_sfx = ''
-    if __version__ != 'Version unspecified':
+    if __version__ != 'Version unspecified':  # pragma: no coverage
         epilog_sfx = f'|nVersion: {__version__}'
     parser = argparse.ArgumentParser(
         formatter_class=MultilineFormatter,
@@ -1187,7 +1269,8 @@ def main(cmd_line=None):
                                   metavar='XPATHS_FILEPATH',
                                   help='Optional text file specifying which XPaths to '
                                        'scrape. If not specified, all XPaths found in '
-                                       'the label files are included.')
+                                       'the label files are included. Only whole XPaths '
+                                       'can be specified.')
 
     limiting_results.add_argument('--output-headers-file', type=str,
                                   metavar='HEADERS_FILEPATH',
@@ -1234,10 +1317,10 @@ def main(cmd_line=None):
     # will determine which files will be scraped for.
 
     nillable_elements_info = {}
-    label_files = []
+    collected_files = set()
     all_results = []
-    tags = []
     xsd_files = []
+    extra_file_info_ind = {}
 
     output_csv_path = None
     output_txt_path = None
@@ -1253,21 +1336,21 @@ def main(cmd_line=None):
 
     for pattern in patterns:
         files = directory_path.glob(pattern)
-        if not files:
-            verboseprint(f'No files matching {pattern} found in '
-                         f'directory: {directory_path}')
-        label_files.extend(files)
+        prev_len = len(collected_files)
+        collected_files.update(files)
+        if len(collected_files) == prev_len:
+            print(f'No new files found for pattern: {pattern}')
 
-    verboseprint(f'{len(label_files)} matching file(s) found')
+    verboseprint(f'{len(collected_files)} matching file(s) found')
 
-    if label_files == []:
+    label_files = list(collected_files)
+    label_files.sort()
+    if len(label_files) == 0:
         print(f'No files matching any patterns found in directory: {directory_path}')
         sys.exit(1)
 
     # Loading in additional patterns from --limit-xpaths-file, if applicable,
     if args.limit_xpaths_file:
-        verboseprint(
-            f'Element file {args.limit_xpaths_file} used for additional patterns.')
         with open(args.limit_xpaths_file, 'r') as limit_xpaths_file:
             elements_to_scrape = [line.strip() for line in limit_xpaths_file]
             verboseprint('Elements to scrape:')
@@ -1280,6 +1363,15 @@ def main(cmd_line=None):
 
     else:
         elements_to_scrape = None
+
+    if (
+        args.add_extra_file_info
+        and args.limit_xpaths_file
+        and elements_to_scrape is not None
+    ):
+        for x in elements_to_scrape:
+            if x in valid_add_extra_file_info:
+                extra_file_info_ind[x] = elements_to_scrape.index(x)
 
     # For each file in label_files, load in schema files and namespaces for reference.
     # Traverse the label file and scrape the desired contents. Place these contents
@@ -1300,7 +1392,7 @@ def main(cmd_line=None):
 
         filepath = str(label_file.relative_to(args.directorypath)).replace('\\', '/')
         # PDS4 compliant filepaths must be less than 255 characters.
-        if len(filepath) > 255:
+        if len(filepath) > 255:  # pragma: no coverage
             print(f'Filepath {filepath} exceeds 255 character limit.')
             sys.exit(1)
 
@@ -1319,6 +1411,7 @@ def main(cmd_line=None):
         # improve readability. Each XPath's namespace is replaced with its prefix for
         # faster reference. Duplicate XPaths are made unique to ensure all results are
         # present in the final product.
+
         for key in list(label_results):
             process_headers(label_results, key, root, namespaces, prefixes)
 
@@ -1332,7 +1425,7 @@ def main(cmd_line=None):
             new_parts = []
             for part in parts:
                 if not part.endswith('>') and parts.index(part) != 1:
-                    part = part+'<1>'
+                    part = f'{part}<1>'
                     new_parts.append(part)
                 else:
                     new_parts.append(part)
@@ -1342,7 +1435,6 @@ def main(cmd_line=None):
         for key in list(label_results):
             if 'cyfunction' in key:
                 del label_results[key]
-
         # The XPath headers must be renumbered to reflect which instance of the element
         # the column refers to. At this stage, duplicate XPaths may exist again due to
         # the reformatting. These duplicates are corrected to preserve the contents of
@@ -1351,14 +1443,15 @@ def main(cmd_line=None):
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
 
-        correct_duplicates(label_results)
-
         # Collect metadata about the label file. The label file's lid is scraped and
         # broken into multiple parts. This metadata can then be requested as additional
         # columns within the index file.
-        lid = extract_logical_identifier(tree)
-        if lid is None:
-            lid = label_results.get('pds:logical_identifier', 'Missing_LID')
+        try:
+            lid = extract_logical_identifier(tree)
+        except AttributeError:
+            print(f'Label file {label_file} does not have a '
+                  f'logical_identifier attribute.')
+            sys.exit(1)
 
         # Attach extra columns if asked for.
         bundle_lid = ':'.join(lid.split(':')[:4])
@@ -1371,8 +1464,16 @@ def main(cmd_line=None):
             label_results = {**{ele: extras[ele] for ele in
                                 args.add_extra_file_info}, **label_results}
 
-        result_dict = {'Results': label_results}
-        all_results.append(result_dict)
+        all_results.append(label_results)
+
+    for label_results in all_results:
+        if extra_file_info_ind != {}:
+            new_columns = {}
+            for key in extra_file_info_ind.keys():
+                values = [d[key] for d in all_results]
+                new_columns[key] = (extra_file_info_ind[key], values)
+        else:
+            new_columns = None
 
     if args.add_extra_file_info and elements_to_scrape is not None:
         elements_to_scrape = args.add_extra_file_info + elements_to_scrape
@@ -1381,87 +1482,64 @@ def main(cmd_line=None):
     # of the --limit-xpaths-file input file. If this command is not used, the original
     # dictionary will be returned. Glob patterns are processed sequentially, with the
     # first pattern having the highest priority.
-    for i in range(len(all_results)):
-        label_results = all_results[i]['Results']
-        label_results = filter_dict_by_glob_patterns(
-            label_results, elements_to_scrape, valid_add_extra_file_info, verboseprint)
-        all_results[i]['Results'] = label_results
 
-    if all(len(set(r['Results'])) == 0 for r in all_results):
+    for ind, label_results in enumerate(all_results):
+        label_results_new = filter_dict_by_glob_patterns(
+            label_results, elements_to_scrape, valid_add_extra_file_info, verboseprint)
+        all_results[ind] = label_results_new
+
+    if all(len(r) == 0 for r in all_results):
         print('No results found: glob pattern(s) excluded all matches.')
         sys.exit(1)
 
-    # If --simplify-xpaths is used, the XPath headers will be shortened to the
-    # element's tag and namespace prefix. This is contingent on the uniqueness of
-    # the XPath header; if more than one XPath header shares a tag, a namespace and a
-    # predicate value, the XPath header will remain whole.
     if args.simplify_xpaths:
-        for i in range(len(all_results)):
-            label_results = all_results[i]['Results']
-            tags = []
-            names = []
-
-            # Step 1: Gather all tags from keys
-            for key in label_results:
-                elements = key.split('/')
-                tag = elements[-1]
-                name = tag.split('<')[0]
-                tags.append(tag)
-                names.append(name)
-
-            # Step 2: Find unique tags
-            unique_tags = []
-            for tag in tags:
-                name = tag.split('<')[0]
-                if tags.count(tag) == 1 and names.count(name) == 1:
-                    unique_tags.append(tag)
-
-            # Step 3: Create a new dictionary to hold modified results
-            new_label_results = {}
-
-            # Step 4: Iterate over original dictionary to modify and copy to new
-            # dictionary
-            for key, value in list(label_results.items()):
-                elements = key.split('/')
-                tag = elements[-1]
-                if tag in unique_tags:
-                    new_tag = tag.split('<')[0]
-                    verboseprint(f'XPath header {key} changed to {new_tag}')
-                    new_label_results[new_tag] = value
-                else:
-                    new_label_results[key] = value
-
-            all_results[i]['Results'] = new_label_results
+        original_headers = {}
+        for label_results in all_results:
+            for key in label_results.keys():
+                original_headers[key] = key.split('/')[-1]
 
     if output_csv_path:
-        write_results_to_csv(all_results, args, output_csv_path)
+        clean_header_mapping = write_results_to_csv(all_results, new_columns, args,
+                                                    output_csv_path)
 
     # To instead receive a list of available information available within a label or set
     # of labels, you may use --output-headers-file. This will take all of the keys of
     # the label_results dictionary and place them in the output file, instead of the
     # index file.
     if output_txt_path:
+        if not args.output_index_file:
+            print('No index file generated because --output-headers-file was '
+                  'provided without --output-index-file.')
         xpaths = []
         for label in all_results:
-            for values in label.values():
-                for xpath in values:
-                    if xpath not in xpaths:
-                        xpaths.append(xpath)
+            for xpath in label:
+                if xpath not in xpaths:
+                    xpaths.append(xpath)
+
+        if new_columns is not None:
+            # Sort new elements by index
+            new_elements_sorted = sorted(new_columns.items(), key=lambda x: x[1][0])
+
+            # Insert new elements into xpaths
+            for name, (index, value) in new_elements_sorted:
+                # Remove the value if it exists
+                if name in xpaths:
+                    xpaths.remove(name)
+                # Insert at the desired index
+                xpaths.insert(index, name)
 
         # The file is now written and placed in a given location. If cleaned header
         # field names are requested, they are processed here before being written in.
         with open(output_txt_path, 'w') as output_fp:
+            if args.simplify_xpaths:
+                xpaths = simplify_xpaths(xpaths)
             for item in xpaths:
                 if args.clean_header_field_names:
                     verboseprint(
                         '--clean-header-field-names active. Headers reformatted.')
-                    item = item.replace(
-                        ':', '_').replace('/', '__').replace('<', '_').replace('>', '')
+                    item = header_cleaner(item)
                 output_fp.write("%s\n" % item)
         print(f'XPath headers file generated at {output_txt_path}.')
-        if not args.output_index_file:
-            print('No index file generated because --output-headers-file was '
-                  'provided without --output-index-file.')
 
     # Generates the label for this index file, if --generate-label is used.
 
@@ -1506,13 +1584,17 @@ def main(cmd_line=None):
             # file is fixed-width or delimited.
             for header in headers:
                 whole_header = header
+                whole_header_length = len(whole_header)
                 if args.fixed_width:
                     header = header.strip()
+                if args.clean_header_field_names:
+                    full_header = header
+                    header = clean_header_mapping[header]
                 if (header in valid_add_extra_file_info and 'lid' in header):
                     true_type = 'pds:ASCII_LID'
                 elif header == 'filename':
                     true_type = 'pds:ASCII_File_Name'
-                elif header == filepath:
+                elif header == 'filepath':
                     true_type = 'pds:ASCII_File_Specification_Name'
                 elif header == 'bundle':
                     true_type = 'pds:ASCII_Text_Preserved'
@@ -1520,29 +1602,17 @@ def main(cmd_line=None):
                     parts = header.split('/')
                     name = parts[-1].split('<')[0].split(':')[-1]
 
-                    true_type = None
+                    true_type = get_true_type(xsd_files, name, namespaces)
 
-                    for xsd_file in xsd_files:
-                        xsd_tree = download_xsd_file(xsd_file)
-                        true_type = find_base_attribute(xsd_tree, name, namespaces)
-                        if true_type:
-                            break
-
-                    if not true_type:
-                        modified_name = name + "_WO_Units"
-                        for xsd_file in xsd_files:
-                            xsd_tree = download_xsd_file(xsd_file)
-                            true_type = find_base_attribute(xsd_tree, modified_name,
-                                                            namespaces)
-                            if true_type:
-                                break
-
-                if true_type is None:
-                    true_type = ':inapplicable'
                 true_type = true_type.split(':')[-1]
                 field_number += 1
-                header_length = len(header.encode('utf-8'))
-                header_name = header
+
+                if args.clean_header_field_names:
+                    header_length = len(full_header.encode('utf-8'))
+                    header_name = full_header
+                else:
+                    header_length = len(header.encode('utf-8'))
+                    header_name = header
 
                 maximum_field_length = maximum_field_lengths[whole_header]
                 header_info.append({'name': header_name,
@@ -1552,8 +1622,11 @@ def main(cmd_line=None):
                                     'field_length': maximum_field_length,
                                     'maximum_field_length': maximum_field_length,
                                     'offset': offset})
-                offset += header_length + jump
-                field_location = offset
+                if args.fixed_width:
+                    offset += whole_header_length + jump
+                else:
+                    offset += header_length + jump
+                field_location = offset + 1
 
         # The creation date of the index file is stored for later reference.
         creation_date = get_creation_date(index_file)
@@ -1563,8 +1636,8 @@ def main(cmd_line=None):
         # .yaml file from --config-file
         label_content = {
             'logical_identifier': 'urn:nasa:pds:rms_metadata:document_opus:' + filename,
-            'creation_date_time': str(creation_date),
-            'TEMPFILE': index_file,
+            'calculated_creation_date_time': str(creation_date),
+            'index_file_name': index_file,
             'Field_Content': header_info,
             'fields': len(header_info),
             'maximum_record_length': get_longest_row_length(index_file),
@@ -1597,5 +1670,5 @@ def main(cmd_line=None):
         template.write(label_content, str(output_subdir / filename) + '.xml')
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no coverage
     main()

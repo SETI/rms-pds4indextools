@@ -145,9 +145,10 @@ Limiting results
 
 - ``--limit-xpaths-file XPATHS_FILEPATH``: Specify a text file containing a list of
   specific XPaths to extract from the label files. If this argument is not specified, all
-  elements found in the label files will be included. The given text file can specify
-  XPaths using ``glob``-style syntax, where each XPath level is treated as if it were a
-  directory in a filesystem. Available wildcards are:
+  elements found in the label files will be included. This command uses only the whole
+  versions of the XPath(s) -- simplified versions are not allowed. The given text file
+  can specify XPaths using ``glob``-style syntax, where each XPath level is treated as if
+  it were a directory in a filesystem. Available wildcards are:
 
   - ``?`` matches any single character within an XPath level
   - ``*`` matches any series of characters within an XPath level
@@ -302,6 +303,8 @@ Below is the ``label-contents`` section of the default configuration file::
     External_Reference:
     Source_Product_Internal:
     Source_Product_External:
+    File_Area_Ancillary:
+    File_Area_Metadata:
 
 Each listed value with an empty dictionary is an optional field the user can include in
 their generated label. If the user does decide to include one of these fields, **they must
@@ -311,39 +314,41 @@ element will remain empty**.
 For reference, provided below are the full contents of the optional label classes::
 
   Citation_Information:
-    author_list
-    editor_list
-    publication_year
-    doi
-    keyword
-    description
+    author_list:
+    editor_list:
+    publication_year:
+    doi:
+    keyword:
+    description:
     Funding_Acknowledgement:
-      funding_source
-      funding_year
-      funding_award
-      funding_acknowledgement_text
+      funding_source:
+      funding_year:
+      funding_award:
+      funding_acknowledgement_text:
   Modification_Detail:
-    modification_date
-    version_id
-    description
+    modification_date:
+    version_id:
+    description:
   Internal_Reference:
-    lid_reference
-    reference_type
-    comment
+    lid_reference:
+    reference_type:
+    comment:
   External_Reference:
-    doi
-    reference_text
-    description
+    doi:
+    reference_text:
+    description:
   Source_Product_Internal:
-    lidvid_reference
-    reference_type
-    comment
+    lidvid_reference:
+    reference_type:
+    comment:
   Source_Product_External:
-    external_source_product_identifier
-    reference_type
-    doi
-    curating_facility
-    description
+    external_source_product_identifier:
+    reference_type:
+    doi:
+    curating_facility:
+    description:
+  File_Area_Ancillary / File_Area_Metadata:
+    creation_date_time:
 
 
 If no new contents are specified for label generation, the label will contain the

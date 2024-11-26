@@ -1,0 +1,25 @@
+nillable:
+  pds:ASCII_Integer:
+    inapplicable: -9999
+    missing: -9988
+    unknown: -9977
+    anticipated: -9966
+
+  pds:ASCII_Real:
+    inapplicable: -9999.0
+    missing: -9988.0
+    unknown: -9977.0
+    anticipated: -9966.0
+
+  pds:ASCII_Short_String_Collapsed:
+    inapplicable: inapplicable_alt
+    missing: missing_alt
+    unknown: unknown_alt
+    anticipated: anticipated_alt
+
+label-contents:
+  version_id: 1.1
+  File_Area_Metadata:
+    creation_date_time: '0002-02-02T00:00:00.00Z'
+  File_Area_Ancillary:
+    creation_date_time: '0001-01-01T00:00:00.00Z'

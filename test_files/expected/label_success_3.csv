@@ -1,0 +1,4 @@
+filename,filepath,lid,bundle,bundle_lid,pds:Product_Observational/pds:Identification_Area<1>/pds:logical_identifier<1>,pds:Product_Observational/pds:Identification_Area<1>/pds:version_id<1>
+tester_label_1.xml,labels/tester_label_1.xml,urn:nasa:pds:cassini_iss_saturn:data_raw:1455200455n,cassini_iss_saturn,urn:nasa:pds:cassini_iss_saturn,urn:nasa:pds:cassini_iss_saturn:data_raw:1455200455n,1.0
+tester_label_2.xml,labels/tester_label_2.xml,urn:nasa:pds:uranus_occ_u149_irtf_320cm:data:2200nm_counts-v-time_occult,uranus_occ_u149_irtf_320cm,urn:nasa:pds:uranus_occ_u149_irtf_320cm,urn:nasa:pds:uranus_occ_u149_irtf_320cm:data:2200nm_counts-v-time_occult,1.0
+tester_label_3.xml,labels/tester_label_3.xml,urn:nasa:pds:cassini_iss_cruise:data_raw:1357539630n,cassini_iss_cruise,urn:nasa:pds:cassini_iss_cruise,urn:nasa:pds:cassini_iss_cruise:data_raw:1357539630n,1.0

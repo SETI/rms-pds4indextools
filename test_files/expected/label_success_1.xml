@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.sch"
+    schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_Ancillary xmlns="http://pds.nasa.gov/pds4/pds/v1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.xsd">
+    <Identification_Area>
+        <logical_identifier>urn:nasa:pds:rms_metadata:document_opus:generated_label_1</logical_identifier>
+        <version_id>1.1</version_id>
+        <title>Index File</title>
+        <information_model_version>1.21.0.0</information_model_version>
+        <product_class>Product_Ancillary</product_class>
+        <License_Information>
+            <name>Creative Common Public License CC0 1.0 (2024)</name>
+            <description>Creative Commons Zero (CC0) license information.</description>
+            <Internal_Reference>
+                <lid_reference>urn:nasa:pds:system_bundle:document_pds4_standards:creative_commons_1.0.0::1.0</lid_reference>
+                <reference_type>product_to_license</reference_type>
+            </Internal_Reference>
+        </License_Information>
+    </Identification_Area>
+    <File_Area_Ancillary>
+        <File>
+            <file_name>generated_label_1.csv</file_name>
+            <local_identifier>index-table</local_identifier>
+            <creation_date_time>0001-01-01T00:00:00.00Z</creation_date_time>
+            <md5_checksum>a177a1160bf3780c01e3bd9e02be89f4</md5_checksum>
+            <comment></comment>
+        </File>
+        <Header>
+            <offset unit="byte">0</offset>
+            <object_length unit="byte">819</object_length>
+            <parsing_standard_id>UTF-8 Text</parsing_standard_id>
+            <description>Provides the column headers, separated by commas, for the data table.</description>
+        </Header>
+        <Table_Delimited>
+            <offset unit="byte">0</offset>
+            <object_length unit="byte">1058</object_length>
+            <parsing_standard_id>PDS DSV 1</parsing_standard_id>
+            <records>2</records>
+            <record_delimiter>Line-Feed</record_delimiter>
+            <field_delimiter>Comma</field_delimiter>
+            <Record_Delimited>
+                <fields>9</fields>
+                <groups>0</groups>
+                <maximum_record_length unit="byte">818</maximum_record_length>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Identification_Area&lt;1&gt;/pds:logical_identifier&lt;1&gt;</name>
+                        <field_number>1</field_number>
+                        <data_type>ASCII_Short_String_Collapsed</data_type>
+                        <maximum_field_length unit="byte">52</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Identification_Area&lt;1&gt;/pds:version_id&lt;1&gt;</name>
+                        <field_number>2</field_number>
+                        <data_type>ASCII_Short_String_Collapsed</data_type>
+                        <maximum_field_length unit="byte">3</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Identification_Area&lt;1&gt;/pds:title&lt;1&gt;</name>
+                        <field_number>3</field_number>
+                        <data_type>ASCII_Short_String_Collapsed</data_type>
+                        <maximum_field_length unit="byte">33</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Identification_Area&lt;1&gt;/pds:information_model_version&lt;1&gt;</name>
+                        <field_number>4</field_number>
+                        <data_type>ASCII_Short_String_Collapsed</data_type>
+                        <maximum_field_length unit="byte">8</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Observing_System&lt;1&gt;/pds:name&lt;1&gt;</name>
+                        <field_number>5</field_number>
+                        <data_type>UTF8_Short_String_Collapsed</data_type>
+                        <maximum_field_length unit="byte">41</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Observing_System&lt;1&gt;/pds:Observing_System_Component&lt;1&gt;/pds:name&lt;1&gt;</name>
+                        <field_number>6</field_number>
+                        <data_type>UTF8_Short_String_Collapsed</data_type>
+                        <maximum_field_length unit="byte">15</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Observing_System&lt;1&gt;/pds:Observing_System_Component&lt;1&gt;/pds:type&lt;1&gt;</name>
+                        <field_number>7</field_number>
+                        <data_type>ASCII_Short_String_Collapsed</data_type>
+                        <maximum_field_length unit="byte">10</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Observing_System&lt;1&gt;/pds:Observing_System_Component&lt;1&gt;/pds:Internal_Reference&lt;1&gt;/pds:lid_reference&lt;1&gt;</name>
+                        <field_number>8</field_number>
+                        <data_type>ASCII_LID</data_type>
+                        <maximum_field_length unit="byte">50</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+                    <Field_Delimited>
+                        <name>pds:Product_Observational/pds:Observing_System&lt;1&gt;/pds:Observing_System_Component&lt;1&gt;/pds:Internal_Reference&lt;1&gt;/pds:reference_type&lt;1&gt;</name>
+                        <field_number>9</field_number>
+                        <data_type>ASCII_Short_String_Collapsed</data_type>
+                        <maximum_field_length unit="byte">18</maximum_field_length>
+                        <Special_Constants></Special_Constants>
+                    </Field_Delimited>
+            </Record_Delimited>
+        </Table_Delimited>
+    </File_Area_Ancillary>
+</Product_Ancillary>
