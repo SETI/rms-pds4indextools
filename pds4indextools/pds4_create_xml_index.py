@@ -714,7 +714,7 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
                 nillable_elements_info[name] = 'External or built-in type'
 
 
-def write_results_to_csv(results_list, args, output_csv_path):
+def write_results_to_csv(results_list, new_columns, args, output_csv_path):
     """
     Write results from a list of dictionaries to a CSV file.
 
@@ -760,6 +760,17 @@ def write_results_to_csv(results_list, args, output_csv_path):
         rows.append(result_dict)
 
     df = pd.DataFrame(rows)
+
+    if new_columns is not None:
+        new_columns_sorted = sorted(new_columns.items(), key=lambda x: x[1][0])
+
+        for col_name, (index, col_values) in new_columns_sorted:
+            # If the column already exists, remove it temporarily
+            if col_name in df.columns:
+                df = df.drop(columns=[col_name])
+
+            # Insert the column at the desired index
+            df.insert(index, col_name, col_values)
 
     if (
         df.map(lambda x: isinstance(x, str) and ('"' in x))
@@ -1309,6 +1320,7 @@ def main(cmd_line=None):
     collected_files = set()
     all_results = []
     xsd_files = []
+    extra_file_info_ind = {}
 
     output_csv_path = None
     output_txt_path = None
@@ -1339,8 +1351,6 @@ def main(cmd_line=None):
 
     # Loading in additional patterns from --limit-xpaths-file, if applicable,
     if args.limit_xpaths_file:
-        verboseprint(
-            f'Element file {args.limit_xpaths_file} used for additional patterns.')
         with open(args.limit_xpaths_file, 'r') as limit_xpaths_file:
             elements_to_scrape = [line.strip() for line in limit_xpaths_file]
             verboseprint('Elements to scrape:')
@@ -1354,16 +1364,14 @@ def main(cmd_line=None):
     else:
         elements_to_scrape = None
 
-    if args.add_extra_file_info:
-        if elements_to_scrape is None:
-            elements_to_scrape = args.add_extra_file_info
-        else:
-            # Ensure add-extra-file-info fields appear first, respecting their order
-            # in the command line
-            elements_to_scrape = args.add_extra_file_info + [
-                xpath for xpath in elements_to_scrape
-                if xpath not in args.add_extra_file_info
-            ]
+    if (
+        args.add_extra_file_info
+        and args.limit_xpaths_file
+        and elements_to_scrape is not None
+    ):
+        for x in elements_to_scrape:
+            if x in valid_add_extra_file_info:
+                extra_file_info_ind[x] = elements_to_scrape.index(x)
 
     # For each file in label_files, load in schema files and namespaces for reference.
     # Traverse the label file and scrape the desired contents. Place these contents
@@ -1458,6 +1466,15 @@ def main(cmd_line=None):
 
         all_results.append(label_results)
 
+    for label_results in all_results:
+        if extra_file_info_ind != {}:
+            new_columns = {}
+            for key in extra_file_info_ind.keys():
+                values = [d[key] for d in all_results]
+                new_columns[key] = (extra_file_info_ind[key], values)
+        else:
+            new_columns = None
+
     if args.add_extra_file_info and elements_to_scrape is not None:
         elements_to_scrape = args.add_extra_file_info + elements_to_scrape
 
@@ -1482,7 +1499,8 @@ def main(cmd_line=None):
                 original_headers[key] = key.split('/')[-1]
 
     if output_csv_path:
-        clean_header_mapping = write_results_to_csv(all_results, args, output_csv_path)
+        clean_header_mapping = write_results_to_csv(all_results, new_columns, args,
+                                                    output_csv_path)
 
     # To instead receive a list of available information available within a label or set
     # of labels, you may use --output-headers-file. This will take all of the keys of
@@ -1497,6 +1515,18 @@ def main(cmd_line=None):
             for xpath in label:
                 if xpath not in xpaths:
                     xpaths.append(xpath)
+
+        if new_columns is not None:
+            # Sort new elements by index
+            new_elements_sorted = sorted(new_columns.items(), key=lambda x: x[1][0])
+
+            # Insert new elements into xpaths
+            for name, (index, value) in new_elements_sorted:
+                # Remove the value if it exists
+                if name in xpaths:
+                    xpaths.remove(name)
+                # Insert at the desired index
+                xpaths.insert(index, name)
 
         # The file is now written and placed in a given location. If cleaned header
         # field names are requested, they are processed here before being written in.
