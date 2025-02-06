@@ -566,6 +566,42 @@ def renumber_xpaths(xpaths):
     return xpath_map
 
 
+def replace_columns(filepath, df=None, xpaths=None, index=False):
+    """
+    Replaces column names in a DataFrame or list of XPaths using a mapping file.
+
+    Parameters:
+        filepath (str): Path to the txt file containing old and new column names.
+        df (pandas.DataFrame, optional): DataFrame whose columns should be renamed.
+        xpaths (list, optional): List of XPaths to be replaced.
+        index (bool, optional): If True, replaces DataFrame column names; otherwise,
+        replaces XPaths.
+
+    Returns:
+        pandas.DataFrame or list: Updated DataFrame (if `index=True`) or updated XPaths
+            list.
+    """
+    def load_mapping(file_path):
+        mapping = {}
+        with open(file_path, 'r') as file:
+            for line in file:
+                parts = line.strip().split(',')
+                if len(parts) != 2:
+                    print(f"Invalid line in mapping file: {line.strip()}")
+                    sys.exit(1)
+                old_name, new_name = map(str.strip, parts)
+                mapping[old_name] = new_name
+        return mapping
+
+    # Load the mapping once
+    mapping = load_mapping(filepath)
+
+    if index:
+        return df.rename(columns=mapping)
+
+    return [mapping.get(xpath, xpath) for xpath in xpaths]
+
+
 def split_into_elements(xpath):
     """
     Extract elements from an XPath in the order they appear.
@@ -714,7 +750,7 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
                 nillable_elements_info[name] = 'External or built-in type'
 
 
-def write_results_to_csv(results_list, new_columns, args, output_csv_path):
+def write_results_to_csv(results_list, args, output_csv_path):
     """
     Write results from a list of dictionaries to a CSV file.
 
@@ -798,6 +834,9 @@ def write_results_to_csv(results_list, new_columns, args, output_csv_path):
         except ValueError as bad_sort:
             print(bad_sort)
             sys.exit(1)
+
+    if args.rename_headers:
+        df = replace_columns(args.rename_headers, df=df, index=True)
 
     if args.fixed_width:
         padded_df = pad_column_values_and_headers(df)
@@ -1301,6 +1340,11 @@ def main(cmd_line=None):
                            'file using additional --config-file arguments, in which case '
                            'each subsequent configuration file augments and overrides '
                            'the previous files.')
+    misc.add_argument('--rename-headers', type=str,
+                      metavar='RENAME_COLUMNS_FILEPATH',
+                      help='Optional text file mapping XPaths to new header names. Each '
+                           'line should contain an original XPath on the left and its '
+                           'replacement on the right. One entry per line.')
 
     args = parser.parse_args(cmd_line)
 
@@ -1499,7 +1543,7 @@ def main(cmd_line=None):
                 original_headers[key] = key.split('/')[-1]
 
     if output_csv_path:
-        clean_header_mapping = write_results_to_csv(all_results, new_columns, args,
+        clean_header_mapping = write_results_to_csv(all_results, args,
                                                     output_csv_path)
 
     # To instead receive a list of available information available within a label or set
@@ -1533,6 +1577,8 @@ def main(cmd_line=None):
         with open(output_txt_path, 'w') as output_fp:
             if args.simplify_xpaths:
                 xpaths = simplify_xpaths(xpaths)
+            if args.rename_headers:
+                xpaths = replace_columns(args.rename_headers, xpaths=xpaths)
             for item in xpaths:
                 if args.clean_header_field_names:
                     verboseprint(

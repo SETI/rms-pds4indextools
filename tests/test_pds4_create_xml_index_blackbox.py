@@ -509,6 +509,23 @@ def compare_files(path_to_file, golden_file):
                 '--simplify-xpaths'
             ]
         ),
+
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_2.xml" --rename-headers ../test_files/samples/rename_headers_file.txt  --limit-xpaths-file ../test_files/samples/element_2.txt --output-index-file rename_headers_1.csv --output-headers-file rename_headers_1.txt
+        # Compare result to golden copy:
+        # test_files/expected/rename_headers_success_1.csv
+        (
+            str(EXPECTED_DIR / 'rename_headers_success_1.csv'),
+            'rename_headers_1.csv', 'rename_headers_1.txt',
+            [
+                str(TEST_FILES_DIR),
+                LABEL_NAME + '/tester_label_2.xml',
+                '--rename-headers',
+                str(SAMPLES_DIR / 'rename_headers_file.txt'),
+                '--limit-xpaths-file',
+                str(SAMPLES_DIR / 'element_2.txt'),
+            ]
+        ),
+
     ]
 )
 def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
@@ -645,7 +662,19 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
             LABEL_NAME + '/bad_lid_label.xml',
             '--output-headers-file',
             'hdout.txt',
-        )
+        ),
+
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_2.xml" --limit-xpaths-file ../test_files/samples/element_2.txt --rename-headers ../test_files/samples/rename_headers_file_bad.txt --output-headers-file hdout.txt
+        (
+            str(TEST_FILES_DIR),
+            LABEL_NAME + '/tester_label_2.xml',
+            '--limit-xpaths-file',
+            str(SAMPLES_DIR / 'element_2.txt'),
+            '--rename-headers',
+	    str(SAMPLES_DIR / 'rename_headers_file_bad.txt'),
+            '--output-headers-file',
+            'hdout.txt',
+        ),
 
     ]
 )
