@@ -750,7 +750,8 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
                 nillable_elements_info[name] = 'External or built-in type'
 
 
-def write_results_to_csv(results_list, args, output_csv_path):
+def write_results_to_csv(results_list, new_columns, elements_to_scrape, args,
+                         output_csv_path):
     """
     Write results from a list of dictionaries to a CSV file.
 
@@ -798,15 +799,15 @@ def write_results_to_csv(results_list, args, output_csv_path):
     df = pd.DataFrame(rows)
 
     if new_columns is not None:
-        new_columns_sorted = sorted(new_columns.items(), key=lambda x: x[1][0])
+        for col_name in elements_to_scrape:
+            if col_name in new_columns:
+                index, col_values = new_columns[col_name]
 
-        for col_name, (index, col_values) in new_columns_sorted:
-            # If the column already exists, remove it temporarily
-            if col_name in df.columns:
+                # Remove column if it already exists
                 df = df.drop(columns=[col_name])
 
-            # Insert the column at the desired index
-            df.insert(index, col_name, col_values)
+                # Insert in the correct position
+                df.insert(index, col_name, col_values)
 
     if (
         df.map(lambda x: isinstance(x, str) and ('"' in x))
@@ -1413,9 +1414,10 @@ def main(cmd_line=None):
         and args.limit_xpaths_file
         and elements_to_scrape is not None
     ):
-        for x in elements_to_scrape:
-            if x in valid_add_extra_file_info:
-                extra_file_info_ind[x] = elements_to_scrape.index(x)
+        extra_file_info_ind = {
+            x: i for i, x in enumerate(elements_to_scrape)
+            if x in valid_add_extra_file_info
+        }
 
     # For each file in label_files, load in schema files and namespaces for reference.
     # Traverse the label file and scrape the desired contents. Place these contents
@@ -1511,11 +1513,12 @@ def main(cmd_line=None):
         all_results.append(label_results)
 
     for label_results in all_results:
-        if extra_file_info_ind != {}:
+        if extra_file_info_ind:
             new_columns = {}
-            for key in extra_file_info_ind.keys():
-                values = [d[key] for d in all_results]
-                new_columns[key] = (extra_file_info_ind[key], values)
+            for key in elements_to_scrape:
+                if key in extra_file_info_ind:
+                    values = [d[key] for d in all_results]
+                    new_columns[key] = (extra_file_info_ind[key], values)
         else:
             new_columns = None
 
@@ -1543,7 +1546,8 @@ def main(cmd_line=None):
                 original_headers[key] = key.split('/')[-1]
 
     if output_csv_path:
-        clean_header_mapping = write_results_to_csv(all_results, args,
+        clean_header_mapping = write_results_to_csv(all_results, new_columns,
+                                                    elements_to_scrape, args,
                                                     output_csv_path)
 
     # To instead receive a list of available information available within a label or set
@@ -1561,16 +1565,26 @@ def main(cmd_line=None):
                     xpaths.append(xpath)
 
         if new_columns is not None:
-            # Sort new elements by index
-            new_elements_sorted = sorted(new_columns.items(), key=lambda x: x[1][0])
 
-            # Insert new elements into xpaths
-            for name, (index, value) in new_elements_sorted:
-                # Remove the value if it exists
-                if name in xpaths:
-                    xpaths.remove(name)
-                # Insert at the desired index
-                xpaths.insert(index, name)
+            # Create a new list to store the reordered elements
+            reordered_xpaths = [None] * (len(xpaths) + len(new_columns))
+
+            # Fill in known positions from new_columns
+            for col_name, (index, _) in new_columns.items():
+                reordered_xpaths[index] = col_name  # Place at correct index
+
+            # Fill in the rest of the elements while shifting to the left
+            xpath_idx = 0  # Index for iterating over
+            for i in range(len(reordered_xpaths)):
+                if reordered_xpaths[i] is None:  # If this slot isn't occupied
+                    while xpath_idx < len(xpaths) and xpaths[xpath_idx] in new_columns:
+                        xpath_idx += 1  # Skip over `filename` and `filepath`
+                    if xpath_idx < len(xpaths):
+                        reordered_xpaths[i] = xpaths[xpath_idx]  # Place original element
+                        xpath_idx += 1  # Move to next
+
+            # Remove any remaining `None` values (in case of overshoot)
+            xpaths = [x for x in reordered_xpaths if x is not None]
 
         # The file is now written and placed in a given location. If cleaned header
         # field names are requested, they are processed here before being written in.

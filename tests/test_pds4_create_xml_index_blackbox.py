@@ -290,6 +290,26 @@ def compare_files(path_to_file, golden_file):
             ]
         ),
 
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" "tester_label_2.xml" "tester_label_3.xml" --limit-xpaths-file ../test_files/samples/element_with_filename.txt --add-extra-file-info filename,filepath,lid,bundle,bundle_lid --sort-by filename --output-index-file extra_file_info_4.csv
+        # Compare result to golden copy:
+        # test_files/expected/extra_file_info_success_4.csv
+        (
+            str(EXPECTED_DIR / 'extra_file_info_success_4.csv'),
+            'extra_file_info_4.csv', 'extra_file_info_4.txt',
+            [
+                str(TEST_FILES_DIR),
+
+                LABEL_NAME + '/tester_label_1.xml',
+                LABEL_NAME + '/tester_label_2.xml',
+                LABEL_NAME + '/tester_label_3.xml',
+                '--limit-xpaths-file',
+                str(SAMPLES_DIR / 'element_with_filename.txt'),
+                '--simplify-xpaths',
+                '--add-extra-file-info',
+                'filename,filepath',
+            ]
+        ),
+
         # Testing --clean-header-field-names
         # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --clean-header-field-names --output-headers-file clean_header_field_names_1.txt
         # Compare result to golden copy:
@@ -671,10 +691,19 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
             '--limit-xpaths-file',
             str(SAMPLES_DIR / 'element_2.txt'),
             '--rename-headers',
-	    str(SAMPLES_DIR / 'rename_headers_file_bad.txt'),
+            str(SAMPLES_DIR / 'rename_headers_file_bad.txt'),
             '--output-headers-file',
             'hdout.txt',
         ),
+
+        # Executable command: pds4_create_xml_index ../test_files/labels "bad_quoted_label.xml" --output-headers-file hdout.txt
+        (
+            str(TEST_FILES_DIR),
+            LABEL_NAME + '/bad_quoted_label.xml',
+            '--output-index-file',
+            'hdout.csv',
+        ),
+
 
     ]
 )
