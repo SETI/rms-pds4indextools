@@ -570,12 +570,18 @@ def replace_columns(filepath, df=None, xpaths=None, index=False):
     """
     Replaces column names in a DataFrame or list of XPaths using a mapping file.
 
+    This function determines the output depending on whether an index file or a
+    headers file is being generated. If an index is True, it will output a new DataFrame
+    object. If index=False, it will output a list containing the new column header
+    values. There is also a check to ensure only one replacement name for the column
+    exists per line.
+
     Parameters:
         filepath (str): Path to the txt file containing old and new column names.
         df (pandas.DataFrame, optional): DataFrame whose columns should be renamed.
         xpaths (list, optional): List of XPaths to be replaced.
         index (bool, optional): If True, replaces DataFrame column names; otherwise,
-        replaces XPaths.
+            replaces XPaths within a list.
 
     Returns:
         pandas.DataFrame or list: Updated DataFrame (if `index=True`) or updated XPaths
@@ -593,7 +599,6 @@ def replace_columns(filepath, df=None, xpaths=None, index=False):
                 mapping[old_name] = new_name
         return mapping
 
-    # Load the mapping once
     mapping = load_mapping(filepath)
 
     if index:
