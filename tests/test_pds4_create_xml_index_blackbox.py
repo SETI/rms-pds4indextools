@@ -546,6 +546,22 @@ def compare_files(path_to_file, golden_file):
             ]
         ),
 
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_2.xml" --rename-headers ../test_files/samples/rename_headers_file_blanks.txt  --limit-xpaths-file ../test_files/samples/element_2.txt --output-index-file rename_headers_2.csv --output-headers-file rename_headers_2.txt
+        # Compare result to golden copy:
+        # test_files/expected/rename_headers_success_2.csv
+        (
+            str(EXPECTED_DIR / 'rename_headers_success_2.csv'),
+            'rename_headers_2.csv', 'rename_headers_2.txt',
+            [
+                str(TEST_FILES_DIR),
+                LABEL_NAME + '/tester_label_2.xml',
+                '--rename-headers',
+                str(SAMPLES_DIR / 'rename_headers_file_blanks.txt'),
+                '--limit-xpaths-file',
+                str(SAMPLES_DIR / 'element_2.txt'),
+            ]
+        ),
+
     ]
 )
 def test_success(golden_file, new_file_index, new_file_headers, cmd_line):

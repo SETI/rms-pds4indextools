@@ -566,45 +566,46 @@ def renumber_xpaths(xpaths):
     return xpath_map
 
 
-def replace_columns(filepath, df=None, xpaths=None, index=False):
+def replace_columns(filepath, df_or_xpaths):
     """
     Replaces column names in a DataFrame or list of XPaths using a mapping file.
 
     This function determines the output depending on whether an index file or a
-    headers file is being generated. If an index is True, it will output a new DataFrame
-    object. If index=False, it will output a list containing the new column header
-    values. There is also a check to ensure only one replacement name for the column
-    exists per line.
+    headers file is being generated. If df_or_xpaths is a pandas.DataFrame object,
+    it will output a new pandas.DataFrame object. If df_or_xpaths is a list, it will
+    output a new list of column header values. There is also a check to ensure only
+    one replacement name for the column exists per line.
 
     Parameters:
         filepath (str): Path to the txt file containing old and new column names.
-        df (pandas.DataFrame, optional): DataFrame whose columns should be renamed.
-        xpaths (list, optional): List of XPaths to be replaced.
-        index (bool, optional): If True, replaces DataFrame column names; otherwise,
-            replaces XPaths within a list.
+        df_or_xpaths (pandas.DataFrame or list): the DataFrame or list containing the
+            original columns of the index/headers file.
 
     Returns:
-        pandas.DataFrame or list: Updated DataFrame (if `index=True`) or updated XPaths
-            list.
+        pandas.DataFrame or list: Updated DataFrame or updated XPaths list.
     """
     def load_mapping(file_path):
         mapping = {}
         with open(file_path, 'r') as file:
             for line in file:
+                if not line.strip() or line.strip().startswith('#'):
+                    continue
+
                 parts = line.strip().split(',')
                 if len(parts) != 2:
                     print(f"Invalid line in mapping file: {line.strip()}")
                     sys.exit(1)
+
                 old_name, new_name = map(str.strip, parts)
                 mapping[old_name] = new_name
         return mapping
 
     mapping = load_mapping(filepath)
 
-    if index:
-        return df.rename(columns=mapping)
+    if isinstance(df_or_xpaths, pd.DataFrame):
+        return df_or_xpaths.rename(columns=mapping)
 
-    return [mapping.get(xpath, xpath) for xpath in xpaths]
+    return [mapping.get(xpath, xpath) for xpath in df_or_xpaths]
 
 
 def split_into_elements(xpath):
@@ -842,7 +843,7 @@ def write_results_to_csv(results_list, new_columns, elements_to_scrape, args,
             sys.exit(1)
 
     if args.rename_headers:
-        df = replace_columns(args.rename_headers, df=df, index=True)
+        df = replace_columns(args.rename_headers, df)
 
     if args.fixed_width:
         padded_df = pad_column_values_and_headers(df)
@@ -1597,7 +1598,7 @@ def main(cmd_line=None):
             if args.simplify_xpaths:
                 xpaths = simplify_xpaths(xpaths)
             if args.rename_headers:
-                xpaths = replace_columns(args.rename_headers, xpaths=xpaths)
+                xpaths = replace_columns(args.rename_headers, xpaths)
             for item in xpaths:
                 if args.clean_header_field_names:
                     verboseprint(
