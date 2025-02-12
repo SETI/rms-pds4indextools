@@ -574,7 +574,8 @@ def replace_columns(filepath, df_or_xpaths):
     headers file is being generated. If df_or_xpaths is a pandas.DataFrame object,
     it will output a new pandas.DataFrame object. If df_or_xpaths is a list, it will
     output a new list of column header values. There is also a check to ensure only
-    one replacement name for the column exists per line.
+    one replacement name for the column exists per line. Blank lines or lines that are
+    commented out will be ignored.
 
     Parameters:
         filepath (str): Path to the txt file containing old and new column names.
