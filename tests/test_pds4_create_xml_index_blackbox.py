@@ -562,6 +562,43 @@ def compare_files(path_to_file, golden_file):
             ]
         ),
 
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_2.xml" --limit-xpaths-file ../test_files/samples/element_5.txt --simplify-xpaths --dont-number-unique-tags --output-headers-file dont_number_unique_tags_1.txt
+        # Compare result to golden copy:
+        # test_files/expected/simplify_xpaths_success_1.txt
+        (
+            str(EXPECTED_DIR / 'dont_number_unique_tags_success_1.txt'),
+            None, 'dont_number_unique_tags_1.txt',
+            [
+                str(TEST_FILES_DIR),
+                LABEL_NAME + '/tester_label_2.xml',
+                '--simplify-xpaths',
+                '--dont-number-unique-tags',
+                '--limit-xpaths-file',
+                str(SAMPLES_DIR / 'element_5.txt'),
+                '--sort-by',
+                'pds:logical_identifier',
+            ]
+        ),
+
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_2.xml" --limit-xpaths-file ../test_files/samples/element_2.txt --dont-number-unique-tags --output-headers-file dont_number_unique_tags_2.txt
+        # Compare result to golden copy:
+        # test_files/expected/simplify_xpaths_success_2.txt
+        (
+            str(EXPECTED_DIR / 'dont_number_unique_tags_success_2.txt'),
+            None, 'dont_number_unique_tags_2.txt',
+            [
+                str(TEST_FILES_DIR),
+                LABEL_NAME + '/tester_label_2.xml',
+                '--dont-number-unique-tags',
+                '--limit-xpaths-file',
+                str(SAMPLES_DIR / 'element_2.txt'),
+                '--sort-by',
+                'pds:Product_Observational/pds:Observation_Area/pds:Discipline_Area/'
+                'geom:Geometry/geom:SPICE_Kernel_Files/'
+                'geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name',
+            ]
+        ),
+
     ]
 )
 def test_success(golden_file, new_file_index, new_file_headers, cmd_line):

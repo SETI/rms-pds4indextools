@@ -423,7 +423,7 @@ def process_headers(label_results, key, root, namespaces, prefixes):
     label_results[key_new] = label_results.pop(key)
 
 
-def renumber_xpaths(xpaths):
+def renumber_xpaths(xpaths, dont_number_unique_tags=False):
     """
     Renumber a list of XPaths to be sequential at each level.
 
@@ -475,6 +475,9 @@ def renumber_xpaths(xpaths):
 
     Parameters:
         xpaths (list): The list of XPaths or XPath fragments.
+        dont_number_unique_tags (bool): Determines whether the predicates of
+            unique tags are removed, leaving predicates only for shared elements
+            between XPaths.
 
 
     Returns:
@@ -529,7 +532,10 @@ def renumber_xpaths(xpaths):
         # increasing starting at 1. We also add a special entry for the empty
         # suffix when there is no number.
         unique_nums = sorted({x.num for x in prefix_group_list if x.num is not None})
-        renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
+        if dont_number_unique_tags and len(unique_nums) == 1:
+            renumber_map = {x: '' for x in unique_nums}  # Remove numbering
+        else:
+            renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
         renumber_map[None] = ''
 
         # We further group these by unique parent (including the number)
@@ -545,7 +551,8 @@ def renumber_xpaths(xpaths):
             # down.
             children = [x for x in parent_group_list if x.child is not None]
             if children:
-                child_map = renumber_xpaths([x.child for x in children])
+                child_map = renumber_xpaths([x.child for x in children],
+                                            dont_number_unique_tags)
                 xpath_map.update(
                     {
                         f'{x.parent}/{x.child}': (
@@ -1310,6 +1317,13 @@ def main(cmd_line=None):
         action='store_true',
         help='If specified, only writes the tags of unique XPaths to output files. Any '
              'values with duplicate values will still use their full XPath.')
+    
+    index_file_generation.add_argument('--dont-number-unique-tags', action='store_true',
+                                       help='If specified, only retain predicates for '
+                                            'elements in XPaths that are unique to their '
+                                            'hierarchy. If multiple instances of an '
+                                            'element exists, the predicates will be '
+                                            'preserved for those elements.')
 
     limiting_results = parser.add_argument_group('Limiting Results')
     limiting_results.add_argument('--limit-xpaths-file', type=str,
@@ -1492,7 +1506,7 @@ def main(cmd_line=None):
         # the column refers to. At this stage, duplicate XPaths may exist again due to
         # the reformatting. These duplicates are corrected to preserve the contents of
         # each element's value.
-        xpath_map = renumber_xpaths(label_results)
+        xpath_map = renumber_xpaths(label_results, args.dont_number_unique_tags)
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
 

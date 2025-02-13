@@ -140,6 +140,10 @@ Index file generation
   instead. This will usually produce an index file with simpler column names, potentially
   making the file easier to display or use.
 
+- ``--dont-number-unique-tags``: Whenever a tag is unique within its hierarchy, remove
+  the predicates (``<#>``) from the full or simplified XPath. When used together with
+  ``--simplify-xpaths``, this command generates the shortest possible headers.
+
 Limiting results
 """"""""""""""""
 
