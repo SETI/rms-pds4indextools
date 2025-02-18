@@ -533,7 +533,7 @@ def renumber_xpaths(xpaths, dont_number_unique_tags=False):
         # suffix when there is no number.
         unique_nums = sorted({x.num for x in prefix_group_list if x.num is not None})
         if dont_number_unique_tags and len(unique_nums) == 1:
-            renumber_map = {x: '' for x in unique_nums}  # Remove numbering
+            renumber_map = {x: '' for x in unique_nums}
         else:
             renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
         renumber_map[None] = ''
