@@ -1317,7 +1317,7 @@ def main(cmd_line=None):
         action='store_true',
         help='If specified, only writes the tags of unique XPaths to output files. Any '
              'values with duplicate values will still use their full XPath.')
-    
+
     index_file_generation.add_argument('--dont-number-unique-tags', action='store_true',
                                        help='If specified, only retain predicates for '
                                             'elements in XPaths that are unique to their '
