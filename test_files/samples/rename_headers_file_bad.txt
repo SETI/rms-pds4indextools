@@ -1,0 +1,5 @@
+pds:Product_Observational/pds:Observation_Area<1>/pds:Discipline_Area<1>/geom:Geometry<1>/geom:SPICE_Kernel_Files<1>/geom:SPICE_Kernel_Identification<1>/geom:spice_kernel_file_name<1>, spice_1, spice_1_a
+pds:Product_Observational/pds:Observation_Area<1>/pds:Discipline_Area<1>/geom:Geometry<1>/geom:SPICE_Kernel_Files<1>/geom:SPICE_Kernel_Identification<2>/geom:spice_kernel_file_name<1>, spice_2, spice_2_a
+pds:Product_Observational/pds:Observation_Area<1>/pds:Discipline_Area<1>/geom:Geometry<1>/geom:SPICE_Kernel_Files<1>/geom:SPICE_Kernel_Identification<3>/geom:spice_kernel_file_name<1>, spice_3, spice_3_a
+pds:Product_Observational/pds:Observation_Area<1>/pds:Discipline_Area<1>/geom:Geometry<1>/geom:SPICE_Kernel_Files<1>/geom:SPICE_Kernel_Identification<4>/geom:spice_kernel_file_name<1>, spice_4, spice_4_a
+pds:Product_Observational/pds:Observation_Area<1>/pds:Discipline_Area<1>/geom:Geometry<1>/geom:SPICE_Kernel_Files<1>/geom:SPICE_Kernel_Identification<5>/geom:spice_kernel_file_name<1>, spice_5, spice_5_a

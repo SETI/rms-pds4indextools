@@ -195,9 +195,12 @@ Miscellaneous
 - ``--verbose``: Display detailed information during the file scraping process that may
   be useful for debugging.
 
+- ``--rename-headers``: Change the headers of the output file from their XPath/simplified
+  XPath counterparts to user-defined values via a given text file. Each line within the
+  text file must have the format ``<old_column_name>,<new_column_name>``.
+
 - ``--config-file``: Specify one or more YAML-style configuration files for further
   customization of the extraction process. See the section below for details.
-
 
 Configuration Files
 -------------------

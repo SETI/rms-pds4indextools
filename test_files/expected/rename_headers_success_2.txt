@@ -1,0 +1,5 @@
+spice_1
+pds:Product_Observational/pds:Observation_Area<1>/pds:Discipline_Area<1>/geom:Geometry<1>/geom:SPICE_Kernel_Files<1>/geom:SPICE_Kernel_Identification<2>/geom:spice_kernel_file_name<1>
+spice_3
+spice_4
+spice_5
