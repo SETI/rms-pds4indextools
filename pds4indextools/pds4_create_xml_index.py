@@ -1322,7 +1322,7 @@ def main(cmd_line=None):
                                        help='If specified, only retain predicates for '
                                             'elements in XPaths that are unique to their '
                                             'hierarchy. If multiple instances of an '
-                                            'element exists, the predicates will be '
+                                            'element exist, the predicates will be '
                                             'preserved for those elements.')
 
     limiting_results = parser.add_argument_group('Limiting Results')
