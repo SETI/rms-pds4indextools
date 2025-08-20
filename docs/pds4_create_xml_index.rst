@@ -186,12 +186,11 @@ Limiting results
 Label generation
 """"""""""""""""
 
-- ``--generate-label {ancillary,supplemental}``: Generate a label file describing the
+- ``--generate-label {ancillary,metadata}``: Generate a label file describing the
   index file. The label file will be placed in the same directory as the index file and
   will have the same name except that the suffix will be ``.xml``. The required argument
   specifies the type of metadata class to use in the label file, ``Product_Ancillary`` for
-  ``ancillary`` or ``Product_Metadata_Supplemental`` for ``supplemental``. Additional
-  customization of the label can be provided with ``--label-user-input``.
+  ``ancillary`` or ``Product_Metadata_Supplemental`` for ``metadata``.
 
 Miscellaneous
 """""""""""""
