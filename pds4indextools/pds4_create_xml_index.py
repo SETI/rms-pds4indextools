@@ -1607,7 +1607,8 @@ def main(cmd_line=None):
             cleaned_keys = clean_predicates(old_keys)
 
             # Eager, coverage-friendly
-            remapped = {ck: label_results_new[ok] for ck, ok in zip(cleaned_keys, old_keys)}
+            remapped = {ck: label_results_new[ok] for ck, ok in zip(cleaned_keys,
+                                                                    old_keys)}
             label_results_new.clear()
             label_results_new.update(remapped)
         all_results[ind] = label_results_new
