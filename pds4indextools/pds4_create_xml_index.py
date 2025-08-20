@@ -1556,18 +1556,6 @@ def main(cmd_line=None):
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
 
-        # If --dont-number-unique-tags was chosen, clean the predicates off of the
-        # keys of the label_results dictionary.
-        if args.dont_number_unique_tags:
-            elements_to_scrape = clean_predicates(elements_to_scrape)
-            old_keys = list(label_results.keys())
-            cleaned_keys = clean_predicates(old_keys)
-
-            # Eager, coverage-friendly
-            remapped = {ck: label_results[ok] for ck, ok in zip(cleaned_keys, old_keys)}
-            label_results.clear()
-            label_results.update(remapped)
-
         # Collect metadata about the label file. The label file's lid is scraped and
         # broken into multiple parts. This metadata can then be requested as additional
         # columns within the index file.
@@ -1612,6 +1600,16 @@ def main(cmd_line=None):
     for ind, label_results in enumerate(all_results):
         label_results_new = filter_dict_by_glob_patterns(
             label_results, elements_to_scrape, valid_add_extra_file_info, verboseprint)
+        # If --dont-number-unique-tags was chosen, clean the predicates off of the
+        # keys of the label_results dictionary.
+        if args.dont_number_unique_tags:
+            old_keys = list(label_results_new.keys())
+            cleaned_keys = clean_predicates(old_keys)
+
+            # Eager, coverage-friendly
+            remapped = {ck: label_results_new[ok] for ck, ok in zip(cleaned_keys, old_keys)}
+            label_results_new.clear()
+            label_results_new.update(remapped)
         all_results[ind] = label_results_new
 
     if all(len(r) == 0 for r in all_results):
