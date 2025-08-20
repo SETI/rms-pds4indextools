@@ -23,6 +23,7 @@ import pandas as pd
 from pathlib import Path
 import platform
 import requests
+import re
 import sys
 import textwrap as _textwrap
 import yaml
@@ -423,7 +424,7 @@ def process_headers(label_results, key, root, namespaces, prefixes):
     label_results[key_new] = label_results.pop(key)
 
 
-def renumber_xpaths(xpaths, dont_number_unique_tags=False):
+def renumber_xpaths(xpaths):
     """
     Renumber a list of XPaths to be sequential at each level.
 
@@ -532,10 +533,7 @@ def renumber_xpaths(xpaths, dont_number_unique_tags=False):
         # increasing starting at 1. We also add a special entry for the empty
         # suffix when there is no number.
         unique_nums = sorted({x.num for x in prefix_group_list if x.num is not None})
-        if dont_number_unique_tags and len(unique_nums) == 1:
-            renumber_map = {x: '' for x in unique_nums}
-        else:
-            renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
+        renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
         renumber_map[None] = ''
 
         # We further group these by unique parent (including the number)
@@ -551,8 +549,7 @@ def renumber_xpaths(xpaths, dont_number_unique_tags=False):
             # down.
             children = [x for x in parent_group_list if x.child is not None]
             if children:
-                child_map = renumber_xpaths([x.child for x in children],
-                                            dont_number_unique_tags)
+                child_map = renumber_xpaths([x.child for x in children])
                 xpath_map.update(
                     {
                         f'{x.parent}/{x.child}': (
@@ -869,6 +866,55 @@ def write_results_to_csv(results_list, new_columns, elements_to_scrape, args,
         return clean_header_mapping
     else:
         return None
+
+
+def clean_predicates(strings):
+    """Normalize angle-bracket predicates in slash-delimited tag paths.
+
+    For each path segment position (split by "/"), this function preserves
+    a numeric predicate ``<n>`` only when that segment's predicate varies
+    across the entire input set at the same position and base tag. If the
+    predicate is constant (including always absent or always the same value),
+    it is removed for that segment.
+
+    Parameters:
+        strings (Sequence[str]): Iterable of slash-separated tag paths where
+            each segment may optionally end with an angle-bracketed integer
+            predicate, e.g. ``"geom:SPICE_Kernel_Identification<3>"``.
+            Example path:
+            ``"pds:Observation_Area<1>/pds:Discipline_Area<1>/geom:Geometry<1>"``.
+
+    Returns:
+        list[str]: Paths with predicates removed for segments whose predicate
+            is constant (or absent) across the input, and preserved only for
+            segments whose predicate values differ across the input.
+    """
+    split_paths = [s.split('/') for s in strings]
+
+    # Collect predicate sets keyed by (position_in_path, base_tag)
+    pred_sets = {}
+    for parts in split_paths:
+        for i, tag in enumerate(parts):
+            base = re.sub(r"<\d+>", "", tag)
+            m = re.search(r"<(\d+)>", tag)
+            num = m.group(1) if m else None
+            key = (i, base)
+            pred_sets.setdefault(key, set()).add(num)
+
+    cleaned = []
+    for parts in split_paths:
+        new_parts = []
+        for i, tag in enumerate(parts):
+            base = re.sub(r"<\d+>", "", tag)
+            key = (i, base)
+            preds = pred_sets.get(key, {None})
+            # Keep predicate only if there are multiple distinct numeric values
+            if len([p for p in preds if p is not None]) > 1:
+                new_parts.append(tag)
+            else:
+                new_parts.append(base)
+        cleaned.append("/".join(new_parts))
+    return cleaned
 
 
 def find_base_attribute(xsd_tree, target_name, new_namespaces):
@@ -1506,9 +1552,21 @@ def main(cmd_line=None):
         # the column refers to. At this stage, duplicate XPaths may exist again due to
         # the reformatting. These duplicates are corrected to preserve the contents of
         # each element's value.
-        xpath_map = renumber_xpaths(label_results, args.dont_number_unique_tags)
+        xpath_map = renumber_xpaths(label_results)
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
+
+        # If --dont-number-unique-tags was chosen, clean the predicates off of the
+        # keys of the label_results dictionary.
+        if args.dont_number_unique_tags:
+            elements_to_scrape = clean_predicates(elements_to_scrape)
+            old_keys = list(label_results.keys())
+            cleaned_keys = clean_predicates(old_keys)
+
+            # Eager, coverage-friendly
+            remapped = {ck: label_results[ok] for ck, ok in zip(cleaned_keys, old_keys)}
+            label_results.clear()
+            label_results.update(remapped)
 
         # Collect metadata about the label file. The label file's lid is scraped and
         # broken into multiple parts. This metadata can then be requested as additional
