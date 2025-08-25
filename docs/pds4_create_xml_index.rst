@@ -105,7 +105,7 @@ Index file generation
   entirely, the default filename ``index.csv`` will be used. However, to prevent
   accidentally overwriting an existing index file, if ``index.csv`` already exists in the
   current directory, the index will be written into ``index1.csv``, ``index2.csv``, etc.
-  as necessary.
+  as necessary. 
 
 - ``--add-extra-file-info COMMA_SEPARATED_COLUMN_NAMES``: Generate additional information
   columns in the index file. One or more column names can be specified separated by
@@ -115,6 +115,8 @@ Index file generation
   - ``filepath``: The path of the label file relative to the top-level directory
   - ``bundle_lid``: The LID of the bundle containing the label file
   - ``bundle``: The name of the bundle containing the label file
+
+  .. note:: **Adds utility columns before any header simplification/renaming.
 
 - ``--sort-by COMMA_SEPARATED_HEADER_NAME(s)``: Sort the resulting index file by the
   value(s) in one or more columns. The column names are those that appear in the final
@@ -126,6 +128,8 @@ Index file generation
   syntax includes special characters that may be interpreted by the shell, it may be
   necessary to surround the list of sort keys with double quotes.
 
+  .. note:: Sorting uses the **current** header names after steps 1 – 5.
+
   Example::
 
     pds4_create_xml_index <...> --sort-by "pds:Product_Observational/pds:Identification_Area<1>/pds:version_id<1>,pds:logical_identifier"
@@ -135,14 +139,20 @@ Index file generation
 - ``--clean-header-field-names``: Rename column headers to use only characters permissible
   in variable names, making them more compatible with certain file readers.
 
+  .. note:: Normalizes header strings after simplification but before sorting/rename.
+
 - ``--simplify-xpaths``: Where possible, rename column headers to use only the tag instead
   of the full XPath. If this would cause ambiguity, leave the name using the full XPath
   instead. This will usually produce an index file with simpler column names, potentially
   making the file easier to display or use.
 
+  .. note:: Reduces headers to shortest unambiguous form prior to cleaning/sorting/rename.
+
 - ``--dont-number-unique-tags``: Whenever a tag is unique within its hierarchy, remove
   the predicates (``<#>``) from the full or simplified XPath. When used together with
   ``--simplify-xpaths``, this command generates the shortest possible headers.
+
+  .. note:: Removes predicates from unique tags prior to simplify/clean/sort/rename
 
 Limiting results
 """"""""""""""""
@@ -175,13 +185,18 @@ Limiting results
     **
     !**/*version*
 
+  .. note:: Defines the working header set for all subsequent steps.
+
 - ``--output-headers-file HEADERS_FILEPATH``: Write a list of all column names included in
   the index file. The column names will precisely agree with those given in the first line
-  of the index file, as modified by ``--simplify-xpaths``, ``--limit-xpaths-file``, or
-  ``--clean-header-field-names``, and include any additional columns added with
-  ``--add-extra-file-info``. This file is useful to easily verify the contents of the
-  index file and also to serve as a starting point for a file to be supplied to
-  ``--limit-xpaths-file``.
+  of the index file, as modified by ``--simplify-xpaths``, ``--limit-xpaths-file``,
+  ``--dont-number-unique-tags``, or ``--clean-header-field-names``, and include any
+  additional columns added with ``--add-extra-file-info``. This file is useful to easily
+  verify the contents of the index file and also to serve as a starting point for a file
+  to be supplied to ``--limit-xpaths-file``.
+
+  .. note:: Not in header-processing sequence. Writes the final headers that would appear in the index. Internally applies transforms in this order for the headers file: simplify → rename → clean.
+
 
 Label generation
 """"""""""""""""
@@ -289,6 +304,43 @@ common data types::
       unknown: unknown_alt
       anticipated: anticipated_alt
 
+Processing Order of Options
+"""""""""""""""""""""""""""
+
+Most options either transform the **set and names of headers** in the index or affect
+output/labels. During index generation, header-affecting options are applied in this order:
+
+1. ``--limit-xpaths-file``  
+   Restricts which headers (XPaths) are considered at all.
+
+2. ``--add-extra-file-info``  
+   Appends utility columns (e.g., ``filepath``) to the working set.
+
+3. ``--dont-number-unique-tags``  
+   Removes predicates (``<1>``) from headers where the tag is unique within its hierarchy.
+
+4. ``--simplify-xpaths``  
+   Rewrites headers to their simplest unambiguous form.
+
+5. ``--clean-header-field-names``  
+   Normalizes header strings to reader-friendly variable names.
+
+6. ``--sort-by``  
+   Sorts rows using the **current** (already-transformed) header names.
+
+7. ``--rename-headers``  
+   Applies user-supplied final header renames.
+
+Notes
+^^^^^
+
+- ``--output-headers-file`` writes the **final headers** that would appear in the index,
+  but internally applies header transforms in the order: simplify → rename → clean.
+  (This differs slightly from the main pipeline, but the resulting file still reflects
+  what users will see when the same options are used.)
+- Formatting/packaging options (e.g., ``--fixed-width``, ``--output-index-file``,
+  ``--generate-label``) occur at write time and do not participate in the header
+  transformation pipeline.
 
 Label Contents
 ^^^^^^^^^^^^^^

@@ -476,10 +476,6 @@ def renumber_xpaths(xpaths):
 
     Parameters:
         xpaths (list): The list of XPaths or XPath fragments.
-        dont_number_unique_tags (bool): Determines whether the predicates of
-            unique tags are removed, leaving predicates only for shared elements
-            between XPaths.
-
 
     Returns:
         dict: A dictionary containing a mapping from the original XPaths to the
@@ -1616,12 +1612,6 @@ def main(cmd_line=None):
     if all(len(r) == 0 for r in all_results):
         print('No results found: glob pattern(s) excluded all matches.')
         sys.exit(1)
-
-    if args.simplify_xpaths:
-        original_headers = {}
-        for label_results in all_results:
-            for key in label_results.keys():
-                original_headers[key] = key.split('/')[-1]
 
     if output_csv_path:
         clean_header_mapping = write_results_to_csv(all_results, new_columns,
