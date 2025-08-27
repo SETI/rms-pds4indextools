@@ -1710,6 +1710,22 @@ def main(cmd_line=None):
             # header_info to be referenced later. Not all information will be put into
             # the generated label, since some information depends on whether the index
             # file is fixed-width or delimited.
+            mapping = {}
+            if args.rename_headers:
+                with open(str(args.rename_headers), 'r') as file:
+                    for line in file:
+                        if not line.strip() or line.strip().startswith('#'):
+                            continue
+
+                        parts = line.strip().split(',')
+                        if len(parts) != 2:
+                            print(f"Invalid line in mapping file: {line.strip()}")
+                            sys.exit(1)
+
+                        old_name, new_name = map(str.strip, parts)
+                        mapping[new_name] = old_name
+
+    
             for header in headers:
                 whole_header = header
                 whole_header_length = len(whole_header)
@@ -1718,14 +1734,19 @@ def main(cmd_line=None):
                 if args.clean_header_field_names:
                     full_header = header
                     header = clean_header_mapping[header]
-                if (header in valid_add_extra_file_info and 'lid' in header):
-                    true_type = 'pds:ASCII_LID'
-                elif header == 'filename':
-                    true_type = 'pds:ASCII_File_Name'
-                elif header == 'filepath':
-                    true_type = 'pds:ASCII_File_Specification_Name'
-                elif header == 'bundle':
-                    true_type = 'pds:ASCII_Text_Preserved'
+                if (
+    ("<" not in header) and
+    (header in valid_add_extra_file_info or mapping[header] in valid_add_extra_file_info)
+):
+                    if ('lid' in header) or (
+                        mapping and mapping.get(header) in ('lid', 'bundle_lid')):
+                        true_type = 'pds:ASCII_LID'
+                    elif header == 'filename' or mapping and mapping.get(header) == 'filename':
+                        true_type = 'pds:ASCII_File_Name'
+                    elif header == 'filepath' or mapping and mapping.get(header) == 'filepath':
+                        true_type = 'pds:ASCII_File_Specification_Name'
+                    elif header == 'bundle' or mapping and mapping.get(header) == 'bundle':
+                        true_type = 'pds:ASCII_Text_Preserved'
                 else:
                     parts = header.split('/')
                     name = parts[-1].split('<')[0].split(':')[-1]
