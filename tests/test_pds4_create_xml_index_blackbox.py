@@ -562,6 +562,26 @@ def compare_files(path_to_file, golden_file):
             ]
         ),
 
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --rename-headers ../test_files/samples/rename_headers_label.txt --output-index-file rename_headers_2.csv --add-extra-file-info lid,bundle --output-headers-file rename_headers_3.txt
+        # Compare result to golden copy:
+        # test_files/expected/rename_headers_success_3.csv
+        (
+            str(EXPECTED_DIR / 'rename_headers_success_3.csv'),
+            'rename_headers_3.csv', None,
+            [
+                str(TEST_FILES_DIR),
+                LABEL_NAME + '/tester_label_1.xml',
+                '--rename-headers',
+                str(SAMPLES_DIR / 'rename_headers_label.txt'),
+                '--add-extra-file-info',
+                'lid,bundle,bundle_lid,filename,filepath',
+                '--generate-label',
+                'ancillary',
+                '--config-file',
+                str(SAMPLES_DIR / 'tester_config.yaml')
+            ]
+        ),
+
         # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_2.xml" --limit-xpaths-file ../test_files/samples/element_5.txt --simplify-xpaths --dont-number-unique-tags --output-headers-file dont_number_unique_tags_1.txt --sort-by 'pds:logical_identifier'
         # Compare result to golden copy:
         # test_files/expected/dont_number_unique_tags_success_1.txt
