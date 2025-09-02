@@ -476,6 +476,10 @@ def renumber_xpaths(xpaths):
 
     Parameters:
         xpaths (list): The list of XPaths or XPath fragments.
+        dont_number_unique_tags (bool): Determines whether the predicates of
+            unique tags are removed, leaving predicates only for shared elements
+            between XPaths.
+
 
     Returns:
         dict: A dictionary containing a mapping from the original XPaths to the
@@ -566,7 +570,7 @@ def renumber_xpaths(xpaths):
     return xpath_map
 
 
-def replace_columns(mapping, df_or_xpaths):
+def replace_columns(filepath, df_or_xpaths):
     """
     Replaces column names in a DataFrame or list of XPaths using a mapping file.
 
@@ -578,13 +582,30 @@ def replace_columns(mapping, df_or_xpaths):
     commented out will be ignored.
 
     Parameters:
-        mapping (dict): Dictionary containing the old and new column names.
+        filepath (str): Path to the txt file containing old and new column names.
         df_or_xpaths (pandas.DataFrame or list): the DataFrame or list containing the
             original columns of the index/headers file.
 
     Returns:
         pandas.DataFrame or list: Updated DataFrame or updated XPaths list.
     """
+    def load_mapping(file_path):
+        mapping = {}
+        with open(file_path, 'r') as file:
+            for line in file:
+                if not line.strip() or line.strip().startswith('#'):
+                    continue
+
+                parts = line.strip().split(',')
+                if len(parts) != 2:
+                    print(f"Invalid line in mapping file: {line.strip()}")
+                    sys.exit(1)
+
+                old_name, new_name = map(str.strip, parts)
+                mapping[old_name] = new_name
+        return mapping
+
+    mapping = load_mapping(filepath)
 
     if isinstance(df_or_xpaths, pd.DataFrame):
         return df_or_xpaths.rename(columns=mapping)
@@ -740,17 +761,13 @@ def update_nillable_elements_from_xsd_file(xsd_file, nillable_elements_info):
                 nillable_elements_info[name] = 'External or built-in type'
 
 
-def write_results_to_csv(results_list, new_columns, mapping, elements_to_scrape, args,
+def write_results_to_csv(results_list, new_columns, elements_to_scrape, args,
                          output_csv_path):
     """
     Write results from a list of dictionaries to a CSV file.
 
     Parameters:
         results_list (list): List of dictionaries containing results.
-        new_columns (dict): Dictionary containing values for --add-extra-file-info.
-        mapping (dict): Dictionary containing old and new header names, if
-            --rename-headers was used.
-        elements_to_scrape (list): List of elements to limit results to.
         args (argparse.Namespace): Arguments parsed from command line using argparse.
         output_csv_path (str): The output directory and filename.
     """
@@ -831,7 +848,7 @@ def write_results_to_csv(results_list, new_columns, mapping, elements_to_scrape,
             sys.exit(1)
 
     if args.rename_headers:
-        df = replace_columns(mapping, df)
+        df = replace_columns(args.rename_headers, df)
 
     if args.fixed_width:
         padded_df = pad_column_values_and_headers(df)
@@ -1416,7 +1433,6 @@ def main(cmd_line=None):
     all_results = []
     xsd_files = []
     extra_file_info_ind = {}
-    mapping = {}
 
     output_csv_path = None
     output_txt_path = None
@@ -1469,20 +1485,6 @@ def main(cmd_line=None):
             x: i for i, x in enumerate(elements_to_scrape)
             if x in valid_add_extra_file_info
         }
-
-    if args.rename_headers:
-        with open(str(args.rename_headers), 'r') as file:
-            for line in file:
-                if not line.strip() or line.strip().startswith('#'):
-                    continue
-
-                parts = line.strip().split(',')
-                if len(parts) != 2:
-                    print(f"Invalid line in mapping file: {line.strip()}")
-                    sys.exit(1)
-
-                old_name, new_name = map(str.strip, parts)
-                mapping[old_name] = new_name
 
     # For each file in label_files, load in schema files and namespaces for reference.
     # Traverse the label file and scrape the desired contents. Place these contents
@@ -1605,8 +1607,7 @@ def main(cmd_line=None):
             cleaned_keys = clean_predicates(old_keys)
 
             # Eager, coverage-friendly
-            remapped = {ck: label_results_new[ok] for ck, ok in zip(cleaned_keys,
-                                                                    old_keys)}
+            remapped = {ck: label_results_new[ok] for ck, ok in zip(cleaned_keys, old_keys)}
             label_results_new.clear()
             label_results_new.update(remapped)
         all_results[ind] = label_results_new
@@ -1615,8 +1616,14 @@ def main(cmd_line=None):
         print('No results found: glob pattern(s) excluded all matches.')
         sys.exit(1)
 
+    if args.simplify_xpaths:
+        original_headers = {}
+        for label_results in all_results:
+            for key in label_results.keys():
+                original_headers[key] = key.split('/')[-1]
+
     if output_csv_path:
-        clean_header_mapping = write_results_to_csv(all_results, new_columns, mapping,
+        clean_header_mapping = write_results_to_csv(all_results, new_columns,
                                                     elements_to_scrape, args,
                                                     output_csv_path)
 
@@ -1662,7 +1669,7 @@ def main(cmd_line=None):
             if args.simplify_xpaths:
                 xpaths = simplify_xpaths(xpaths)
             if args.rename_headers:
-                xpaths = replace_columns(mapping, xpaths)
+                xpaths = replace_columns(args.rename_headers, xpaths)
             for item in xpaths:
                 if args.clean_header_field_names:
                     verboseprint(
@@ -1712,9 +1719,6 @@ def main(cmd_line=None):
             # header_info to be referenced later. Not all information will be put into
             # the generated label, since some information depends on whether the index
             # file is fixed-width or delimited.
-            # Only if mapping is not None
-            if mapping:
-                mapping = {v: k for k, v in mapping.items()}
             for header in headers:
                 whole_header = header
                 whole_header_length = len(whole_header)
@@ -1723,44 +1727,18 @@ def main(cmd_line=None):
                 if args.clean_header_field_names:
                     full_header = header
                     header = clean_header_mapping[header]
-
-                true_type = None
-
-                if (
-                    ("<" not in header)
-                    and (
-                        (header in valid_add_extra_file_info)
-                        or (mapping and mapping[header] in valid_add_extra_file_info)
-                    )
-                ):
-                    if (('lid' in header) or (
-                        mapping and mapping.get(header) in (
-                            'lid', 'bundle_lid'))) and true_type is None:
-                        true_type = 'pds:ASCII_LID'
-                    if ((
-                        header == 'filename')
-                        or (mapping
-                            and mapping.get(header) == 'filename')) and true_type is None:
-                        true_type = 'pds:ASCII_File_Name'
-                    if ((
-                        header == 'filepath')
-                        or (mapping
-                            and mapping.get(header) == 'filepath')) and true_type is None:
-                        true_type = 'pds:ASCII_File_Specification_Name'
-                    if ((
-                        header == 'bundle')
-                        or (mapping
-                            and mapping.get(header) == 'bundle')) and true_type is None:
-                        true_type = 'pds:ASCII_Text_Preserved'
-
-                    true_type = true_type or get_true_type(
-                        xsd_files,
-                        header.split('/')[-1].split('<')[0].split(':')[-1],
-                        namespaces
-                    )
+                if (header in valid_add_extra_file_info and 'lid' in header):
+                    true_type = 'pds:ASCII_LID'
+                elif header == 'filename':
+                    true_type = 'pds:ASCII_File_Name'
+                elif header == 'filepath':
+                    true_type = 'pds:ASCII_File_Specification_Name'
+                elif header == 'bundle':
+                    true_type = 'pds:ASCII_Text_Preserved'
                 else:
                     parts = header.split('/')
                     name = parts[-1].split('<')[0].split(':')[-1]
+
                     true_type = get_true_type(xsd_files, name, namespaces)
 
                 true_type = true_type.split(':')[-1]
