@@ -562,7 +562,7 @@ def compare_files(path_to_file, golden_file):
             ]
         ),
 
-        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --rename-headers ../test_files/samples/rename_headers_label.txt --output-index-file rename_headers_2.csv --add-extra-file-info lid,bundle --output-headers-file rename_headers_3.txt
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_1.xml" --rename-headers ../test_files/samples/rename_headers_label.txt --output-index-file rename_headers_3.csv --add-extra-file-info lid,bundle,bundle_lid,filename,filepath —generate-label ancillary —config-file ../test_files/samples/tester_config.yaml
         # Compare result to golden copy:
         # test_files/expected/rename_headers_success_3.csv
         (

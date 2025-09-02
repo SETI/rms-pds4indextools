@@ -476,10 +476,6 @@ def renumber_xpaths(xpaths):
 
     Parameters:
         xpaths (list): The list of XPaths or XPath fragments.
-        dont_number_unique_tags (bool): Determines whether the predicates of
-            unique tags are removed, leaving predicates only for shared elements
-            between XPaths.
-
 
     Returns:
         dict: A dictionary containing a mapping from the original XPaths to the
@@ -1433,6 +1429,7 @@ def main(cmd_line=None):
     all_results = []
     xsd_files = []
     extra_file_info_ind = {}
+    extra_terms_mapping = {}
 
     output_csv_path = None
     output_txt_path = None
@@ -1485,6 +1482,24 @@ def main(cmd_line=None):
             x: i for i, x in enumerate(elements_to_scrape)
             if x in valid_add_extra_file_info
         }
+
+    if args.add_extra_file_info and args.rename_headers:
+        with open(str(args.rename_headers), "r", encoding="utf-8") as f:
+            for lineno, raw in enumerate(f, 1):
+                line = raw.strip()
+                if not line or line.startswith("#"):
+                    continue
+
+                parts = [p.strip() for p in line.split(",", 1)]
+                if len(parts) != 2:
+                    print(f"Invalid line in mapping file (line {lineno}): {line}")
+                    sys.exit(1)
+
+                old_name, new_name = parts
+                if old_name in valid_add_extra_file_info:
+                    extra_terms_mapping[old_name] = new_name
+                else:
+                    pass
 
     # For each file in label_files, load in schema files and namespaces for reference.
     # Traverse the label file and scrape the desired contents. Place these contents
@@ -1607,7 +1622,8 @@ def main(cmd_line=None):
             cleaned_keys = clean_predicates(old_keys)
 
             # Eager, coverage-friendly
-            remapped = {ck: label_results_new[ok] for ck, ok in zip(cleaned_keys, old_keys)}
+            remapped = {ck: label_results_new[ok] for ck, ok in zip(cleaned_keys,
+                                                                    old_keys)}
             label_results_new.clear()
             label_results_new.update(remapped)
         all_results[ind] = label_results_new
@@ -1615,12 +1631,6 @@ def main(cmd_line=None):
     if all(len(r) == 0 for r in all_results):
         print('No results found: glob pattern(s) excluded all matches.')
         sys.exit(1)
-
-    if args.simplify_xpaths:
-        original_headers = {}
-        for label_results in all_results:
-            for key in label_results.keys():
-                original_headers[key] = key.split('/')[-1]
 
     if output_csv_path:
         clean_header_mapping = write_results_to_csv(all_results, new_columns,
@@ -1727,14 +1737,32 @@ def main(cmd_line=None):
                 if args.clean_header_field_names:
                     full_header = header
                     header = clean_header_mapping[header]
-                if (header in valid_add_extra_file_info and 'lid' in header):
-                    true_type = 'pds:ASCII_LID'
-                elif header == 'filename':
-                    true_type = 'pds:ASCII_File_Name'
-                elif header == 'filepath':
-                    true_type = 'pds:ASCII_File_Specification_Name'
-                elif header == 'bundle':
-                    true_type = 'pds:ASCII_Text_Preserved'
+                if (
+                    header in valid_add_extra_file_info
+                    or header in extra_terms_mapping.values()
+                ):
+                    if header in (
+                        'lid',
+                        'bundle_lid',
+                        extra_terms_mapping.get('lid'),
+                        extra_terms_mapping.get('bundle_lid'),
+                    ):
+                        true_type = 'pds:ASCII_LID'
+                    elif header in (
+                        'filename',
+                        extra_terms_mapping.get('filename'),
+                    ):
+                        true_type = 'pds:ASCII_File_Name'
+                    elif header in (
+                        'filepath',
+                        extra_terms_mapping.get('filepath'),
+                    ):
+                        true_type = 'pds:ASCII_File_Specification_Name'
+                    elif header in (
+                        'bundle',
+                        extra_terms_mapping.get('bundle'),
+                    ):
+                        true_type = 'pds:ASCII_Text_Preserved'
                 else:
                     parts = header.split('/')
                     name = parts[-1].split('<')[0].split(':')[-1]
