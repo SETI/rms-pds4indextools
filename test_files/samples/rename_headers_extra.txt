@@ -1,0 +1,6 @@
+lid,LID
+#break in the line
+bundle,bundle_name
+bogus_name, bogus_rename
+bundle_lid
+pds:Product_Observational/pds:Identification_Area<1>/pds:title<1>pds:Product_Observational/pds:Identification_Area<1>/pds:information_model_version<1>, vid

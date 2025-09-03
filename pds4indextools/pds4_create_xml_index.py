@@ -1483,7 +1483,7 @@ def main(cmd_line=None):
             if x in valid_add_extra_file_info
         }
 
-    if args.add_extra_file_info and args.rename_headers:
+    if args.rename_headers:
         with open(str(args.rename_headers), "r", encoding="utf-8") as f:
             for lineno, raw in enumerate(f, 1):
                 line = raw.strip()
@@ -1492,14 +1492,11 @@ def main(cmd_line=None):
 
                 parts = [p.strip() for p in line.split(",", 1)]
                 if len(parts) != 2:
-                    print(f"Invalid line in mapping file (line {lineno}): {line}")
+                    print(f"Invalid line in renaming file (line {lineno}): {line}")
                     sys.exit(1)
 
                 old_name, new_name = parts
-                if old_name in valid_add_extra_file_info:
-                    extra_terms_mapping[old_name] = new_name
-                else:
-                    pass
+                extra_terms_mapping[old_name] = new_name
 
     # For each file in label_files, load in schema files and namespaces for reference.
     # Traverse the label file and scrape the desired contents. Place these contents
@@ -1729,46 +1726,48 @@ def main(cmd_line=None):
             # header_info to be referenced later. Not all information will be put into
             # the generated label, since some information depends on whether the index
             # file is fixed-width or delimited.
+            SPECIAL_TYPES = {
+                'lid': 'pds:ASCII_LID',
+                'bundle_lid': 'pds:ASCII_LID',
+                'filename': 'pds:ASCII_File_Name',
+                'filepath': 'pds:ASCII_File_Specification_Name',
+                'bundle': 'pds:ASCII_Text_Preserved',
+            }
+
+            # alias -> original (skip empty aliases)
+            alias_to_original = {v: k for k, v in extra_terms_mapping.items() if v}
+
             for header in headers:
                 whole_header = header
                 whole_header_length = len(whole_header)
+
                 if args.fixed_width:
                     header = header.strip()
+
                 if args.clean_header_field_names:
                     full_header = header
                     header = clean_header_mapping[header]
-                if (
-                    header in valid_add_extra_file_info
-                    or header in extra_terms_mapping.values()
-                ):
-                    if header in (
-                        'lid',
-                        'bundle_lid',
-                        extra_terms_mapping.get('lid'),
-                        extra_terms_mapping.get('bundle_lid'),
-                    ):
-                        true_type = 'pds:ASCII_LID'
-                    elif header in (
-                        'filename',
-                        extra_terms_mapping.get('filename'),
-                    ):
-                        true_type = 'pds:ASCII_File_Name'
-                    elif header in (
-                        'filepath',
-                        extra_terms_mapping.get('filepath'),
-                    ):
-                        true_type = 'pds:ASCII_File_Specification_Name'
-                    elif header in (
-                        'bundle',
-                        extra_terms_mapping.get('bundle'),
-                    ):
-                        true_type = 'pds:ASCII_Text_Preserved'
-                else:
-                    parts = header.split('/')
-                    name = parts[-1].split('<')[0].split(':')[-1]
 
+                # If this header is a renamed alias, map back to the original key
+                original = alias_to_original.get(header)
+
+                # Special fields: accept either canonical or alias
+                if header in SPECIAL_TYPES or (original in SPECIAL_TYPES):
+                    canonical = header if header in SPECIAL_TYPES else original
+                    true_type = SPECIAL_TYPES[canonical]
+
+                else:
+                    basis = original or header
+                    name = basis.split('/')[-1].split('<')[0].split(':')[-1]
                     true_type = get_true_type(xsd_files, name, namespaces)
 
+                if not true_type:  # pragma: no cover
+                    raise ValueError(
+                        f"Could not resolve schema type for header '{header}' "
+                        f"(original: '{original or header}')"
+                    )
+
+                # Strip any namespace prefix
                 true_type = true_type.split(':')[-1]
                 field_number += 1
 
