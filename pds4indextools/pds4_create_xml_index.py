@@ -887,29 +887,34 @@ def clean_predicates(strings):
     """
     split_paths = [s.split('/') for s in strings]
 
-    # Collect predicate sets keyed by (position_in_path, base_tag)
+    # Precompile patterns
+    _PRED_RE = re.compile(r"<\d+>")
+    _NUM_RE = re.compile(r"<(\d+)>")
+
+    # Collect predicate sets keyed by (parent_context_wo_nums, base_tag_wo_num)
     pred_sets = {}
     for parts in split_paths:
         for i, tag in enumerate(parts):
-            base = re.sub(r"<\d+>", "", tag)
-            m = re.search(r"<(\d+)>", tag)
+            base = _PRED_RE.sub("", tag)
+            ctx = tuple(_PRED_RE.sub("", p) for p in parts[:i])  # parent chain sans nums
+            m = _NUM_RE.search(tag)
             num = m.group(1) if m else None
-            key = (i, base)
-            pred_sets.setdefault(key, set()).add(num)
+            pred_sets.setdefault((ctx, base), set()).add(num)
 
     cleaned = []
     for parts in split_paths:
         new_parts = []
         for i, tag in enumerate(parts):
-            base = re.sub(r"<\d+>", "", tag)
-            key = (i, base)
-            preds = pred_sets.get(key, {None})
+            base = _PRED_RE.sub("", tag)
+            ctx = tuple(_PRED_RE.sub("", p) for p in parts[:i])
+            preds = pred_sets.get((ctx, base), {None})
             # Keep predicate only if there are multiple distinct numeric values
             if len([p for p in preds if p is not None]) > 1:
                 new_parts.append(tag)
             else:
                 new_parts.append(base)
         cleaned.append("/".join(new_parts))
+
     return cleaned
 
 
@@ -1489,13 +1494,17 @@ def main(cmd_line=None):
                 line = raw.strip()
                 if not line or line.startswith("#"):
                     continue
-
                 parts = [p.strip() for p in line.split(",", 1)]
                 if len(parts) != 2:
                     print(f"Invalid line in renaming file (line {lineno}): {line}")
                     sys.exit(1)
-
                 old_name, new_name = parts
+                if not old_name or not new_name:
+                    print(f"Invalid (empty) mapping at line {lineno}: {line}")
+                    sys.exit(1)
+                if old_name in extra_terms_mapping:
+                    print(f"Duplicate mapping for '{old_name}' at line {lineno}")
+                    sys.exit(1)
                 extra_terms_mapping[old_name] = new_name
 
     # For each file in label_files, load in schema files and namespaces for reference.

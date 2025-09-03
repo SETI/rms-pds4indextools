@@ -783,6 +783,34 @@ def test_success(golden_file, new_file_index, new_file_headers, cmd_line):
             'hdout.txt',
         ),
 
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_2.xml" --limit-xpaths-file ../test_files/samples/element_2.txt --rename-headers ../test_files/samples/rename_headers_extra.txt --add-extra-file-info lid,bundle --output-headers-file hdout.txt
+        (
+            str(TEST_FILES_DIR),
+            LABEL_NAME + '/tester_label_2.xml',
+            '--limit-xpaths-file',
+            str(SAMPLES_DIR / 'element_2.txt'),
+            '--rename-headers',
+            str(SAMPLES_DIR / 'rename_headers_duplicate.txt'),
+            '--add-extra-file-info',
+            'lid,bundle',
+            '--output-headers-file',
+            'hdout.txt',
+        ),
+
+        # Executable command: pds4_create_xml_index ../test_files/labels "tester_label_2.xml" --limit-xpaths-file ../test_files/samples/element_2.txt --rename-headers ../test_files/samples/rename_headers_extra.txt --add-extra-file-info lid,bundle --output-headers-file hdout.txt
+        (
+            str(TEST_FILES_DIR),
+            LABEL_NAME + '/tester_label_2.xml',
+            '--limit-xpaths-file',
+            str(SAMPLES_DIR / 'element_2.txt'),
+            '--rename-headers',
+            str(SAMPLES_DIR / 'rename_headers_incomplete.txt'),
+            '--add-extra-file-info',
+            'lid,bundle',
+            '--output-headers-file',
+            'hdout.txt',
+        ),
+
         # Executable command: pds4_create_xml_index ../test_files/labels "bad_quoted_label.xml" --output-headers-file hdout.txt
         (
             str(TEST_FILES_DIR),

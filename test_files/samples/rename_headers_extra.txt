@@ -1,5 +1,6 @@
+# NOTE: Lines below intentionally include malformed entries to exercise parser errors.
 lid,LID
-#break in the line
+# filepath, file_path
 bundle,bundle_name
 bogus_name, bogus_rename
 bundle_lid
