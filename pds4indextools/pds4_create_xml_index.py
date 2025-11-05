@@ -23,6 +23,7 @@ import pandas as pd
 from pathlib import Path
 import platform
 import requests
+import re
 import sys
 import textwrap as _textwrap
 import yaml
@@ -423,7 +424,7 @@ def process_headers(label_results, key, root, namespaces, prefixes):
     label_results[key_new] = label_results.pop(key)
 
 
-def renumber_xpaths(xpaths, dont_number_unique_tags=False):
+def renumber_xpaths(xpaths):
     """
     Renumber a list of XPaths to be sequential at each level.
 
@@ -475,10 +476,6 @@ def renumber_xpaths(xpaths, dont_number_unique_tags=False):
 
     Parameters:
         xpaths (list): The list of XPaths or XPath fragments.
-        dont_number_unique_tags (bool): Determines whether the predicates of
-            unique tags are removed, leaving predicates only for shared elements
-            between XPaths.
-
 
     Returns:
         dict: A dictionary containing a mapping from the original XPaths to the
@@ -532,10 +529,7 @@ def renumber_xpaths(xpaths, dont_number_unique_tags=False):
         # increasing starting at 1. We also add a special entry for the empty
         # suffix when there is no number.
         unique_nums = sorted({x.num for x in prefix_group_list if x.num is not None})
-        if dont_number_unique_tags and len(unique_nums) == 1:
-            renumber_map = {x: '' for x in unique_nums}
-        else:
-            renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
+        renumber_map = {x: f'<{i+1}>' for i, x in enumerate(unique_nums)}
         renumber_map[None] = ''
 
         # We further group these by unique parent (including the number)
@@ -551,8 +545,7 @@ def renumber_xpaths(xpaths, dont_number_unique_tags=False):
             # down.
             children = [x for x in parent_group_list if x.child is not None]
             if children:
-                child_map = renumber_xpaths([x.child for x in children],
-                                            dont_number_unique_tags)
+                child_map = renumber_xpaths([x.child for x in children])
                 xpath_map.update(
                     {
                         f'{x.parent}/{x.child}': (
@@ -869,6 +862,60 @@ def write_results_to_csv(results_list, new_columns, elements_to_scrape, args,
         return clean_header_mapping
     else:
         return None
+
+
+def clean_predicates(strings):
+    """Normalize angle-bracket predicates in slash-delimited tag paths.
+
+    For each path segment position (split by "/"), this function preserves
+    a numeric predicate ``<n>`` only when that segment's predicate varies
+    across the entire input set at the same position and base tag. If the
+    predicate is constant (including always absent or always the same value),
+    it is removed for that segment.
+
+    Parameters:
+        strings (Sequence[str]): Iterable of slash-separated tag paths where
+            each segment may optionally end with an angle-bracketed integer
+            predicate, e.g. ``"geom:SPICE_Kernel_Identification<3>"``.
+            Example path:
+            ``"pds:Observation_Area<1>/pds:Discipline_Area<1>/geom:Geometry<1>"``.
+
+    Returns:
+        list[str]: Paths with predicates removed for segments whose predicate
+            is constant (or absent) across the input, and preserved only for
+            segments whose predicate values differ across the input.
+    """
+    split_paths = [s.split('/') for s in strings]
+
+    # Precompile patterns
+    _PRED_RE = re.compile(r"<\d+>")
+    _NUM_RE = re.compile(r"<(\d+)>")
+
+    # Collect predicate sets keyed by (parent_context_wo_nums, base_tag_wo_num)
+    pred_sets = {}
+    for parts in split_paths:
+        for i, tag in enumerate(parts):
+            base = _PRED_RE.sub("", tag)
+            ctx = tuple(_PRED_RE.sub("", p) for p in parts[:i])  # parent chain sans nums
+            m = _NUM_RE.search(tag)
+            num = m.group(1) if m else None
+            pred_sets.setdefault((ctx, base), set()).add(num)
+
+    cleaned = []
+    for parts in split_paths:
+        new_parts = []
+        for i, tag in enumerate(parts):
+            base = _PRED_RE.sub("", tag)
+            ctx = tuple(_PRED_RE.sub("", p) for p in parts[:i])
+            preds = pred_sets.get((ctx, base), {None})
+            # Keep predicate only if there are multiple distinct numeric values
+            if len([p for p in preds if p is not None]) > 1:
+                new_parts.append(tag)
+            else:
+                new_parts.append(base)
+        cleaned.append("/".join(new_parts))
+
+    return cleaned
 
 
 def find_base_attribute(xsd_tree, target_name, new_namespaces):
@@ -1387,6 +1434,7 @@ def main(cmd_line=None):
     all_results = []
     xsd_files = []
     extra_file_info_ind = {}
+    extra_terms_mapping = {}
 
     output_csv_path = None
     output_txt_path = None
@@ -1439,6 +1487,25 @@ def main(cmd_line=None):
             x: i for i, x in enumerate(elements_to_scrape)
             if x in valid_add_extra_file_info
         }
+
+    if args.rename_headers:
+        with open(str(args.rename_headers), "r", encoding="utf-8") as f:
+            for lineno, raw in enumerate(f, 1):
+                line = raw.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = [p.strip() for p in line.split(",", 1)]
+                if len(parts) != 2:
+                    print(f"Invalid line in renaming file (line {lineno}): {line}")
+                    sys.exit(1)
+                old_name, new_name = parts
+                if not old_name or not new_name:
+                    print(f"Invalid (empty) mapping at line {lineno}: {line}")
+                    sys.exit(1)
+                if old_name in extra_terms_mapping:
+                    print(f"Duplicate mapping for '{old_name}' at line {lineno}")
+                    sys.exit(1)
+                extra_terms_mapping[old_name] = new_name
 
     # For each file in label_files, load in schema files and namespaces for reference.
     # Traverse the label file and scrape the desired contents. Place these contents
@@ -1506,7 +1573,7 @@ def main(cmd_line=None):
         # the column refers to. At this stage, duplicate XPaths may exist again due to
         # the reformatting. These duplicates are corrected to preserve the contents of
         # each element's value.
-        xpath_map = renumber_xpaths(label_results, args.dont_number_unique_tags)
+        xpath_map = renumber_xpaths(label_results)
         for old_xpath, new_xpath in xpath_map.items():
             label_results[new_xpath] = label_results.pop(old_xpath)
 
@@ -1554,17 +1621,22 @@ def main(cmd_line=None):
     for ind, label_results in enumerate(all_results):
         label_results_new = filter_dict_by_glob_patterns(
             label_results, elements_to_scrape, valid_add_extra_file_info, verboseprint)
+        # If --dont-number-unique-tags was chosen, clean the predicates off of the
+        # keys of the label_results dictionary.
+        if args.dont_number_unique_tags:
+            old_keys = list(label_results_new.keys())
+            cleaned_keys = clean_predicates(old_keys)
+
+            # Eager, coverage-friendly
+            remapped = {ck: label_results_new[ok] for ck, ok in zip(cleaned_keys,
+                                                                    old_keys)}
+            label_results_new.clear()
+            label_results_new.update(remapped)
         all_results[ind] = label_results_new
 
     if all(len(r) == 0 for r in all_results):
         print('No results found: glob pattern(s) excluded all matches.')
         sys.exit(1)
-
-    if args.simplify_xpaths:
-        original_headers = {}
-        for label_results in all_results:
-            for key in label_results.keys():
-                original_headers[key] = key.split('/')[-1]
 
     if output_csv_path:
         clean_header_mapping = write_results_to_csv(all_results, new_columns,
@@ -1663,28 +1735,48 @@ def main(cmd_line=None):
             # header_info to be referenced later. Not all information will be put into
             # the generated label, since some information depends on whether the index
             # file is fixed-width or delimited.
+            SPECIAL_TYPES = {
+                'lid': 'pds:ASCII_LID',
+                'bundle_lid': 'pds:ASCII_LID',
+                'filename': 'pds:ASCII_File_Name',
+                'filepath': 'pds:ASCII_File_Specification_Name',
+                'bundle': 'pds:ASCII_Text_Preserved',
+            }
+
+            # alias -> original (skip empty aliases)
+            alias_to_original = {v: k for k, v in extra_terms_mapping.items() if v}
+
             for header in headers:
                 whole_header = header
                 whole_header_length = len(whole_header)
+
                 if args.fixed_width:
                     header = header.strip()
+
                 if args.clean_header_field_names:
                     full_header = header
                     header = clean_header_mapping[header]
-                if (header in valid_add_extra_file_info and 'lid' in header):
-                    true_type = 'pds:ASCII_LID'
-                elif header == 'filename':
-                    true_type = 'pds:ASCII_File_Name'
-                elif header == 'filepath':
-                    true_type = 'pds:ASCII_File_Specification_Name'
-                elif header == 'bundle':
-                    true_type = 'pds:ASCII_Text_Preserved'
-                else:
-                    parts = header.split('/')
-                    name = parts[-1].split('<')[0].split(':')[-1]
 
+                # If this header is a renamed alias, map back to the original key
+                original = alias_to_original.get(header)
+
+                # Special fields: accept either canonical or alias
+                if header in SPECIAL_TYPES or (original in SPECIAL_TYPES):
+                    canonical = header if header in SPECIAL_TYPES else original
+                    true_type = SPECIAL_TYPES[canonical]
+
+                else:
+                    basis = original or header
+                    name = basis.split('/')[-1].split('<')[0].split(':')[-1]
                     true_type = get_true_type(xsd_files, name, namespaces)
 
+                if not true_type:  # pragma: no cover
+                    raise ValueError(
+                        f"Could not resolve schema type for header '{header}' "
+                        f"(original: '{original or header}')"
+                    )
+
+                # Strip any namespace prefix
                 true_type = true_type.split(':')[-1]
                 field_number += 1
 

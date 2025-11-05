@@ -1,0 +1,6 @@
+# Start of file
+lid,LID
+bundle,bundle_name
+bundle_lid,bundle_LID
+filename,file_name
+filepath,path_to_file
