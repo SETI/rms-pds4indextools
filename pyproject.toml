@@ -1,0 +1,160 @@
+[build-system]
+requires = ["setuptools", "setuptools_scm[toml]"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rms-pds4indextools"
+dynamic = ["version"]
+description = "TODO"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "TODO"
+]
+license = {text = "Apache-2.0"}
+authors = [
+  {name = "Robert S. French", email = "rfrench@seti.org"}
+]
+maintainers = [
+  {name = "Robert S. French", email = "rfrench@seti.org"}
+]
+keywords = ["TODO"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Natural Language :: English",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Astronomy",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Utilities",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows"
+]
+
+[project.urls]
+Homepage = "https://github.com/SETI/rms-pds4indextools"
+Documentation = "https://rms-pds4indextools.readthedocs.io/en/latest"
+Repository = "https://github.com/SETI/rms-pds4indextools"
+Source = "https://github.com/SETI/rms-pds4indextools"
+Issues = "https://github.com/SETI/rms-pds4indextools/issues"
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
+testpaths = ["tests"]
+# TODO Update desired parallelism
+addopts = ["-n", "auto", "--cov=src", "--strict-markers", "--strict-config"]
+markers = []
+
+[tool.setuptools]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"pds4indextools" = ["py.typed"]
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+write_to = "src/pds4indextools/_version.py"
+
+[project.optional-dependencies]
+dev = [
+  "pds4indextools",
+  "coverage>=7.0",
+  # "mypy>=1.0",
+  "pymarkdownlnt>=0.9.35",
+  "pytest>=7.0",
+  "pytest-cov>=4.0",
+  "pytest-xdist>=3.8.0",
+  "ruff>=0.8",
+  # "bandit[toml]>=1.8",
+  "pyroma>=4.2",
+  # "vulture>=2.14",
+  "pds4indextools[docs]",
+]
+docs = [
+  "myst-parser",
+  "sphinx>=7",
+  "sphinxcontrib-mermaid",
+  "sphinx-rtd-theme",
+]
+
+[project.scripts]
+#TODO = "main.pds4indextools:main"
+
+# Tool configuration
+
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ["pds4indextools"]
+omit = ["tests/*", "_version.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise NotImplementedError",
+]
+fail_under = 90
+
+[tool.mypy]
+strict = true
+disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = "pds4indextools._version"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# module = ["pds4indextools.*"]
+# ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = [
+#  "TODO"
+]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+# Explicit rule set (recommended for library projects). Categories:
+# E, W = pycodestyle errors/warnings; F = Pyflakes; I = isort; UP = pyupgrade;
+# B = bugbear; SIM = simplify; C4 = comprehensions; A = builtins (no shadowing);
+# N = pep8-naming; PT = pytest-style; RUF = Ruff-specific (e.g. unused noqa).
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "A", "N", "PT", "RUF"]
+# PT011 - pytest.raises is too broad.
+# SIM105 - Use contextlib.suppress for suppressions.
+# SIM108 - Use ternary operator for simple if/else.
+extend-ignore = ["PT011", "SIM105", "SIM108"]
+
+[tool.ruff.lint.per-file-ignores]
+#"TODO" = ["TODO"]
+
+[tool.pymarkdown.plugins.md013]
+# Line length (disable so README/CONTRIBUTING can use longer lines).
+enabled = false
+
+[tool.pymarkdown.plugins.md033]
+# Inline HTML (e.g. <br>) allowed in Markdown.
+enabled = false
+
+# Uncomment when enabling bandit in [project.optional-dependencies].dev.
+# [tool.bandit]
+# exclude_dirs = ["tests", "venv", ".venv"]
+# targets = ["src"]
+
+# Uncomment when enabling vulture in [project.optional-dependencies].dev.
+# [tool.vulture]
+# paths = ["src"]
+# exclude = ["tests/"]
+# min_confidence = 70
