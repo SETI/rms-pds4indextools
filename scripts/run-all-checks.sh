@@ -89,12 +89,12 @@ SCOPE_SPECIFIED=false
 # Per-check defaults (override by exporting before invoking this script, or
 # permanently change here)
 : "${ENABLE_RUFF_CHECK:=true}"
-: "${ENABLE_RUFF_FORMAT:=false}"
-: "${ENABLE_MYPY:=false}"
+: "${ENABLE_RUFF_FORMAT:=true}"
+: "${ENABLE_MYPY:=true}"
 : "${ENABLE_PYTEST:=true}"
 : "${ENABLE_PYROMA:=true}"
-: "${ENABLE_BANDIT:=false}"
-: "${ENABLE_VULTURE:=false}"
+: "${ENABLE_BANDIT:=true}"
+: "${ENABLE_VULTURE:=true}"
 : "${ENABLE_SPHINX:=true}"
 : "${ENABLE_PYMARKDOWN:=true}"
 
