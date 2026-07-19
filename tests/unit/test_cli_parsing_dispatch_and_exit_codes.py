@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 from pds4indextools.cli import (
+    CopyDefaultConfigArgs,
     CopyDefaultConfigResult,
     GenerateIndexFileArgs,
     GenerateIndexFileResult,
@@ -24,6 +25,7 @@ from pds4indextools.cli import (
     GenerateXpathListResult,
     cli_entrypoint,
     main,
+    run_copy_default_config,
     run_generate_index_file,
     run_generate_xpath_list,
 )
@@ -876,8 +878,9 @@ def test_cli_entrypoint_calls_sys_exit_with_main_result(
 def test_run_copy_default_config_writes_default(tmp_path: Path) -> None:
     """R-CLI-030: ``copy_default_config`` writes the packaged default config."""
     dest = tmp_path / 'fresh.yaml'
-    assert main(['copy_default_config', '--output-file', str(dest)]) == 0
-    assert isinstance(CopyDefaultConfigResult(output_path=dest), CopyDefaultConfigResult)
+    result = run_copy_default_config(CopyDefaultConfigArgs(output_file=dest))
+    assert isinstance(result, CopyDefaultConfigResult)
+    assert result.output_path == dest.resolve()
     assert 'Default configuration' in dest.read_text(encoding='utf-8')
 
 
@@ -942,6 +945,59 @@ def test_register_label_parse_error_raises(seeded_cache_overlay: Path, tmp_path:
     )
     with pytest.raises(ParseError):
         run_generate_index_file(args)
+
+
+def test_fail_slow_bom_label_rejected_before_schema_registration(
+    seeded_cache_overlay: Path, tmp_path: Path
+) -> None:
+    """R-PARSE-001: a BOM label is rejected before its schemas register (#60).
+
+    Under ``--fail-slow`` the BOM label's ``ParseError`` is collected, but its
+    namespace never binds into the shared resolver, so it cannot provoke a
+    spurious ``SchemaVersionError`` against a valid later label that declares the
+    same namespace with a different schema URL.
+    """
+    bundle = tmp_path / 'bundle'
+    bundle.mkdir()
+    valid = (SIMPLE_BUNDLE / 'row1.lblx').read_bytes()
+    # A valid later label binding pds/v1 to the real (cached) schema URL.
+    (bundle / 'zzz_valid.lblx').write_bytes(valid)
+    # A BOM label binding the same pds/v1 namespace to a DIFFERENT schema URL:
+    # were its bindings registered before the BOM check, they would conflict with
+    # zzz_valid.lblx and raise a spurious SchemaVersionError (R-SCH-040).
+    conflicting = valid.replace(b'PDS4_PDS_1L00.xsd', b'PDS4_PDS_1B00.xsd')
+    (bundle / 'aaa_bom.lblx').write_bytes(b'\xef\xbb\xbf' + conflicting)
+    args = GenerateIndexFileArgs(
+        bundle_root=bundle,
+        patterns=('*.lblx',),
+        config_files=(SIMPLE_CFG, seeded_cache_overlay),
+        output_file=tmp_path / 'index.csv',
+        fail_slow=True,
+    )
+    with pytest.raises(FailSlowAggregateError) as excinfo:
+        run_generate_index_file(args)
+    errors = excinfo.value.errors
+    assert len(errors) == 1
+    assert isinstance(errors[0], ParseError)
+    assert 'UTF-8 BOM not permitted' in str(errors[0])
+    assert not any(isinstance(err, SchemaError) for err in errors)
+
+
+def test_fail_slow_bom_bundle_exits_2(seeded_cache_overlay: Path, tmp_path: Path) -> None:
+    """R-PARSE-001: a bundle with a BOM label under ``--fail-slow`` exits 2 (#60)."""
+    bundle = tmp_path / 'bundle'
+    bundle.mkdir()
+    valid = (SIMPLE_BUNDLE / 'row1.lblx').read_bytes()
+    (bundle / 'zzz_valid.lblx').write_bytes(valid)
+    (bundle / 'aaa_bom.lblx').write_bytes(b'\xef\xbb\xbf' + valid)
+    argv = _index_argv(
+        bundle,
+        '*.lblx',
+        config_files=(SIMPLE_CFG, seeded_cache_overlay),
+        output_file=tmp_path / 'index.csv',
+        extra=('--fail-slow',),
+    )
+    assert main(argv) == 2
 
 
 def test_specified_output_lblx_extension_uses_csv_for_data(
