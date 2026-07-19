@@ -37,15 +37,15 @@ Every bug report MUST include:
 ## Environment
 - **Python version**: [e.g., 3.12.4]
 - **OS**: [e.g., Ubuntu 24.04, macOS 14.5, Windows 11]
-- **Package version**: [e.g., rms-pds4indextools 0.3.1]
+- **Package version**: [e.g., REPONAME 0.3.1]
 - **Key dependency versions**: [e.g., numpy 2.2.1, scipy 1.14.0]
-- **Installation method**: [e.g., pip install rms-pds4indextools, editable install]
+- **Installation method**: [e.g., pip install REPONAME, editable install]
 
 ## Severity
 [Level] — [Brief justification]
 
 ## Steps to Reproduce
-1. Install: `pip install rms-pds4indextools==0.3.1`
+1. Install: `pip install REPONAME==0.3.1`
 2. Run:
    (Example)
 3. Observe the error.

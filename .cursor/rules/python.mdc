@@ -5,7 +5,7 @@ description: Python coding standards for writing correct, readable, maintainable
 
 # Python Best Practices
 
-Apply these rules to ALL new and modified Python code. This project is a Python library published on PyPI and documented on ReadTheDocs. **Minimum Python version: 3.10.**
+Apply these rules to ALL new and modified Python code. This project is a Python library published on PyPI and documented on ReadTheDocs. **Minimum Python version: 3.11.**
 
 ## 1. Naming and Style
 
@@ -50,7 +50,8 @@ Apply these rules to ALL new and modified Python code. This project is a Python 
 ## 4. Comments
 
 - ALWAYS write self-documenting code: meaningful names, simple structure, limited nesting.
-- NEVER include comments that merely restate the code, reference user requests, or describe modification history.
+- NEVER write a comment whose ONLY content is a restatement of the code, a user request, or modification history. A comment must earn its place by describing behavior or rationale the code itself cannot show.
+- An issue/ticket number is welcome AS A REFERENCE once a comment already describes the behavior or rationale. Good: `# Cap the tier when the fit is rank-deficient: an unobservable axis is an assumption, not a measurement (#221).` — it explains the behavior and cites the issue for further context. Not acceptable: `# Fix for #221.` — that is only historical.
 - ALWAYS include comments that explain the **rationale** behind non-obvious or complex logic.
 - ALWAYS preserve existing comments that are still accurate and relevant. Remove or update stale comments.
 
@@ -59,8 +60,7 @@ Apply these rules to ALL new and modified Python code. This project is a Python 
 ### Types
 
 - ALWAYS annotate all function/method parameters and return values, including `-> None` for functions (and `__init__`) that return nothing.
-- Use modern generic syntax (`list[str]`, `dict[str, int]`, `X | None`) for Python 3.10+.
-- Do not include `from __future__ import annotations` unless actually needed.
+- Use modern generic syntax (`list[str]`, `dict[str, int]`, `X | None`) for Python 3.11+.
 
 ### Mypy
 
@@ -83,46 +83,17 @@ Apply these rules to ALL new and modified Python code. This project is a Python 
 - ALWAYS include a docstring for every module, class, function, and method.
 - Follow **PEP 257** using **Google style**. Use `Parameters:` (not `Args:`).
 - Include `Returns:`, `Raises:`, and any important behavioral notes.
-- NEVER mention backwards compatibility or user requests in docstrings.
+- NEVER mention backwards compatibility, a user request, change history, or an issue/ticket number in a docstring. Docstrings are usage documentation for the published API, not a place to explain the code's provenance; describe only observable behavior. (Issue references are allowed in inline `#` code comments per Section 4, and in commit messages and PR descriptions.)
 - Docstrings MUST be detailed enough to write a black-box test from the docstring alone.
 - Wrap docstring text to **90** characters.
 - ALWAYS update docstrings when the associated code changes.
 
 ## 7. Testing
 
-### Test-driven development (TDD)
-
-- Use **test-driven development**: write tests first, then implement. Red → green → refactor.
-- Write tests BEFORE implementation based on stated requirements. If requirements are unclear, ask.
-- Run tests to confirm they fail, then implement, re-run, and fix until green.
-- After implementation, review tests to strengthen coverage.
-
-### Framework
-
-- ALWAYS include type annotations on test functions.
-- ALWAYS use `pytest` with `pytest-cov`.
-- ALWAYS use `pytest` with `pytest-xdist` and run tests with "-n auto".
-- ALWAYS write tests to be independent so that tests can be run in parallel.
-
-### Coverage and correctness
-
-- Target at least **90%** line coverage measured over the entire test suite (not a subset). Skipping hard-to-hit exception paths is acceptable.
-- NEVER write tests whose sole purpose is exercising code paths without asserting correctness.
-- Each `assert` MUST test exactly one condition (no `and` in assertions).
-- ALWAYS test for precise expected values, not ranges or existence checks. If the expected value is only known after implementation, update the test accordingly.
-- When multiple tests call the same function, use distinct inputs to maximize branch coverage, including edge cases and boundary values.
-- If two tests invoke the same code path but assert on different parts of the result, combine them into one test.
-- When testing exceptions, ALWAYS use `pytest.raises` as a context manager and assert on the exception **message content**, not just the exception type.
-
-### Test hygiene
-
-- If a test mutates a global, use a fixture or `try`/`finally` to restore the original value.
-- NEVER write a test that passes by ignoring an incorrect result or swallowing an exception. If the code is wrong, leave the failing test and explain why.
-- NEVER include line numbers, verbose rationale, or modification history in test comments. Keep comments to short (1-2 sentence) summaries useful for future maintainers.
-
-### Debugging
-
-- NEVER guess at bug causes. Use logic, stack traces, and targeted logging. If stuck in a fix loop, revert and re-approach from first principles. When necessary, ask for help.
+- All testing standards live in `python_testing` (pytest, fixtures,
+  parametrization, coverage targets, TDD, and test hygiene). Tests are
+  first-class code and MUST follow the naming, typing, docstring, and DRY rules
+  in this file as well.
 
 ## 8. Ruff Rule Categories (Default Set)
 
@@ -133,7 +104,7 @@ The template enables these Ruff lint categories in `pyproject.toml`. Use them as
 | **E**, **W** | pycodestyle | Style and formatting (indent, whitespace, line length). |
 | **F** | Pyflakes | Unused imports, undefined names, syntax issues. |
 | **I** | isort | Import sorting and grouping. |
-| **UP** | pyupgrade | Prefer modern Python (e.g. 3.10+ syntax). |
+| **UP** | pyupgrade | Prefer modern Python (e.g. 3.11+ syntax). |
 | **B** | flake8-bugbear | Common bugs (mutable defaults, assert, loop vars). |
 | **SIM** | flake8-simplify | Simpler alternatives (e.g. `in` instead of `not x == y`). |
 | **C4** | flake8-comprehensions | Prefer comprehensions over loops where clear. |

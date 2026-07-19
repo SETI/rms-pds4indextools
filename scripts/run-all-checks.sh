@@ -47,7 +47,7 @@
 #     ENABLE_PYTEST       (default: true)
 #     ENABLE_PYROMA       (default: true)
 #     ENABLE_BANDIT       (default: false)
-#     ENABLE_VULTURE      (default: false)
+#     ENABLE_VULTURE      (default: true)
 #     ENABLE_SPHINX       (default: true)
 #     ENABLE_PYMARKDOWN   PyMarkdown scan (default: true)
 #
@@ -93,7 +93,7 @@ SCOPE_SPECIFIED=false
 : "${ENABLE_MYPY:=true}"
 : "${ENABLE_PYTEST:=true}"
 : "${ENABLE_PYROMA:=true}"
-: "${ENABLE_BANDIT:=true}"
+: "${ENABLE_BANDIT:=false}"
 : "${ENABLE_VULTURE:=true}"
 : "${ENABLE_SPHINX:=true}"
 : "${ENABLE_PYMARKDOWN:=true}"
