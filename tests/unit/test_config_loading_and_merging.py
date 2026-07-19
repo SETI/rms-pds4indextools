@@ -184,7 +184,8 @@ def test_missing_logical_identifier_rejected(tmp_path: Path) -> None:
 def test_missing_product_class_rejected(tmp_path: Path) -> None:
     """A ``label_contents`` without ``product_class`` is rejected by name.
 
-    T-ID: T-CFG-021, R-CFG-031.
+    Proves ``product_class`` is a required field in the merged config (R-LBL-011).
+    T-ID: T-CFG-021, R-CFG-031, R-LBL-011.
     """
     content = 'label_contents:\n  logical_identifier: urn:nasa:pds:test:test:test_index\n'
     path = _write_config(tmp_path, 'no_pc.yaml', content)

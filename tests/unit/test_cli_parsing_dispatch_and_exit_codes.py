@@ -11,6 +11,7 @@ routes every error message through the logging handler (critique skill §21).
 import dataclasses
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -179,6 +180,46 @@ def test_generate_index_file_no_bundle_root_exits_2_argparse(
     assert 'bundle-root' in capsys.readouterr().err
 
 
+def test_subcommand_flag_before_subcommand_name_rejected(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """R-CLI-004: a subcommand flag placed before the subcommand name is a usage error.
+
+    ``--bundle-root`` belongs to ``generate_index_file`` and must appear after
+    the subcommand keyword; the top-level parser has no such flag (no shared
+    parent parser is visible before the subcommand), so argparse exits 2.
+    """
+    assert main(['--bundle-root', 'x', 'generate_index_file', 'p']) == 2
+    assert 'usage:' in capsys.readouterr().err
+
+
+def test_glob_expansion_follows_symlinked_directory(
+    seeded_cache_overlay: Path, tmp_path: Path
+) -> None:
+    """R-FS-003: glob expansion follows symlinks, discovering labels through them.
+
+    A label lives in a real subdirectory; a sibling symlink points at that
+    directory. A pattern routed through the symlink discovers the label,
+    proving ``Path.glob`` follows symlinks.
+    """
+    bundle = tmp_path / 'bundle'
+    real = bundle / 'real'
+    real.mkdir(parents=True)
+    (real / 'row1.lblx').write_bytes((SIMPLE_BUNDLE / 'row1.lblx').read_bytes())
+    (bundle / 'link').symlink_to(real, target_is_directory=True)
+    out = tmp_path / 'index.csv'
+    result = run_generate_index_file(
+        GenerateIndexFileArgs(
+            bundle_root=bundle,
+            patterns=('link/*.lblx',),
+            config_files=(SIMPLE_CFG, seeded_cache_overlay),
+            output_file=out,
+        )
+    )
+    assert result.rows_written == 1
+    assert out.is_file()
+
+
 def test_generate_index_file_nonexistent_bundle_exits_1(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -252,7 +293,11 @@ def test_absolute_windows_pattern_rejected(caplog: pytest.LogCaptureFixture) -> 
 def test_three_config_files_merged_in_order(
     seeded_cache_overlay: Path, chdir_tmp: Path, tmp_path: Path
 ) -> None:
-    """T-CLI-030, R-CFG-051: the last config file in the chain wins."""
+    """T-CLI-030, R-CFG-051, R-CLI-012: the last config file in the chain wins.
+
+    ``--config-file`` is supplied three times (``action='append'``) and the
+    files are loaded and overlaid in the order given (R-CLI-012).
+    """
     label_contents = (
         'label_contents:\n'
         '  logical_identifier: urn:nasa:pds:test_simple:index:index\n'
@@ -307,7 +352,12 @@ def test_label_template_default_packaged_path_used(
 
 
 def test_custom_label_template_honored(seeded_cache_overlay: Path, tmp_path: Path) -> None:
-    """T-LBL-002, R-LBL-002: a supplied ``--label-template`` is rendered."""
+    """T-LBL-002, R-LBL-002, R-LBL-003: a supplied ``--label-template`` is rendered.
+
+    The template is arbitrary text with no PDS4 structure; it is rendered
+    without any tool-side validation beyond what PdsTemplate performs at parse
+    time, exercising the no-template-validation contract (R-LBL-003).
+    """
     template = tmp_path / 'custom.xml'
     template.write_text('CUSTOM-TEMPLATE-SENTINEL\n', encoding='utf-8')
     out = tmp_path / 'out.csv'
@@ -483,6 +533,43 @@ def test_each_subcommand_help_has_examples(sub: str, capsys: pytest.CaptureFixtu
     """T-CLI-071, R-CLI-040: every subcommand help carries examples."""
     assert main([sub, '--help']) == 0
     assert 'Example' in capsys.readouterr().out
+
+
+_BRITISH_SPELLINGS = (
+    'colour',
+    'behaviour',
+    'optimise',
+    'organise',
+    'licence',
+    'analyse',
+    'catalogue',
+    'labelled',
+    'cancelled',
+    'whilst',
+)
+_DOUBLE_SPACE_AFTER_PERIOD = re.compile(r'\.  [A-Za-z]')
+
+
+@pytest.mark.parametrize(
+    'argv',
+    [
+        ['--help'],
+        ['generate_index_file', '--help'],
+        ['generate_xpath_list', '--help'],
+        ['copy_default_config', '--help'],
+    ],
+    ids=['top', 'index', 'xpath', 'copy'],
+)
+def test_help_text_american_english_single_spaced(
+    argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """R-CLI-041: help text uses American English and one space between sentences."""
+    assert main(argv) == 0
+    text = capsys.readouterr().out
+    assert _DOUBLE_SPACE_AFTER_PERIOD.search(text) is None
+    lowered = text.lower()
+    for word in _BRITISH_SPELLINGS:
+        assert word not in lowered, f'British spelling {word!r} in help text'
 
 
 def test_xpath_list_rejects_label_template_arg(capsys: pytest.CaptureFixture[str]) -> None:
@@ -677,7 +764,11 @@ def test_failslow_aggregate_summary_printed_to_stderr(
     chdir_tmp: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """T-FSLOW-002 (CLI leg), R-FSLOW-120: the summary names every failed label."""
+    """T-FSLOW-002 (CLI leg), R-FSLOW-120, R-CLI-016: the summary names every failed label.
+
+    The run passes ``--fail-slow`` (the boolean flag, default off) and observes
+    fail-slow accumulation, exercising the flag's parsing and effect (R-CLI-016).
+    """
 
     def fake_scrape(label_path: Path, **_kwargs: object) -> ScrapeResult:
         raise LidError('bad lid', file_path=label_path)

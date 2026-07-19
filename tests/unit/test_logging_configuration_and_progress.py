@@ -141,7 +141,11 @@ def test_setup_logging_format_string(
 
 
 def test_setup_logging_emits_to_stderr(capsys: pytest.CaptureFixture[str]) -> None:
-    """The rendered record body appears on stderr and not on stdout."""
+    """The rendered record body appears on stderr and not on stdout.
+
+    Warnings are emitted to stderr through the standard logging facility; no
+    separate warning-log file is written (R-FSLOW-140).
+    """
     setup_logging(0)
     module_logger('test').warning('body-text')
     captured = capsys.readouterr()

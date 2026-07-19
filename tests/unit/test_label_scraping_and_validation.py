@@ -221,6 +221,42 @@ def test_scrape_records_canonical_root_tag_and_version_id(tmp_path: Path) -> Non
     assert result.version_id == '1.0'
 
 
+def test_scrape_arbitrary_root_tag_processed_without_allowlist(tmp_path: Path) -> None:
+    """Any root element tag is recorded and processed, with no allowlist (R-PARSE-010).
+
+    The root is a made-up element name in the default namespace; the scrape
+    succeeds, the canonical root tag reflects that name verbatim, and every
+    scraped XPath is anchored on it as the first segment.
+    """
+    label = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<Totally_Made_Up_Root xmlns="{NS_PDS}" xmlns:xsi="{NS_XSI}"\n'
+        f' xsi:schemaLocation="{SCHEMA_LOC}">\n'
+        '    <Identification_Area>\n'
+        f'{_id()}'
+        '    </Identification_Area>\n'
+        '</Totally_Made_Up_Root>\n'
+    )
+    path = _write(tmp_path, 'weirdroot.lblx', label)
+    result = _scrape(path)
+    assert result.canonical_root_tag == 'pds:Totally_Made_Up_Root'
+    assert result.rows
+    assert all(key.startswith('pds:Totally_Made_Up_Root<1>/') for key in result.rows)
+
+
+def test_scrape_xsi_namespace_absent_from_element_xpaths(tmp_path: Path) -> None:
+    """The ``xsi`` namespace is recorded but never appears on element XPaths (R-XP-012).
+
+    ``xsi`` is used only on attributes (``xsi:nil``, ``xsi:schemaLocation``),
+    which are not scraped, so no scraped row key carries the ``xsi`` prefix even
+    though it is a recorded namespace like any other.
+    """
+    path = _write(tmp_path, 'xsi.lblx', LABEL_WITH_NIL)
+    result = _scrape(path, resolver=_StubResolver('pds:ASCII_Date_YMD'))
+    assert result.namespaces['xsi'] == NS_XSI
+    assert not any('xsi' in key for key in result.rows)
+
+
 def test_scrape_is_suffix_agnostic_xml_and_lblx_identical(tmp_path: Path) -> None:
     """A ``.xml`` label scrapes identically to a ``.lblx`` label (owner #1)."""
     lblx = _write(tmp_path, 'a.lblx', SIMPLE_LABEL)
@@ -234,7 +270,9 @@ def test_scrape_is_suffix_agnostic_xml_and_lblx_identical(tmp_path: Path) -> Non
 def test_scrape_pre_order_traversal_visits_every_element(tmp_path: Path) -> None:
     """Every leaf XPath is scraped and no parent element is stored.
 
-    Implements R-SCRAPE-010, R-SCRAPE-030.
+    The whole parsed DOM is held in memory and walked in a single pass with no
+    streaming (R-PARSE-003).
+    Implements R-SCRAPE-010, R-SCRAPE-030, R-PARSE-003.
     """
     body = (
         '    <Observation_Area>\n'

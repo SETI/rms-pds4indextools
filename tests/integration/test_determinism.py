@@ -130,7 +130,13 @@ def test_two_runs_byte_identical_with_filesystem_order_randomization(
     frozen_csv_mtime: int,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """R-IDX-002: reversing filesystem iteration order changes nothing byte-wise."""
+    """R-IDX-002, R-DISC-020: reversing filesystem iteration order changes nothing byte-wise.
+
+    Discovered files are sorted by ``filespec`` before any per-label work, so
+    scrape order, row order, and output bytes are independent of the order
+    ``Path.glob`` returns; reversing that order yields identical output
+    (R-DISC-020).
+    """
     first = _run(
         'multi_namespace',
         'multi_namespace.yaml',

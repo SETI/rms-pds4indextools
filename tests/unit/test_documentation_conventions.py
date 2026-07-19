@@ -15,7 +15,7 @@ import inspect
 import re
 from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import cast, get_type_hints
 
 import pytest
 
@@ -69,6 +69,23 @@ def _public_classes() -> list[type]:
         if inspect.isclass(obj):
             classes.append(obj)
     return classes
+
+
+def _public_callables() -> list[str]:
+    """Return the ``__all__`` names bound to a public function or class."""
+    names: list[str] = []
+    for name in pds4indextools.__all__:
+        obj = getattr(pds4indextools, name)
+        if inspect.isclass(obj) or inspect.isfunction(obj):
+            names.append(name)
+    return sorted(names)
+
+
+def _public_functions() -> list[str]:
+    """Return the ``__all__`` names bound to a module-level public function."""
+    return sorted(
+        name for name in pds4indextools.__all__ if inspect.isfunction(getattr(pds4indextools, name))
+    )
 
 
 def _documented_objects() -> list[object]:
@@ -171,6 +188,40 @@ def test_pragma_no_cover_budget() -> None:
     for path in _src_py_files():
         count += path.read_text(encoding='utf-8').count('# pragma: no cover')
     assert count <= 5, f'pragma: no cover budget exceeded: {count} > 5'
+
+
+@pytest.mark.parametrize('name', _public_callables())
+def test_every_public_callable_has_docstring(name: str) -> None:
+    """R-API-001: every public function or class in ``__all__`` has a docstring."""
+    obj = getattr(pds4indextools, name)
+    doc = inspect.getdoc(obj)
+    assert doc is not None, f'{name} has no docstring'
+    assert doc.strip() != '', f'{name} has an empty docstring'
+
+
+@pytest.mark.parametrize('name', _public_functions())
+def test_every_public_function_is_fully_type_annotated(name: str) -> None:
+    """R-API-002: every public function in ``__all__`` is fully type-annotated."""
+    func = getattr(pds4indextools, name)
+    signature = inspect.signature(func)
+    for parameter in signature.parameters.values():
+        if parameter.name in ('self', 'cls'):
+            continue
+        assert parameter.annotation is not inspect.Parameter.empty, (
+            f'{name}: parameter {parameter.name!r} is not annotated'
+        )
+    assert signature.return_annotation is not inspect.Signature.empty, (
+        f'{name}: return value is not annotated'
+    )
+
+
+@pytest.mark.parametrize('cls', _public_classes(), ids=lambda c: c.__name__)
+def test_every_public_class_annotations_resolve(cls: type) -> None:
+    """R-API-002: a public class's field annotations are complete and resolvable."""
+    # ``get_type_hints`` raises if any annotation is a broken or unresolvable
+    # forward reference, so a clean return proves the class's annotations are
+    # well-formed (error classes simply carry no fields and return ``{}``).
+    get_type_hints(cls)
 
 
 def _load_script_main(script_name: str) -> Callable[[], int]:
