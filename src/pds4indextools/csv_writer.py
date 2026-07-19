@@ -149,8 +149,13 @@ def sort_rows(
     """
     if len(output_section.sort_by) == 0:
         return list(rows)
+    if len(rows) == 0:
+        # With no rows the emitted column set is unknowable here, so there is
+        # nothing to sort and nothing to validate; ``build_plan`` performs the
+        # authoritative R-SORT-020 check against the declared columns.
+        return []
     specs = [parse_sort_key(spec) for spec in output_section.sort_by]
-    known_columns = set(rows[0].keys()) if len(rows) > 0 else set()
+    known_columns = set(rows[0].keys())
     for column, _descending in specs:
         if column not in known_columns:
             raise ConfigError(f'sort_by references unknown column {column!r}') from None
@@ -308,8 +313,16 @@ def build_plan(
 
     Implements R-CSV-003, R-CSV-040, R-CSV-060, R-CSV-070, and R-CSV-080.
     """
-    sorted_rows = sort_rows(rows, output_section)
     columns_tuple = tuple(columns)
+    # Validate ``sort_by`` against the authoritative emitted column set so
+    # R-SORT-020 holds for any row count, including zero rows where
+    # ``sort_rows`` cannot see the columns.
+    emitted_columns = set(columns_tuple)
+    for spec in output_section.sort_by:
+        column = parse_sort_key(spec)[0]
+        if column not in emitted_columns:
+            raise ConfigError(f'sort_by references unknown column {column!r}') from None
+    sorted_rows = sort_rows(rows, output_section)
     stats = tuple(
         _column_stat(
             name,

@@ -117,9 +117,17 @@ def test_build_plan_quoting_column_without_comma_marks_must_quote_false() -> Non
 
 
 def test_build_plan_header_not_in_must_quote_calculation() -> None:
-    """Only data values drive ``must_quote``; headers never do (R-CSV-052)."""
-    plan = _make_plan([{'name': 'plain'}, {'name': 'also-plain'}], ['name'])
-    assert _stat_for(plan, 'name').must_quote is False
+    """A comma in the HEADER never triggers quoting; only data does (R-CSV-052)."""
+    # Hand ``build_plan`` a comma-containing header directly, bypassing config
+    # validation, with comma-free data. The header's comma must not mark the
+    # column ``must_quote``.
+    plan = _make_plan(
+        [{'a,b': 'plain'}, {'a,b': 'also-plain'}],
+        ['a,b'],
+        column_is_auto={'a,b': False},
+        auto_tokens={},
+    )
+    assert _stat_for(plan, 'a,b').must_quote is False
 
 
 def test_write_csv_variable_width_no_trailing_comma_per_row(tmp_path: Path) -> None:
@@ -283,7 +291,7 @@ def test_sort_rows_unknown_column_raises_configerror() -> None:
     assert "'unknown'" in str(exc_info.value)
 
 
-def test_sort_rows_multi_key_stable() -> None:
+def test_sort_rows_multi_key_secondary_key_breaks_tie() -> None:
     """A tie on the first key is broken by the second key (R-SORT-020)."""
     rows = [
         {'k1': 'a', 'k2': '2'},
@@ -292,6 +300,36 @@ def test_sort_rows_multi_key_stable() -> None:
     ]
     result = sort_rows(rows, OutputSection(sort_by=['k1', 'k2']))
     assert [row['k2'] for row in result] == ['1', '2', '0']
+
+
+def test_sort_rows_multi_key_stable() -> None:
+    """Rows equal on ALL sort keys keep their input order (stable sort, R-SORT-020)."""
+    rows = [
+        {'k1': 'a', 'k2': 'x', 'tag': 'first'},
+        {'k1': 'a', 'k2': 'x', 'tag': 'second'},
+        {'k1': 'a', 'k2': 'x', 'tag': 'third'},
+    ]
+    result = sort_rows(rows, OutputSection(sort_by=['k1', 'k2']))
+    assert [row['tag'] for row in result] == ['first', 'second', 'third']
+
+
+def test_sort_rows_empty_rows_returns_empty_without_raising() -> None:
+    """Sorting zero rows returns ``[]`` and never validates columns (R-SORT-020)."""
+    result = sort_rows([], OutputSection(sort_by=['anything']))
+    assert result == []
+
+
+def test_build_plan_empty_rows_valid_sort_by_does_not_raise() -> None:
+    """A ``sort_by`` in the emitted columns is valid at zero rows (R-SORT-020)."""
+    plan = _make_plan([], ['a', 'b'], sort_by=['a'])
+    assert plan.rows == ()
+
+
+def test_build_plan_empty_rows_invalid_sort_by_raises_configerror() -> None:
+    """A ``sort_by`` outside the emitted columns still raises at zero rows (R-SORT-020)."""
+    with pytest.raises(ConfigError) as exc_info:
+        _make_plan([], ['a', 'b'], sort_by=['c'])
+    assert "'c'" in str(exc_info.value)
 
 
 def test_sort_rows_string_comparison_on_post_normalization_value() -> None:
