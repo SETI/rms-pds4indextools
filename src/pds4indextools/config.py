@@ -341,7 +341,8 @@ class ColumnSpec(BaseModel):
     Parameters:
         xpath: A canonical XPath selector matched by exact string equality;
             it must contain no internal whitespace.
-        auto: One of the five auto-column tokens (:data:`AUTO_COLUMN_TOKENS`).
+        auto: One of the five auto-column tokens
+            (:data:`~pds4indextools.config.AUTO_COLUMN_TOKENS`).
         name: The emitted CSV header; ``None`` or blank falls back to the
             selector text (R-MAP-012.1).
 

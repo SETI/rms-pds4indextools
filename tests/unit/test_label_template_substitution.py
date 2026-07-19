@@ -280,6 +280,22 @@ def test_build_substitution_dict_label_contents_passthrough_preserves_extras() -
     assert result['custom_var'] == 'hello'
 
 
+def test_build_substitution_dict_passes_no_creation_date_value() -> None:
+    """R-LBL-080: the tool computes/passes no creation-date value into the dict.
+
+    Given a ``LabelContents`` with no user-supplied creation timestamp, the
+    assembled substitution dict carries no key naming a creation date, and the
+    ``File_Area_*`` holders the template reads a creation date from are ``None``.
+    The template's ``$IF(File_Area_Ancillary['creation_date_time'])`` therefore
+    stays false and the label's ``<creation_date_time>`` comes only from the
+    ``$FILE_ZULU(...)$`` time macro rather than any value the tool injected.
+    """
+    result = build_substitution_dict(**_make_inputs(_ONE_XPATH_COLUMN))
+    assert [key for key in result if 'creation' in key.lower()] == []
+    assert result['File_Area_Ancillary'] is None
+    assert result['File_Area_Metadata'] is None
+
+
 def test_build_substitution_dict_records_equals_row_count() -> None:
     """R-LBL-012: ``records`` equals the number of data rows in the plan."""
     rows = ({'lid_col': 'a'}, {'lid_col': 'b'}, {'lid_col': 'c'})

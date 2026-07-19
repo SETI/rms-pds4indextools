@@ -18,7 +18,9 @@ import sys
 from pathlib import Path
 
 
-R_ID_RE = re.compile(r'R-[A-Z]+-\d{3}')
+# Uses [0-9] (not \d): this same pattern string is handed to ``git grep -oE``
+# (POSIX ERE), where ``\d`` is a literal 'd' and would match nothing.
+R_ID_RE = re.compile(r'R-[A-Z]+-[0-9]{3}')
 ROOT = Path(__file__).resolve().parent.parent
 
 # R-ID families satisfied by repository infrastructure, packaging,

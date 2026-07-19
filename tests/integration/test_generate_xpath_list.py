@@ -87,7 +87,13 @@ def test_xpath_list_emits_yaml_columns_block(seeded_cache_overlay: Path, tmp_pat
 def test_xpath_list_first_occurrence_order_across_alphabetically_sorted_labels(
     seeded_cache_overlay: Path, tmp_path: Path
 ) -> None:
-    """T-XPL-002, R-XPL-010: first-occurrence order over alphabetized labels."""
+    """T-XPL-002, R-XPL-010, R-XPL-001: first-occurrence order over alphabetized labels.
+
+    The run is driven by ``simple.yaml``, which declares three ``columns``
+    entries, yet the emitted list has five entries derived purely from the
+    XPaths discovered in the labels: the config ``columns:`` list is not
+    consulted (R-XPL-001).
+    """
     out = tmp_path / 'columns.yaml'
     _run(BUNDLES / 'multi_namespace', (CONFIGS / 'simple.yaml', seeded_cache_overlay), out)
     assert out.read_bytes() == (EXPECTED / 'multi_namespace.yaml').read_bytes()
@@ -102,7 +108,11 @@ def test_xpath_list_first_occurrence_order_across_alphabetically_sorted_labels(
 def test_xpath_list_output_is_loadable_as_config(
     seeded_cache_overlay: Path, tmp_path: Path
 ) -> None:
-    """Spec-amendment #12: the emitted block round-trips through load_config."""
+    """Spec-amendment #12, R-XPL-002: the emitted block round-trips through load_config.
+
+    The emitted XPaths are in canonical §10 form and load directly as ``xpath:``
+    selectors in a config ``columns:`` block (R-XPL-002).
+    """
     out = tmp_path / 'columns.yaml'
     _run(BUNDLES / 'simple_pds_only', (CONFIGS / 'simple.yaml', seeded_cache_overlay), out)
     loaded = yaml.safe_load(out.read_text(encoding='utf-8'))
@@ -132,7 +142,12 @@ def test_xpath_list_emits_canonical_form_with_predicate_one(
 def test_xpath_list_failslow_behaves_like_index_file(
     seeded_cache_overlay: Path, tmp_path: Path
 ) -> None:
-    """T-XPL-010, R-FSLOW-100: fail-slow accumulates a bad LID and writes no output."""
+    """T-XPL-010, R-FSLOW-100, R-CLI-020: fail-slow accumulates a bad LID, writes no output.
+
+    ``generate_xpath_list`` honors ``--fail-slow`` (and ``--bundle-root``,
+    ``PATTERN``, ``--config-file``) identically to ``generate_index_file``,
+    accumulating then aborting with no output (R-CLI-020).
+    """
     bundle = tmp_path / 'bundle'
     _write_label(bundle, 'good.lblx', lid='urn:nasa:pds:t:c:good')
     _write_label(bundle, 'bad.lblx', lid='not-a-urn')

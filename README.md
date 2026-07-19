@@ -30,7 +30,15 @@
 
 # Features
 
-`rms-pds4indextools` is TODO
+`rms-pds4indextools` scrapes PDS4 XML labels into a deterministic index CSV
+and its paired PDS4 label. It exposes the `pds4_create_xml_index`
+command-line program and a matching programmatic API.
+
+- Generate an index CSV from a bundle of PDS4 labels.
+- Generate the paired `.lblx` PDS4 label that describes the CSV.
+- Configure the output columns with XPath selectors and auto tokens.
+- Merge layered YAML configuration files onto a packaged default.
+- Emit a starter columns block from a bundle with `generate_xpath_list`.
 
 # Installation
 
@@ -43,11 +51,28 @@ pip install rms-pds4indextools
 
 # Getting Started
 
-TODO
+Generate an index file from the single-label `simple_pds_only` example
+bundle. Label discovery is glob-driven, so quote the pattern to keep the
+shell from expanding it:
+
+```sh
+pds4_create_xml_index generate_index_file \
+    --bundle-root tests/data/bundles/simple_pds_only \
+    --config-file tests/data/configs/simple.yaml \
+    --output-file index.csv \
+    '**/*.lblx'
+```
 
 Usage examples:
 
-TODO
+The command writes `index.csv`:
+
+```text
+LID,FILE_NAME,TITLE
+urn:nasa:pds:test_simple:index:row1,row1.lblx,Row 1
+```
+
+It also writes `index.lblx`, a PDS4 label that describes the CSV.
 
 Details are available in the [module documentation](https://rms-pds4indextools.readthedocs.io/en/latest/module.html).
 

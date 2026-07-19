@@ -176,6 +176,8 @@ def test_write_csv_fixed_width_pads_each_data_cell(tmp_path: Path) -> None:
     out = tmp_path / 'out.csv'
     write_csv(plan, out)
     lines = _data_lines(out.read_bytes(), b'\n')
+    # Neither fixed-width row ends with a trailing comma after the last column
+    # (R-CSV-072).
     assert lines == [b'x  ,yy', b'zzz,w ']
 
 
@@ -213,6 +215,7 @@ def test_write_csv_crlf_terminator(tmp_path: Path) -> None:
     plan = _make_plan([{'a': '1'}, {'a': '2'}], ['a'], line_ending='CRLF')
     out = tmp_path / 'out.csv'
     write_csv(plan, out)
+    # One header row ('a') is written before any data row (R-CSV-010).
     assert out.read_bytes() == b'a\r\n1\r\n2\r\n'
 
 
@@ -229,6 +232,8 @@ def test_write_csv_field_delimiter_always_comma(tmp_path: Path) -> None:
     plan = _make_plan([{'a': '1', 'b': '2'}], ['a', 'b'])
     out = tmp_path / 'out.csv'
     write_csv(plan, out)
+    # Variable-width row: each value plus a comma except after the last, then
+    # the terminator (R-CSV-060).
     assert _data_lines(out.read_bytes(), b'\n') == [b'1,2']
 
 

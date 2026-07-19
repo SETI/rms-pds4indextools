@@ -130,6 +130,7 @@ def test_simple_pds_only_happy_path(seeded_cache_overlay: Path, tmp_path: Path) 
     assert result.columns_written == 3
     assert out.is_file()
     assert out.with_suffix('.lblx').is_file()
+    # The header row values are the ``name`` of each config columns entry (R-CSV-011).
     assert out.read_text(encoding='utf-8').splitlines()[0] == 'LID,FILE_NAME,TITLE'
 
 
@@ -154,7 +155,12 @@ def test_simple_pds_only_byte_identical_to_expected(
 def test_default_output_paths_byte_golden(
     chdir_tmp: Path, frozen_time: None, data_root: Path, seeded_cache_overlay: Path
 ) -> None:
-    """T-CLI-060 (bytes leg), R-CLI-015: default-path CLI output matches golden."""
+    """T-CLI-060 (bytes leg), R-CLI-015: default-path CLI output matches golden.
+
+    The label carries exactly one ``<creation_date_time>`` line, produced by a
+    PdsTemplate timestamp macro rather than any tool-computed value; masking it
+    is what lets the rest of the label match golden byte-for-byte.
+    """
     argv = _index_argv(
         BUNDLES / 'simple_pds_only',
         '**/*.lblx',
@@ -176,7 +182,11 @@ def test_default_output_paths_byte_golden(
 def test_multi_namespace_three_labels_render_geom_and_rings_prefixes(
     seeded_cache_overlay: Path, tmp_path: Path
 ) -> None:
-    """R-XP-011, R-SCH-040: three labels resolve pds/geom/rings prefixes."""
+    """R-XP-011, R-SCH-040, R-CSV-020: three labels resolve pds/geom/rings prefixes.
+
+    One data row is written per scraped label, so a three-label bundle yields
+    exactly three data rows (R-CSV-020).
+    """
     out = tmp_path / 'index.csv'
     result = _run('multi_namespace', (CONFIGS / 'multi_namespace.yaml', seeded_cache_overlay), out)
     assert result.rows_written == 3
@@ -215,6 +225,8 @@ def test_repeated_tags_renumbered_in_canonical_form(
         out,
         frozen_csv_mtime=frozen_csv_mtime,
     )
+    # The data-row field order matches the header order column for column
+    # (R-CSV-021): header LID,OS1,OS2,OS3 aligns with the data cells below it.
     assert out.read_text(encoding='utf-8').splitlines() == [
         'LID,OS1,OS2,OS3',
         'urn:nasa:pds:test_rep:index:row1,OS_1,OS_2,OS_3',
@@ -457,6 +469,54 @@ def test_mapping_xpath_not_in_any_label_produces_empty_column(
     assert len(lines) == 4
 
 
+def test_missing_xpath_empty_even_when_present_in_another_label(
+    seeded_cache_overlay: Path, tmp_path: Path
+) -> None:
+    """R-MISS-020: a label missing a mapped XPath yields an empty cell even when
+    another label in the same run supplies that XPath.
+
+    Two labels are scraped: ``a_with_title.lblx`` carries a ``title`` element,
+    ``b_no_title.lblx`` omits it. ``simple.yaml`` maps ``title`` to the TITLE
+    column. The row for the title-less label must be empty in TITLE despite the
+    other row supplying a value for the same XPath.
+    """
+    bundle = tmp_path / 'bundle'
+    bundle.mkdir()
+
+    def _label(name: str, lid: str, *, title: str | None) -> None:
+        title_line = f'        <title>{title}</title>\n' if title is not None else ''
+        (bundle / name).write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1"\n'
+            ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n'
+            ' xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 '
+            f'{PDS_1L00_URL}">\n'
+            '    <Identification_Area>\n'
+            f'        <logical_identifier>{lid}</logical_identifier>\n'
+            '        <version_id>1.0</version_id>\n'
+            f'{title_line}'
+            '    </Identification_Area>\n'
+            '</Product_Observational>\n',
+            encoding='utf-8',
+        )
+
+    _label('a_with_title.lblx', 'urn:nasa:pds:t:c:a', title='Present')
+    _label('b_no_title.lblx', 'urn:nasa:pds:t:c:b', title=None)
+    out = tmp_path / 'index.csv'
+    runners_mod.run_generate_index_file(
+        GenerateIndexFileArgs(
+            bundle_root=bundle,
+            patterns=('**/*.lblx',),
+            config_files=(CONFIGS / 'simple.yaml', seeded_cache_overlay),
+            output_file=out,
+        )
+    )
+    lines = out.read_text(encoding='utf-8').splitlines()
+    assert lines[0] == 'LID,FILE_NAME,TITLE'
+    assert lines[1] == 'urn:nasa:pds:t:c:a,a_with_title.lblx,Present'
+    assert lines[2] == 'urn:nasa:pds:t:c:b,b_no_title.lblx,'
+
+
 def test_columns_not_listing_an_observed_xpath_drops_it(
     seeded_cache_overlay: Path, tmp_path: Path
 ) -> None:
@@ -519,6 +579,7 @@ def test_run_generate_index_file_programmatic_returns_result(
     result = _run('simple_pds_only', (CONFIGS / 'simple.yaml', seeded_cache_overlay), out)
     assert isinstance(result, GenerateIndexFileResult)
     assert result.csv_path == out.resolve()
+    # The label path is ``<csv_stem>.lblx`` next to the CSV (R-LBL-050).
     assert result.label_path == out.with_suffix('.lblx').resolve()
     assert result.rows_written == 1
     assert result.columns_written == 3
