@@ -1,3 +1,7 @@
+> **Historical.** This is the pre-rewrite reference implementation, kept for
+> algorithm reference only. See the top-level [`docs/`](../docs/) (and
+> `README.md`) for the current documentation.
+
 [![GitHub release; latest by date](https://img.shields.io/github/v/release/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/releases)
 [![GitHub Release Date](https://img.shields.io/github/release-date/SETI/rms-pds4indextools)](https://github.com/SETI/rms-pds4indextools/releases)
 [![Test Status](https://img.shields.io/github/actions/workflow/status/SETI/rms-pds4indextools/run-tests.yml?branch=main)](https://github.com/SETI/rms-pds4indextools/actions)
