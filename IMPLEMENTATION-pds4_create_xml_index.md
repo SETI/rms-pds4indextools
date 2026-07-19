@@ -4065,7 +4065,7 @@ XSDs that mimic the PDS4 type registry well enough to exercise the
 22-query chain in `schema_types.py`.
 
 `pds_v1_basic.xsd` (the seed contains enough to resolve `logical_identifier`,
-`version_id`, `title`, `description`, `editor_list`, `Citation_Information`):
+`version_id`, `title`, `name`, `description`, `editor_list`, `Citation_Information`):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -4113,6 +4113,11 @@ XSDs that mimic the PDS4 type registry well enough to exercise the
     </xs:simpleType>
   </xs:element>
   <xs:element name="title">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="name">
     <xs:simpleType>
       <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>
     </xs:simpleType>

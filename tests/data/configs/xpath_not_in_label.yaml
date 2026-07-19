@@ -1,5 +1,5 @@
 columns:
   - auto: lid
     name: LID
-  - xpath: pds:Product_Observational<1>/pds:Identification_Area<1>/pds:nonexistent<1>
+  - xpath: pds:Product_Observational<1>/pds:Identification_Area<1>/pds:description<1>
     name: GONE

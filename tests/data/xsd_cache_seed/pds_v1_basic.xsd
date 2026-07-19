@@ -47,6 +47,11 @@
       <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>
     </xs:simpleType>
   </xs:element>
+  <xs:element name="name">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>
+    </xs:simpleType>
+  </xs:element>
   <xs:element name="description">
     <xs:simpleType>
       <xs:restriction base="pds:ASCII_Text_Preserved"/>

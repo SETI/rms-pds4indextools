@@ -21,11 +21,8 @@ import responses
 from pds4indextools import (
     GenerateIndexFileArgs,
     GenerateIndexFileResult,
-    SchemaCache,
     SchemaNetworkError,
     SchemaResolutionError,
-    SchemaTypeResolver,
-    scrape_label,
 )
 from pds4indextools.cli import _runners as runners_mod
 from pds4indextools.cli import main
@@ -198,29 +195,35 @@ def test_nilled_label_substitutes_config_defaults(
     assert out.read_text(encoding='utf-8').splitlines()[1].split(',')[1] == '0002-01-01'
 
 
-# --- Renumbering (seed XSD cannot type pds:name; verify via scrape_label) -----
+# --- Renumbering ------------------------------------------------------------
 
 
-def test_repeated_tags_renumbered_in_canonical_form(seeded_xsd_cache: Path) -> None:
-    """T-XP-020, R-XP-020: sibling blocks scrape to dense <1>,<2>,<3> keys."""
-    label = BUNDLES / 'repeated_tags' / 'repeated.lblx'
-    resolver = SchemaTypeResolver(SchemaCache(cache_dir=seeded_xsd_cache))
-    from lxml import etree
+def test_repeated_tags_renumbered_in_canonical_form(
+    seeded_cache_overlay: Path, tmp_path: Path, frozen_time: None, frozen_csv_mtime: int
+) -> None:
+    """T-XP-020, R-XP-020: sibling blocks renumber to dense <1>,<2>,<3> keys.
 
-    resolver.register_label(label, etree.parse(str(label)).getroot())
-    result = scrape_label(
-        label,
-        bundle_root=label.parent,
-        resolver=resolver,
-        nillable_config={},
-        fixed_width_mode=False,
+    ``repeated_tags.yaml`` maps three columns (OS1/OS2/OS3) at the
+    renumbered ``pds:Observing_System<1..3>/pds:name<1>`` XPaths; a
+    byte-golden comparison through the full pipeline proves the canonical
+    renumbering feeds the CSV and label.
+    """
+    out = tmp_path / 'index.csv'
+    _run(
+        'repeated_tags',
+        (CONFIGS / 'repeated_tags.yaml', seeded_cache_overlay),
+        out,
+        frozen_csv_mtime=frozen_csv_mtime,
     )
-    base = 'pds:Product_Observational<1>/pds:Observation_Area<1>'
-    assert result.rows[f'{base}/pds:Observing_System<1>/pds:name<1>'] == 'OS_1'
-    assert result.rows[f'{base}/pds:Observing_System<2>/pds:name<1>'] == 'OS_2'
-    assert result.rows[f'{base}/pds:Observing_System<3>/pds:name<1>'] == 'OS_3'
-    name_values = {value for key, value in result.rows.items() if key.endswith('pds:name<1>')}
-    assert name_values == {'OS_1', 'OS_2', 'OS_3'}
+    assert out.read_text(encoding='utf-8').splitlines() == [
+        'LID,OS1,OS2,OS3',
+        'urn:nasa:pds:test_rep:index:row1,OS_1,OS_2,OS_3',
+    ]
+    assert out.read_bytes() == (EXPECTED / 'repeated_tags' / 'index.csv').read_bytes()
+    assert (
+        out.with_suffix('.lblx').read_bytes()
+        == (EXPECTED / 'repeated_tags' / 'index.lblx').read_bytes()
+    )
 
 
 # --- Failure paths that abort the run ----------------------------------------
@@ -433,23 +436,21 @@ def test_mapping_xpath_not_in_any_label_produces_empty_column(
 ) -> None:
     """T-MAP-080, T-NIL-040, R-MAP-311, R-MISS-010: an absent XPath yields empty cells.
 
-    The committed ``xpath_not_in_label.yaml`` targets ``pds:nonexistent``,
-    which the committed seed XSD cannot type, so an overlay written here
-    targets ``pds:description`` (typeable but absent from every label) to
-    exercise the missing-value path faithfully.
+    The committed ``xpath_not_in_label.yaml`` targets ``pds:description``,
+    which the seed XSD types successfully but which is absent from every
+    ``multi_namespace`` label, so the missing-value path is exercised
+    faithfully through the full pipeline.
     """
-    overlay = tmp_path / 'absent_column.yaml'
-    overlay.write_text(
-        'columns:\n'
-        '  - auto: lid\n'
-        '    name: LID\n'
-        '  - xpath: pds:Product_Observational<1>/pds:Identification_Area<1>/'
-        'pds:description<1>\n'
-        '    name: GONE\n',
-        encoding='utf-8',
-    )
     out = tmp_path / 'index.csv'
-    _run('multi_namespace', (CONFIGS / 'multi_namespace.yaml', overlay, seeded_cache_overlay), out)
+    _run(
+        'multi_namespace',
+        (
+            CONFIGS / 'multi_namespace.yaml',
+            CONFIGS / 'xpath_not_in_label.yaml',
+            seeded_cache_overlay,
+        ),
+        out,
+    )
     lines = out.read_text(encoding='utf-8').splitlines()
     assert lines[0] == 'LID,GONE'
     assert all(line.endswith(',') for line in lines[1:])
