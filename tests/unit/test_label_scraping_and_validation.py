@@ -615,7 +615,8 @@ def _nil_label(nil_attrs: str) -> str:
 def test_nil_substitution_known_dtype(tmp_path: Path) -> None:
     """A nilled element of a known dtype substitutes the config value.
 
-    Implements R-NIL-010, R-NIL-020 (T-NIL-001).
+    The element is detected as nil by ``xsi:nil="true"`` alone (R-NIL-001).
+    Implements R-NIL-001, R-NIL-010, R-NIL-020 (T-NIL-001).
     """
     path = _write(tmp_path, 'nil.lblx', LABEL_WITH_NIL)
     result = _scrape(path, resolver=_StubResolver('pds:ASCII_Date_YMD'))
@@ -648,7 +649,10 @@ def test_nil_unknown_dtype_in_config_raises_nilerror(tmp_path: Path) -> None:
 
 
 def test_empty_text_no_nil_attribute_treated_as_absent(tmp_path: Path) -> None:
-    """An empty leaf with no xsi:nil is omitted from rows (R-NIL-040, T-NIL-030)."""
+    """An empty leaf with no xsi:nil is omitted from rows (R-NIL-040, T-NIL-030).
+
+    Its absence from ``rows`` yields an empty cell downstream (R-MISS-010).
+    """
     body = '    <Observation_Area>\n        <empty></empty>\n    </Observation_Area>\n'
     path = _write(tmp_path, 'empty.lblx', _label(_id(), body))
     result = _scrape(path)
