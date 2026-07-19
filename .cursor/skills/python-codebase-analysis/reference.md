@@ -12,7 +12,7 @@ Use this when you need concrete examples for a dimension or wording guidance.
 
 **Best practices – library hygiene**
 - **Finding**: Library code uses `print()` for diagnostic output instead of logging. **Evidence**: `src/parser.py` lines 12, 78, 134. **Suggestion**: Replace with `logger.debug()`/`logger.info()` using a module-level `logger = logging.getLogger(__name__)`.
-- **Finding**: Top-level `__init__.py` configures the root logger with `logging.basicConfig()`. **Evidence**: `src/rms-pds4indextools/__init__.py` line 5. **Suggestion**: Remove; add `logging.getLogger(__name__).addHandler(logging.NullHandler())` instead. Libraries must not configure logging for their callers.
+- **Finding**: Top-level `__init__.py` configures the root logger with `logging.basicConfig()`. **Evidence**: `src/REPONAME/__init__.py` line 5. **Suggestion**: Remove; add `logging.getLogger(__name__).addHandler(logging.NullHandler())` instead. Libraries must not configure logging for their callers.
 - **Finding**: `sys.exit(1)` called in library function on validation failure. **Evidence**: `src/validator.py` line 42. **Suggestion**: Raise a `ValueError` (or a custom exception) and let the caller decide how to handle it.
 
 **Best practices – error messages**
@@ -27,7 +27,7 @@ Use this when you need concrete examples for a dimension or wording guidance.
 - **Finding**: Public API in `api.py` has no return type annotations; mypy is not run in CI. **Evidence**: `pyproject.toml` has no `[tool.mypy]`; `api.py` functions lack `->`. **Suggestion**: Add mypy to CI, enable strict mode, and annotate public functions first.
 
 **Testing**
-- **Finding**: Coverage is ~45%; module `core/solver.py` has no direct tests. **Evidence**: `coverage report`; no `tests/test_solver.py`. **Suggestion**: Add unit tests for solver entry points and key branches; aim for ≥80% on core.
+- **Finding**: Coverage is ~45%; module `core/solver.py` has no direct tests. **Evidence**: `coverage report`; no `tests/test_solver.py`. **Suggestion**: Add unit tests for solver entry points and key branches; aim for ≥90% on core.
 
 **Performance**
 - **Finding**: Config is re-read from disk inside a loop in `process_batch`. **Evidence**: `src/batch.py` `process_batch` calls `load_config()` per item. **Suggestion**: Load config once outside the loop and pass it in or use a module-level cache.
@@ -40,8 +40,8 @@ Use this when you need concrete examples for a dimension or wording guidance.
 - **Finding**: Feature flags and environment checks are scattered across 12 files. **Evidence**: Grep for `os.getenv("FEATURE_")`. **Suggestion**: Centralize in a `config` or `features` module and inject into call sites.
 
 **Maintainability – documentation quality**
-- **Finding**: README usage example calls `rms-pds4indextools.process(data)` but the function was renamed to `rms-pds4indextools.transform(data)` in v2.0. **Evidence**: `README.md` line 34 vs `src/rms-pds4indextools/__init__.py`. **Suggestion**: Update README examples to match the current API; consider a CI check that runs README code blocks.
-- **Finding**: Three public modules (`analysis`, `export`, `utils`) have no corresponding Sphinx `automodule` directive. **Evidence**: Compare `src/rms-pds4indextools/__init__.py` `__all__` against `docs/module.rst`. **Suggestion**: Add `.. automodule::` entries for each public module.
+- **Finding**: README usage example calls `REPONAME.process(data)` but the function was renamed to `REPONAME.transform(data)` in v2.0. **Evidence**: `README.md` line 34 vs `src/REPONAME/__init__.py`. **Suggestion**: Update README examples to match the current API; consider a CI check that runs README code blocks.
+- **Finding**: Three public modules (`analysis`, `export`, `utils`) have no corresponding Sphinx `automodule` directive. **Evidence**: Compare `src/REPONAME/__init__.py` `__all__` against `docs/module.rst`. **Suggestion**: Add `.. automodule::` entries for each public module.
 
 **Security**
 - **Finding**: Subprocess is invoked with `shell=True` and user-controlled input. **Evidence**: `src/runner.py` line 67. **Suggestion**: Use list form of arguments and avoid `shell=True`; validate/sanitize input.
@@ -54,7 +54,7 @@ Use this when you need concrete examples for a dimension or wording guidance.
 - **Finding**: CI does not run Sphinx build or PyMarkdown; only ruff and pytest. **Evidence**: `.github/workflows/run-tests.yml`. **Suggestion**: Add Sphinx and PyMarkdown steps to match the local `run-all-checks.sh` so documentation issues are caught before merge.
 
 **Dependencies – configuration consistency**
-- **Finding**: Ruff is configured with `line-length = 88` but the project rule says 100. **Evidence**: `pyproject.toml` `[tool.ruff]` vs `.cursor/rules/python_best_practices.mdc`. **Suggestion**: Align `line-length` across ruff, formatter, and project rules to a single value.
+- **Finding**: Ruff is configured with `line-length = 88` but mypy uses no line-length setting and the project rule says 100. **Evidence**: `pyproject.toml` `[tool.ruff]` vs `.cursor/rules/python.mdc`. **Suggestion**: Align `line-length` across ruff, formatter, and project rules to a single value.
 - **Finding**: Stale `[tool.black]` section remains in `pyproject.toml` after migration to Ruff. **Evidence**: `pyproject.toml` line 45. **Suggestion**: Remove the `[tool.black]` section; Ruff format replaces Black.
 
 **Technical debt**
@@ -62,9 +62,9 @@ Use this when you need concrete examples for a dimension or wording guidance.
 
 **Packaging and distribution**
 - **Finding**: `pyproject.toml` is missing `project.urls` (no Homepage, Repository, or Documentation links). **Evidence**: `pyproject.toml` `[project]` section. **Suggestion**: Add `[project.urls]` with links to GitHub, ReadTheDocs, and changelog so they appear on PyPI.
-- **Finding**: `__version__` is hard-coded in both `__init__.py` and `pyproject.toml`; they disagree after the last release. **Evidence**: `src/rms-pds4indextools/__init__.py` line 3 says `1.2.0`, `pyproject.toml` says `1.3.0`. **Suggestion**: Use a single source of truth (e.g. `importlib.metadata.version("rms-pds4indextools")` in `__init__.py` reading from the installed package metadata).
-- **Finding**: `py.typed` marker file is missing; downstream users get no type-checking benefit. **Evidence**: `src/rms-pds4indextools/` has no `py.typed` file. **Suggestion**: Add an empty `src/rms-pds4indextools/py.typed` and ensure it is included in the package via `[tool.setuptools.package-data]`.
-- **Finding**: `tests/` directory and test fixtures are included in the sdist/wheel. **Evidence**: `pip show -f rms-pds4indextools` lists `tests/`. **Suggestion**: Exclude `tests` from the package via `[tool.setuptools.packages.find]` `exclude = ["tests*"]` or equivalent.
+- **Finding**: `__version__` is hard-coded in both `__init__.py` and `pyproject.toml`; they disagree after the last release. **Evidence**: `src/REPONAME/__init__.py` line 3 says `1.2.0`, `pyproject.toml` says `1.3.0`. **Suggestion**: Use a single source of truth (e.g. `importlib.metadata.version("REPONAME")` in `__init__.py` reading from the installed package metadata).
+- **Finding**: `py.typed` marker file is missing; downstream users get no type-checking benefit. **Evidence**: `src/REPONAME/` has no `py.typed` file. **Suggestion**: Add an empty `src/REPONAME/py.typed` and ensure it is included in the package via `[tool.setuptools.package-data]`.
+- **Finding**: `tests/` directory and test fixtures are included in the sdist/wheel. **Evidence**: `pip show -f REPONAME` lists `tests/`. **Suggestion**: Exclude `tests` from the package via `[tool.setuptools.packages.find]` `exclude = ["tests*"]` or equivalent.
 
 ## Severity phrasing
 
@@ -72,10 +72,9 @@ Use this when you need concrete examples for a dimension or wording guidance.
 - High: "significantly increases…", "will make it difficult to…"
 - Medium: "recommended to…", "would improve…"
 - Low: "consider…", "optional:…"
-- Trivial: "may not be worth changing…"
 
 ## When project rules exist
 
-- "Per project rule in `.cursor/rules/python_best_practices.mdc`, …"
+- "Per project rule in `.cursor/rules/python.mdc`, …"
 - "This conflicts with the project's convention that …"
-- "Align with project rule: … (see python_best_practices.mdc)."
+- "Align with project rule: … (see python.mdc)."

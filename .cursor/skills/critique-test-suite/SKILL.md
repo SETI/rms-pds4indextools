@@ -13,6 +13,17 @@ Analyze all tests in the project and produce a **report only**—do not modify a
 - **Fixtures:** Include `conftest.py` and any shared fixtures in the analysis.
 - **Package:** Assume a standard Python package layout (e.g. `src/` with the package under test; tests in `tests/`).
 
+## Project rules
+
+If the repo contains a `.cursor/rules/` directory, treat those rule files as the authoritative standard and cite them by filename in findings:
+
+- `python_testing.mdc` — the **primary** standard for this critique (pytest usage, fixtures, parametrization, coverage target, markers, TDD, hygiene). Map the checklist items below to it wherever they overlap.
+- `python.mdc` — general coding standards that apply to test code as well (naming, type annotations, docstrings, DRY, line length).
+- `logging.mdc` / `logging_nav.mdc` — the logging conventions the logging-assertion checks (section 21) should validate against.
+- `filecache.mdc` — the transparent local/remote file-access conventions; relevant where tests touch file paths or temp directories.
+
+Not every project ships every rule. **If a referenced rule file does not exist, ignore the corresponding part of the critique** instead of inventing a standard. In particular, the `filecache` and `logging` (and `logging_nav`) rules are project-specific and are frequently absent; when they are missing, skip the file-access and logging-assertion checks that rely on them and do not report their absence as a finding.
+
 ## Checklist for Analysis
 
 Apply these criteria when reviewing each test file and each test case.
@@ -166,11 +177,10 @@ Apply these criteria when reviewing each test file and each test case.
 
 ### 22. Pytest configuration
 
-- **Config file discovery:** Pytest loads **at most one** config file for a given root directory. It scans in this **fixed precedence order** and uses the **first matching** file (the first that exists and qualifies); options are **not** merged from multiple files. Order: (1) `pytest.toml`, (2) `.pytest.toml`, (3) `pytest.ini`, (4) `.pytest.ini`, (5) `pyproject.toml` (only if it contains `[tool.pytest]` or `[tool.pytest.ini_options]`), (6) `tox.ini` (only if it contains a `[pytest]` section), (7) `setup.cfg` (only if it contains a `[tool:pytest]` section).
-- **`testpaths` and discovery options:** In the active config file, check that `testpaths` is set (without it, pytest collects from the entire repo — slow and may find stray test files). Check `python_files`, `python_classes`, `python_functions` if non-standard naming is used.
+- **`pyproject.toml` `[tool.pytest.ini_options]`:** Check that `testpaths` is set (without it, pytest collects from the entire repo — slow and may find stray test files). Check `python_files`, `python_classes`, `python_functions` if non-standard naming is used.
 - **Plugin inventory:** Note installed pytest plugins that are unused (slow startup) and useful plugins that are missing (e.g. `pytest-xdist` for parallelism, `pytest-randomly` for order-independence testing).
 - **`addopts`:** Are default options sensible? Suggest `--strict-markers`, `--strict-config`, `-q`, and `-W error::DeprecationWarning` if not present.
-- **Ignored duplicate configs:** If more than one qualifying file exists in the same directory, lower-precedence files are **silently ignored** (e.g. `pyproject.toml` pytest settings have no effect when `pytest.ini` or `pytest.toml` wins). Note redundant or dead config that maintainers may think is active.
+- **Config conflicts:** Note if both `pytest.ini` and `[tool.pytest.ini_options]` in `pyproject.toml` exist — only one is read and the other is silently ignored.
 
 ### 23. Snapshot and golden-file testing
 
@@ -258,7 +268,7 @@ Produce a single markdown report with the following structure. Do **not** edit a
 [caplog usage, log level checks, absence-of-logging tests.]
 
 ## 22. Pytest configuration
-[Config discovery precedence and first file only; testpaths; plugins; addopts; ignored duplicate configs.]
+[testpaths, plugins, addopts, config conflicts.]
 
 ## 23. Snapshot and golden-file testing
 [Complex output candidates, golden file management, over-use.]
@@ -275,7 +285,7 @@ Produce a single markdown report with the following structure. Do **not** edit a
 
 ## Execution steps
 
-1. **Gather:** List all test files under `tests/` and any `conftest.py`. Read pytest config from the **first matching** file in this **fixed precedence** order (only that file is applied; other qualifying files in the same directory are ignored): `pytest.toml`, `.pytest.toml`, `pytest.ini`, `.pytest.ini`, `pyproject.toml` (only if it contains `[tool.pytest]` or `[tool.pytest.ini_options]`), `tox.ini` (only if it contains `[pytest]`), `setup.cfg` (only if it contains `[tool:pytest]`). Use that file for markers and `addopts`. For plugins, check declared entry points in dependencies, the PYTEST_PLUGINS environment variable, and any pytest_plugins references in conftest.py files.
+1. **Gather:** List all test files under `tests/` and any `conftest.py`. Read pytest config (pyproject.toml or pytest.ini if present) for markers and addopts. For plugins, check declared entry points in dependencies, the PYTEST_PLUGINS environment variable, and any pytest_plugins references in conftest.py files.
 2. **Read:** For each file, read test names, docstrings, assertion patterns (focus on `assert`, return checks, fixtures, marks, `mock.patch`, `monkeypatch`, `caplog`, `pytest.warns`).
 3. **Classify:** For each criterion (1–23), note specific file names, test names, and line references or short quotes.
 4. **Write:** Produce the full report in the format above, including the "Prompt for an AI agent" section at the end.
