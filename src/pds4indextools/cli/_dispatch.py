@@ -178,8 +178,9 @@ def main(argv: list[str] | None = None) -> int:
     """Parse argv, configure logging, dispatch, and return an exit code.
 
     Never calls ``sys.exit``: argparse-initiated exits are returned by
-    :func:`_parse_args`, and dispatch errors are mapped to codes by
-    :func:`_handle_exception` (the library/CLI boundary).
+    the internal ``_parse_args`` helper, and dispatch errors are mapped to
+    codes by the internal ``_handle_exception`` helper (the library/CLI
+    boundary).
 
     Parameters:
         argv: The argument vector, or ``None`` to use ``sys.argv[1:]``.

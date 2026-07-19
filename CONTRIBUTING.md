@@ -22,8 +22,11 @@ See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -e ".[dev]"
+   pip install -e ".[dev,docs]"
    ```
+
+   The `dev` extra installs the test and lint stack; the `docs` extra
+   installs Sphinx and the documentation theme.
 
 ## Development Workflow
 
@@ -42,6 +45,12 @@ See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
    ```bash
    scripts/run-all-checks.sh
    ```
+
+   Run with no arguments to run every check (code checks plus the Sphinx
+   build and the Markdown lint). Narrow the scope with `-c` (code checks
+   only) or `-d` (documentation checks only), or run a single check with a
+   per-check flag such as `--ruff-check`, `--mypy`, `--pytest`, `--sphinx`,
+   or `--pymarkdown`.
 
 5. Commit your changes with a descriptive message:
 
@@ -63,7 +72,7 @@ We follow these standards for all code contributions:
 
 * **Python Style**: Follow PEP 8
 * **Type Hints**: Use type hints for all function parameters and return values
-* **Docstrings**: Document all classes and methods with docstrings following the Google style
+* **Docstrings**: Document every class, method, and function with a PEP 257 Google-style docstring that uses a `Parameters:` block (not `Args:`), includes `Returns:` and `Raises:` blocks only where applicable, wraps at 90 characters, and cross-references API symbols with the Sphinx roles described in the documentation standards
 * **Testing**: Include unit tests for new functionality
 * **Compatibility**: Ensure compatibility with Python 3.10+
 

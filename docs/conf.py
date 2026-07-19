@@ -88,8 +88,9 @@ napoleon_attr_annotations = True
 # Intersphinx settings
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
-    'matplotlib': ('https://matplotlib.org/stable/', None),
+    'lxml': ('https://lxml.de/apidoc/', None),
+    'pydantic': ('https://docs.pydantic.dev/latest/', None),
+    'requests': ('https://requests.readthedocs.io/en/latest/', None),
 }
 
 # MyST-Parser settings
@@ -101,3 +102,31 @@ myst_enable_extensions = [
 # Mermaid settings — use client-side rendering so no mmdc binary is required
 # in CI or on ReadTheDocs.
 mermaid_output_format = 'raw'
+
+# Third-party types that publish no Sphinx inventory, plus autodoc-rendered
+# type-alias/annotation fragments that nitpicky mode cannot resolve. Only
+# non-pds4indextools targets are listed; every pds4indextools.* symbol must
+# resolve for real (see Appendix C.1).
+nitpick_ignore = [
+    # PdsTemplate types are not documented externally; skip in nitpicky mode.
+    ('py:class', 'pdstemplate.PdsTemplate'),
+    # pydantic internals have no cross-referenceable inventory entries.
+    ('py:class', 'pydantic.main.BaseModel'),
+    ('py:class', 'pydantic.functional_validators.AfterValidator'),
+    # lxml element type used in scraper annotations.
+    ('py:class', 'lxml.etree._Element'),
+    # tqdm progress-bar type used in logging annotations.
+    ('py:class', 'tqdm.tqdm'),
+    ('py:class', 'tqdm.std.tqdm'),
+    # autodoc splits complex subscripted annotations on commas, producing
+    # these unresolvable fragments from the AbsolutePath and Literal aliases.
+    ('py:obj', "typing.Annotated[~pathlib.Path"),
+    ('py:obj', "typing.Literal['LF'"),
+    ('py:class', 'dict[str'),
+    # Autodoc expands the AbsolutePath pydantic alias in IndexConfig's
+    # xsd_cache_dir annotation and emits a py:class xref to its private
+    # AfterValidator function. This is a rendering artifact of the alias
+    # expansion, not a missing public-API doc; the public AbsolutePath alias
+    # itself is documented in module.rst.
+    ('py:class', 'pds4indextools.config._require_absolute'),
+]
