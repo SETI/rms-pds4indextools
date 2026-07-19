@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns="http://pds.nasa.gov/pds4/pds/v1"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:pds="http://pds.nasa.gov/pds4/pds/v1"
+           targetNamespace="http://pds.nasa.gov/pds4/pds/v1"
+           elementFormDefault="qualified">
+  <xs:simpleType name="ASCII_LID">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+  <xs:simpleType name="ASCII_LIDVID_LID">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+  <xs:simpleType name="ASCII_File_Name">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+  <xs:simpleType name="ASCII_File_Specification_Name">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+  <xs:simpleType name="ASCII_Short_String_Collapsed">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+  <xs:simpleType name="ASCII_Text_Preserved">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+  <xs:simpleType name="ASCII_Integer">
+    <xs:restriction base="xs:integer"/>
+  </xs:simpleType>
+  <xs:simpleType name="ASCII_Real">
+    <xs:restriction base="xs:double"/>
+  </xs:simpleType>
+  <xs:simpleType name="ASCII_Date_YMD">
+    <xs:restriction base="xs:date"/>
+  </xs:simpleType>
+
+  <xs:element name="logical_identifier">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_LID"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="version_id">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="title">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="description">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Text_Preserved"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="editor_list">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="stop_date_time">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Date_YMD"/>
+    </xs:simpleType>
+  </xs:element>
+</xs:schema>

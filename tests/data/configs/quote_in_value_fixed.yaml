@@ -1,0 +1,12 @@
+label_contents:
+  logical_identifier: urn:nasa:pds:test_quote:index:index
+  product_class: Product_Ancillary
+  version_id: '1.0'
+  title: Quote in value (fixed-width)
+output:
+  fixed_width: true
+columns:
+  - auto: lid
+    name: LID
+  - xpath: pds:Product_Observational<1>/pds:Identification_Area<1>/pds:title<1>
+    name: TITLE

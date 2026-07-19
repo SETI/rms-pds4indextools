@@ -1,0 +1,16 @@
+label_contents:
+  logical_identifier: urn:nasa:pds:test_multi_ns:index:index
+  product_class: Product_Ancillary
+  version_id: '1.0'
+  title: Multi-namespace index file
+columns:
+  - auto: lid
+    name: LID
+  - auto: filename
+    name: FILE_NAME
+  - xpath: pds:Product_Observational<1>/pds:Identification_Area<1>/pds:title<1>
+    name: TITLE
+  - xpath: pds:Product_Observational<1>/pds:Observation_Area<1>/geom:Geometry<1>/geom:method<1>
+    name: GEOM_METHOD
+  - xpath: pds:Product_Observational<1>/pds:Observation_Area<1>/rings:Ring<1>/rings:ring_name<1>
+    name: RING_NAME

@@ -1,0 +1,6 @@
+nillable:
+  pds:ASCII_NonNegative_Integer:
+    inapplicable: 0
+    missing: 0
+    unknown: 0
+    anticipated: 0
