@@ -20,9 +20,18 @@ description: Standards for declaring, installing, and maintaining Python project
 
 ## 3. Version Constraints
 
-- Specify **minimum** compatible versions for direct dependencies (e.g., `numpy>=2.2.0`).
-- Do NOT pin exact versions (`==`) in library projects; exact pinning belongs in lock files or application deployments.
-- For dev/docs dependencies, specify minimum versions to ensure consistent tool behavior across contributors.
+- Prefer **unpinned** (bare-name) dependencies so installs pull the latest
+  compatible releases; add a version constraint only when it is genuinely
+  necessary.
+- When a constraint IS necessary, use a **minimum** lower bound for the
+  feature/API the code relies on (e.g. `pydantic>=2` for the v2 API). Do NOT
+  pin exact versions (`==`) in library projects; exact pinning belongs in lock
+  files or application deployments.
+- Avoid upper bounds unless a known incompatibility requires one; a future
+  release that breaks the build should surface in CI rather than be pre-empted
+  by a speculative cap.
+- The same policy applies to dev/docs dependencies: bare names unless a minimum
+  version is actually required.
 
 ## 4. Adding or Updating Dependencies
 

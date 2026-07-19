@@ -9,14 +9,14 @@ description = "Generate tabular index files and PDS4 labels by scraping PDS4 XML
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-  "lxml>=5.0",
-  "pyyaml>=6.0",
-  "pydantic>=2.5",
-  "rms-pdstemplate>=2.4,<3",
-  "requests>=2.32",
-  "requests-file>=2.1",
-  "platformdirs>=4.0",
-  "tqdm>=4.66",
+  "lxml",
+  "pyyaml",
+  "pydantic>=2",
+  "rms-pdstemplate>=2.4",
+  "requests",
+  "requests-file",
+  "platformdirs",
+  "tqdm",
 ]
 license = {text = "Apache-2.0"}
 authors = [
@@ -96,27 +96,27 @@ write_to = "src/pds4indextools/_version.py"
 [project.optional-dependencies]
 dev = [
   "rms-pds4indextools",
-  "coverage>=7.0",
-  "freezegun>=1.4",
+  "coverage",
+  "freezegun",
   "lxml-stubs",
-  "mypy>=1.0",
-  "pymarkdownlnt>=0.9.35",
-  "pytest>=7.0",
-  "pytest-cov>=4.0",
-  "pytest-timeout>=2.3",
-  "pytest-xdist>=3.8.0",
-  "responses>=0.25",
-  "ruff>=0.8",
+  "mypy",
+  "pymarkdownlnt",
+  "pytest",
+  "pytest-cov",
+  "pytest-timeout",
+  "pytest-xdist",
+  "responses",
+  "ruff",
   "types-PyYAML",
   "types-requests",
-  # "bandit[toml]>=1.8",
-  "pyroma>=4.2",
-  "vulture>=2.14",
+  # "bandit[toml]",
+  "pyroma",
+  "vulture",
   "rms-pds4indextools[docs]",
 ]
 docs = [
   "myst-parser",
-  "sphinx>=7",
+  "sphinx",
   "sphinxcontrib-mermaid",
   "sphinx-rtd-theme",
 ]

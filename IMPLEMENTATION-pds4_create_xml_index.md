@@ -103,8 +103,10 @@ owner decision or a template-first consequence):
 6. §21.2 dev dependencies: as Appendix A.1 (drop `pip-audit`; add
    `freezegun`, `responses`, `pytest-timeout`, `vulture`, `lxml-stubs`,
    `types-requests`, `types-PyYAML`).
-7. R-DEP-001: permit the `rms-pdstemplate>=2.4,<3` upper bound
-   (golden-byte stability across major versions).
+7. R-DEP-001: dependencies are unpinned (bare names) so installs pull
+   the latest compatible releases; a minimum lower bound is kept only
+   where an API demands it (`pydantic>=2`, `rms-pdstemplate>=2.4`). No
+   upper bounds.
 8. R-TST-030: integration tests run against the pre-seeded XSD cache by
    default (no network); real-download tests carry `@pytest.mark.live`.
 9. §7 (mapping file) is rewritten as the `columns:` config-schema
@@ -428,7 +430,7 @@ scripts/run-all-checks.sh --pymarkdown    # only pymarkdown
 
 `bandit` remains disabled (commented out in `pyproject.toml`;
 `ENABLE_BANDIT=false` in `scripts/run-all-checks.sh`). `vulture` is
-ENABLED: Phase 0 uncomments the `vulture>=2.14` dev dependency and the
+ENABLED: Phase 0 uncomments the `vulture` dev dependency and the
 `[tool.vulture]` block in `pyproject.toml` and sets
 `ENABLE_VULTURE=true` in `scripts/run-all-checks.sh`.
 
@@ -572,7 +574,9 @@ applies ONLY the delta below (Appendix A.1 shows the complete resulting
 file; everything not listed here stays byte-identical to the template):
 
 - Fill the template's TODO placeholders: `description`, `keywords`, and
-  `[project.dependencies]` (the spec §21.1 list, with `rms-pdstemplate>=2.4,<3` — 2.4.0 verified against source).
+  `[project.dependencies]` (the spec §21.1 list; dependencies are
+  unpinned bare names except `pydantic>=2` and `rms-pdstemplate>=2.4`,
+  the two API-necessary minimum bounds — 2.4.0 verified against source).
 - `[project.scripts]` register `pds4_create_xml_index =
   "pds4indextools.cli:cli_entrypoint"` (R-CLI-001), replacing the
   template's commented-out TODO entry. `cli_entrypoint()` is a thin
@@ -580,11 +584,11 @@ file; everything not listed here stays byte-identical to the template):
   "Library/CLI output boundary" binding above. `main()` itself MUST
   NEVER call `sys.exit`.
 - `[project.optional-dependencies].dev` — template list with:
-  - `mypy>=1.0` uncommented;
-  - `vulture>=2.14` uncommented (owner decision #2);
+  - `mypy` uncommented;
+  - `vulture` uncommented (owner decision #2);
   - `bandit` left commented out;
-  - additions needed by the test suite: `freezegun>=1.4`,
-    `responses>=0.25`, `pytest-timeout>=2.3` (bound runaway tests,
+  - additions needed by the test suite: `freezegun`,
+    `responses`, `pytest-timeout` (bound runaway tests,
     critique skill §10/§15);
   - type-stub packages required for `mypy strict` on our imports:
     `lxml-stubs`, `types-requests`, `types-PyYAML` (tqdm ships no type
@@ -1890,7 +1894,9 @@ source in `/seti/all_repos/rms-pdstemplate` on 2026-07-18):
       )
   ```
 
-  Pin `rms-pdstemplate>=2.4,<3` in `pyproject.toml` (2.4.0 verified).
+  Require `rms-pdstemplate>=2.4` in `pyproject.toml` (2.4.0 verified);
+  this minimum lower bound is API-necessary — the 1.x API is
+  incompatible — and no upper bound is pinned.
   DO NOT catch bare `Exception` — programming bugs outside this
   enumerated set must surface as exit-code-3 unhandled exceptions.
 - Macro audit (all verified present as `_PREDEFINED_FUNCTIONS` in
@@ -2975,14 +2981,14 @@ description = "Generate tabular index files and PDS4 labels by scraping PDS4 XML
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-  "lxml>=5.0",
-  "pyyaml>=6.0",
-  "pydantic>=2.5",
-  "rms-pdstemplate>=2.4,<3",
-  "requests>=2.32",
-  "requests-file>=2.1",
-  "platformdirs>=4.0",
-  "tqdm>=4.66",
+  "lxml",
+  "pyyaml",
+  "pydantic>=2",
+  "rms-pdstemplate>=2.4",
+  "requests",
+  "requests-file",
+  "platformdirs",
+  "tqdm",
 ]
 license = {text = "Apache-2.0"}
 authors = [
@@ -3062,27 +3068,27 @@ write_to = "src/pds4indextools/_version.py"
 [project.optional-dependencies]
 dev = [
   "rms-pds4indextools",
-  "coverage>=7.0",
-  "freezegun>=1.4",
+  "coverage",
+  "freezegun",
   "lxml-stubs",
-  "mypy>=1.0",
-  "pymarkdownlnt>=0.9.35",
-  "pytest>=7.0",
-  "pytest-cov>=4.0",
-  "pytest-timeout>=2.3",
-  "pytest-xdist>=3.8.0",
-  "responses>=0.25",
-  "ruff>=0.8",
+  "mypy",
+  "pymarkdownlnt",
+  "pytest",
+  "pytest-cov",
+  "pytest-timeout",
+  "pytest-xdist",
+  "responses",
+  "ruff",
   "types-PyYAML",
   "types-requests",
-  # "bandit[toml]>=1.8",
-  "pyroma>=4.2",
-  "vulture>=2.14",
+  # "bandit[toml]",
+  "pyroma",
+  "vulture",
   "rms-pds4indextools[docs]",
 ]
 docs = [
   "myst-parser",
-  "sphinx>=7",
+  "sphinx",
   "sphinxcontrib-mermaid",
   "sphinx-rtd-theme",
 ]
@@ -5467,7 +5473,7 @@ committed `tests/data/expected/<bundle>/index.{csv,lblx}` files. The
 following procedure is binding for producing those committed bytes:
 
 1. **Dependency pinning** (Phase 0 `pyproject.toml`):
-   `rms-pdstemplate>=2.4,<3` (2.4.0 verified against
+   `rms-pdstemplate>=2.4` (2.4.0 verified against
    `/seti/all_repos/rms-pdstemplate`) so byte output does not drift
    under a major version bump. Lxml, requests, and pyyaml retain `>=`
    floors.
