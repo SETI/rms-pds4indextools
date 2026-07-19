@@ -12,7 +12,7 @@ dependencies = [
   "lxml>=5.0",
   "pyyaml>=6.0",
   "pydantic>=2.5",
-  "rms-pdstemplate>=1.0,<2",
+  "rms-pdstemplate>=2.4,<3",
   "requests>=2.32",
   "requests-file>=2.1",
   "platformdirs>=4.0",
@@ -149,7 +149,7 @@ module = "pds4indextools._version"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["pdstemplate.*", "requests_file.*"]
+module = ["pdstemplate.*", "requests_file.*", "tqdm.*"]
 ignore_missing_imports = true
 
 [tool.ruff]

@@ -103,7 +103,7 @@ owner decision or a template-first consequence):
 6. §21.2 dev dependencies: as Appendix A.1 (drop `pip-audit`; add
    `freezegun`, `responses`, `pytest-timeout`, `vulture`, `lxml-stubs`,
    `types-requests`, `types-PyYAML`).
-7. R-DEP-001: permit the `rms-pdstemplate>=1.0,<2` upper bound
+7. R-DEP-001: permit the `rms-pdstemplate>=2.4,<3` upper bound
    (golden-byte stability across major versions).
 8. R-TST-030: integration tests run against the pre-seeded XSD cache by
    default (no network); real-download tests carry `@pytest.mark.live`.
@@ -572,7 +572,7 @@ applies ONLY the delta below (Appendix A.1 shows the complete resulting
 file; everything not listed here stays byte-identical to the template):
 
 - Fill the template's TODO placeholders: `description`, `keywords`, and
-  `[project.dependencies]` (the spec §21.1 list, with `rms-pdstemplate>=1.0,<2` — 1.0.0 verified against source).
+  `[project.dependencies]` (the spec §21.1 list, with `rms-pdstemplate>=2.4,<3` — 2.4.0 verified against source).
 - `[project.scripts]` register `pds4_create_xml_index =
   "pds4indextools.cli:cli_entrypoint"` (R-CLI-001), replacing the
   template's commented-out TODO entry. `cli_entrypoint()` is a thin
@@ -587,8 +587,9 @@ file; everything not listed here stays byte-identical to the template):
     `responses>=0.25`, `pytest-timeout>=2.3` (bound runaway tests,
     critique skill §10/§15);
   - type-stub packages required for `mypy strict` on our imports:
-    `lxml-stubs`, `types-requests`, `types-PyYAML` (tqdm ships inline
-    types; pydantic/platformdirs are typed);
+    `lxml-stubs`, `types-requests`, `types-PyYAML` (tqdm ships no type
+    stubs, so it is covered by the `tqdm.*` mypy override below;
+    pydantic/platformdirs are typed);
   - the template's self-referential extras `MODULENAME` /
     `MODULENAME[docs]` corrected to the actual distribution name
     `rms-pds4indextools` / `rms-pds4indextools[docs]` (the bare module
@@ -612,7 +613,7 @@ file; everything not listed here stays byte-identical to the template):
   to the template's `exclude` placeholder — that is the file's purpose.
 - `[tool.mypy]` — template `strict = true` block and the
   `pds4indextools._version` override kept; add one override with
-  `module = ["pdstemplate.*", "requests_file.*"]` and
+  `module = ["pdstemplate.*", "requests_file.*", "tqdm.*"]` and
   `ignore_missing_imports = true` (untyped third-party imports).
   `tests/` IS included in every mypy invocation
   (`python_testing.mdc` §2/§4).
@@ -1889,7 +1890,7 @@ source in `/seti/all_repos/rms-pdstemplate` on 2026-07-18):
       )
   ```
 
-  Pin `rms-pdstemplate>=1.0,<2` in `pyproject.toml` (1.0.0 verified).
+  Pin `rms-pdstemplate>=2.4,<3` in `pyproject.toml` (2.4.0 verified).
   DO NOT catch bare `Exception` — programming bugs outside this
   enumerated set must surface as exit-code-3 unhandled exceptions.
 - Macro audit (all verified present as `_PREDEFINED_FUNCTIONS` in
@@ -2977,7 +2978,7 @@ dependencies = [
   "lxml>=5.0",
   "pyyaml>=6.0",
   "pydantic>=2.5",
-  "rms-pdstemplate>=1.0,<2",
+  "rms-pdstemplate>=2.4,<3",
   "requests>=2.32",
   "requests-file>=2.1",
   "platformdirs>=4.0",
@@ -3114,7 +3115,7 @@ module = "pds4indextools._version"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["pdstemplate.*", "requests_file.*"]
+module = ["pdstemplate.*", "requests_file.*", "tqdm.*"]
 ignore_missing_imports = true
 
 [tool.ruff]
@@ -5466,7 +5467,7 @@ committed `tests/data/expected/<bundle>/index.{csv,lblx}` files. The
 following procedure is binding for producing those committed bytes:
 
 1. **Dependency pinning** (Phase 0 `pyproject.toml`):
-   `rms-pdstemplate>=1.0,<2` (1.0.0 verified against
+   `rms-pdstemplate>=2.4,<3` (2.4.0 verified against
    `/seti/all_repos/rms-pdstemplate`) so byte output does not drift
    under a major version bump. Lxml, requests, and pyyaml retain `>=`
    floors.
