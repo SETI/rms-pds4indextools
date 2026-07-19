@@ -56,10 +56,12 @@ To follow along you need three things:
    write any Python.
 
 3. **An internet connection the first time you run it.** PDS4 labels refer to
-   official schema files that describe the PDS4 standard, and the index tool fetches
-   those the first time it needs them. After that it remembers them, so later
-   runs are faster and can even work offline. There is nothing you need to set
-   up for this; it just happens.
+   official schema files that describe the PDS4 standard, and the index tool
+   fetches those the first time it needs them. After that it remembers them, so
+   later runs are faster and can work offline for any schema it has already
+   fetched; a bundle that points at a schema version you have not downloaded
+   before will need the internet once more for that one. There is nothing you
+   need to set up for this; it just happens.
 
 How this guide is organized
 ---------------------------

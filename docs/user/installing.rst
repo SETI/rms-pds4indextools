@@ -84,6 +84,11 @@ schemas your labels refer to. This happens automatically; you do not configure
 anything, and you will not usually notice it beyond a brief pause on that first
 run.
 
-After that first download the index tool keeps a local copy, so later runs reuse it,
-start faster, and can even work with no network connection at all. In short:
-be online the first time, and after that it takes care of itself.
+After that first download the index tool keeps a local copy, so later runs
+reuse it and start faster. Once every schema your labels need is in that local
+copy, those runs work with no network connection at all. The one thing to know
+is that the cache only holds what it has already fetched: if you later index a
+bundle whose labels point at a schema version you have not downloaded before,
+the index tool will need to be online once more to fetch that one. In short: be
+online the first time you meet a new schema, and after that it takes care of
+itself.

@@ -68,10 +68,13 @@ to read them. The very first time, it downloads the ones your labels use, so it
 needs the internet for that one run.
 
 *How to fix it:* connect to the internet and run it once. After that first
-successful run the index tool keeps a local copy of the schemas, so later runs are
-faster and can work with no connection at all. If you are behind a restrictive
-network, running it once somewhere with normal internet access is enough to
-prime it. See :doc:`installing`.
+successful run the index tool keeps a local copy of the schemas it fetched, so
+later runs that need only those schemas are faster and work with no connection
+at all. Priming only covers the schemas already in that copy, so a bundle that
+uses a schema version you have not fetched before will need a connection once
+more for that one. If you are behind a restrictive network, running it once
+somewhere with normal internet access is enough to prime it for the schemas it
+sees there. See :doc:`installing`.
 
 "My settings file was rejected"
 -------------------------------

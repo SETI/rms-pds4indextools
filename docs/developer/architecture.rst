@@ -8,10 +8,11 @@ model.
 Exception hierarchy
 -------------------
 
-Every error the index tool raises derives from a single root,
-:exc:`~pds4indextools.errors.Pds4IndexError`. The class-level
-``FAIL_SLOW_ELIGIBLE`` flag records whether an error may be accumulated
-under ``--fail-slow`` (R-ERR-001).
+Every expected (domain) error the index tool raises derives from a single
+root, :exc:`~pds4indextools.errors.Pds4IndexError`; an unexpected exception
+outside this hierarchy is surfaced as an internal error with exit code ``3``
+(see :ref:`cli-exit-codes`). The class-level ``FAIL_SLOW_ELIGIBLE`` flag
+records whether an error may be accumulated under ``--fail-slow`` (R-ERR-001).
 
 .. mermaid::
 
