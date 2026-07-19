@@ -16,6 +16,7 @@ cleanup). Tests still use ``monkeypatch`` for the ``sys.stderr`` swaps.
 
 import io
 import logging
+import subprocess
 import sys
 from collections.abc import Iterator
 
@@ -155,11 +156,24 @@ def test_setup_logging_keeps_propagation_enabled() -> None:
 
 
 def test_library_setup_attaches_nullhandler() -> None:
-    """``library_setup`` attaches a ``NullHandler`` to the root logger."""
-    library_setup()
-    logger = logging.getLogger(ROOT_LOGGER_NAME)
-    null_handlers = [h for h in logger.handlers if isinstance(h, logging.NullHandler)]
-    assert len(null_handlers) == 1
+    """Importing the package attaches a ``NullHandler`` (no ``setup_logging``).
+
+    Runs in a fresh subprocess so the assertion observes the genuine
+    import-time effect of ``__init__.py`` calling ``library_setup()``,
+    unaffected by this module's autouse handler-restoring fixture.
+    """
+    code = (
+        'import logging, pds4indextools\n'
+        "logger = logging.getLogger('pds4indextools')\n"
+        'print(sum(isinstance(h, logging.NullHandler) for h in logger.handlers))\n'
+    )
+    result = subprocess.run(
+        [sys.executable, '-c', code],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == '1'
 
 
 def test_library_setup_idempotent() -> None:
