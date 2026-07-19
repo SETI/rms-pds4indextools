@@ -1318,42 +1318,47 @@ Analogous shapes exist for `generate_xpath_list` and `copy_default_config`.
 
 | Package | Min version | Purpose |
 |---|---|---|
-| `lxml` | `>=5.0` | XML parsing, XPath evaluation |
-| `pyyaml` | `>=6.0` | YAML config loading via `safe_load` |
-| `pydantic` | `>=2.5` | Config validation, RORO dataclasses |
-| `rms-pdstemplate` | `>=2.4,<3` | Template-driven label generation |
-| `requests` | `>=2.32` | XSD downloads (HTTP / HTTPS) |
-| `requests-file` | `>=2.1` | `file://` URL adapter for `requests` (R-FS-005) |
-| `platformdirs` | `>=4.0` | Cache directory location |
-| `tqdm` | `>=4.66` | Progress bars |
+| `lxml` | (unpinned) | XML parsing, XPath evaluation |
+| `pyyaml` | (unpinned) | YAML config loading via `safe_load` |
+| `pydantic` | `>=2` | Config validation, RORO dataclasses (v2 API) |
+| `rms-pdstemplate` | `>=2.4` | Template-driven label generation (2.x API) |
+| `requests` | (unpinned) | XSD downloads (HTTP / HTTPS) |
+| `requests-file` | (unpinned) | `file://` URL adapter for `requests` (R-FS-005) |
+| `platformdirs` | (unpinned) | Cache directory location |
+| `tqdm` | (unpinned) | Progress bars |
 
-- **R-DEP-001** Versions are minimum bounds (not pinned) per
-  `dependency_management.mdc` §3, EXCEPT `rms-pdstemplate`, which
-  carries an upper bound `>=2.4,<3` to keep golden-byte output stable
-  across major versions.
+- **R-DEP-001** Dependencies are unpinned (bare names) so installs pull
+  the latest compatible releases. A minimum lower bound is kept ONLY
+  where an API demands it: `pydantic>=2` (v2-only API) and
+  `rms-pdstemplate>=2.4` (2.x-only API — the 1.x API is incompatible).
+  No upper bounds are pinned; if a future major release of a dependency
+  shifts golden-byte output, CI surfaces it.
 - **R-DEP-002** Pandas is NOT a dependency. The legacy code's use of
   pandas is replaced by stdlib `csv` and small home-grown helpers in
   `csv_writer.py`.
 
 ### 21.2 Dev
 
-| Package | Min version |
+All dev dependencies are unpinned (bare names); no minimum bounds are
+required for the tooling.
+
+| Package | Version |
 |---|---|
-| `pytest` | `>=7.0` |
-| `pytest-cov` | `>=4.0` |
-| `pytest-xdist` | `>=3.8` |
-| `pytest-timeout` | `>=2.3` |
-| `coverage` | `>=7.0` |
-| `freezegun` | `>=1.4` |
-| `responses` | `>=0.25` |
-| `mypy` | `>=1.0` |
-| `lxml-stubs` | (any recent) |
-| `types-requests` | (any recent) |
-| `types-PyYAML` | (any recent) |
-| `ruff` | `>=0.8` |
-| `pymarkdownlnt` | `>=0.9.35` |
-| `pyroma` | `>=4.2` |
-| `vulture` | `>=2.14` |
+| `pytest` | (unpinned) |
+| `pytest-cov` | (unpinned) |
+| `pytest-xdist` | (unpinned) |
+| `pytest-timeout` | (unpinned) |
+| `coverage` | (unpinned) |
+| `freezegun` | (unpinned) |
+| `responses` | (unpinned) |
+| `mypy` | (unpinned) |
+| `lxml-stubs` | (unpinned) |
+| `types-requests` | (unpinned) |
+| `types-PyYAML` | (unpinned) |
+| `ruff` | (unpinned) |
+| `pymarkdownlnt` | (unpinned) |
+| `pyroma` | (unpinned) |
+| `vulture` | (unpinned) |
 
 ### 21.3 Docs
 
