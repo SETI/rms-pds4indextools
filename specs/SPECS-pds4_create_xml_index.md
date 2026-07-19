@@ -1321,7 +1321,7 @@ Analogous shapes exist for `generate_xpath_list` and `copy_default_config`.
 | `lxml` | `>=5.0` | XML parsing, XPath evaluation |
 | `pyyaml` | `>=6.0` | YAML config loading via `safe_load` |
 | `pydantic` | `>=2.5` | Config validation, RORO dataclasses |
-| `rms-pdstemplate` | `>=1.0,<2` | Template-driven label generation |
+| `rms-pdstemplate` | `>=2.4,<3` | Template-driven label generation |
 | `requests` | `>=2.32` | XSD downloads (HTTP / HTTPS) |
 | `requests-file` | `>=2.1` | `file://` URL adapter for `requests` (R-FS-005) |
 | `platformdirs` | `>=4.0` | Cache directory location |
@@ -1329,7 +1329,7 @@ Analogous shapes exist for `generate_xpath_list` and `copy_default_config`.
 
 - **R-DEP-001** Versions are minimum bounds (not pinned) per
   `dependency_management.mdc` §3, EXCEPT `rms-pdstemplate`, which
-  carries an upper bound `>=1.0,<2` to keep golden-byte output stable
+  carries an upper bound `>=2.4,<3` to keep golden-byte output stable
   across major versions.
 - **R-DEP-002** Pandas is NOT a dependency. The legacy code's use of
   pandas is replaced by stdlib `csv` and small home-grown helpers in

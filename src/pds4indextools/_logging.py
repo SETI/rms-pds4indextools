@@ -13,7 +13,7 @@ Implements R-LOG-001..R-LOG-021 and R-CLI-017 of spec section 18.
 import logging
 import sys
 
-from tqdm import tqdm  # type: ignore[import-untyped]  # tqdm ships no type stubs
+from tqdm import tqdm
 
 __all__: list[str] = []
 
