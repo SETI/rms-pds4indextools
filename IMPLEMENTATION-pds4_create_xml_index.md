@@ -109,10 +109,11 @@ owner decision or a template-first consequence):
    default (no network); real-download tests carry `@pytest.mark.live`.
 9. §7 (mapping file) is rewritten as the `columns:` config-schema
    section (owner decision #10): the line-format R-IDs (R-MAP-001/002,
-   R-MAP-010..014, R-MAP-040..042) and the no-mapping-file R-IDs
-   (R-MAP-101/102/110) are RETIRED; the semantic R-IDs survive with
-   their numbers — R-MAP-030 (duplicate selectors), R-MAP-031
-   (duplicate names), R-MAP-043 (name charset), R-MAP-310/311/312
+   R-MAP-010..014, R-MAP-020, R-MAP-040..042) and the no-mapping-file
+   R-IDs (R-MAP-101/102/110) are RETIRED; the semantic R-IDs survive
+   with their numbers — R-MAP-030 (duplicate selectors), R-MAP-031
+   (duplicate names), R-MAP-043 (name charset), R-MAP-300 (projection
+   matches selectors by exact string equality), R-MAP-310/311/312
    (projection/empty-column/empty-list), R-MAP-320 (declared order).
    A new requirement: a merged config without a non-empty `columns`
    list is a hard `ConfigError` for `generate_index_file`.
@@ -122,12 +123,23 @@ owner decision or a template-first consequence):
     dataclass field are removed everywhere; R-CLI-021's "xpath_list
     rejects `--mapping-file`" clause is dropped (the flag no longer
     exists on any subcommand; the `--label-template` rejection stays).
-12. §5 (R-XPL-020) + R-CLI-022: `generate_xpath_list` emits a YAML
+12. R-SORT-010: amended to "an unset/empty `sort_by` performs NO
+    re-sort — rows keep discovery order, which is already
+    filespec-sorted per R-DISC-020" (matches Phase 8's `sort_rows`
+    contract).
+13. R-TST-042: the `mapping_files/<feature>.txt` fixture-directory
+    requirement is removed (no such directory exists).
+14. §5 (R-XPL-020) + R-CLI-022: `generate_xpath_list` emits a YAML
     `columns:` block (one entry per first-occurrence XPath, `name:`
     defaulted to the XPath); the default output file becomes
     `./columns.yaml` (auto-numbered `columns_1.yaml`, … when present);
     a user-supplied `--output-file` without extension gets `.yaml`
     appended, any explicit extension is honored.
+
+Scrub rule: every RETIRED R-ID token is deleted wherever it appears in
+the spec — including the §24 T-ID tables and the §26 index — otherwise
+`scripts/verify_test_coverage.py` re-collects the token and its
+tripwire fails.
 
 ## How to use this plan
 
@@ -157,7 +169,13 @@ owner decision or a template-first consequence):
   `rewrite/phase-<N>-<short-slug>` off the current tip of
   `index_tools_rewrite`; implement the phase to its exit criteria;
   open the PR with the phase's exit-criteria checklist reproduced (and
-  checked) in the PR body. Squash-merge when green. Phases are
+  checked) in the PR body. Squash-merge when green. Use the `gh` REST
+  interface for PR operations — the high-level `gh pr` subcommands may
+  lack access in this environment:
+  `gh api repos/SETI/rms-pds4indextools/pulls -f title=... -f head=<branch> -f base=index_tools_rewrite -f body=...`
+  to open, and
+  `gh api -X PUT repos/SETI/rms-pds4indextools/pulls/<N>/merge -f merge_method=squash`
+  to merge. Phases are
   strictly sequential: no phase starts until the previous phase's PR
   has merged.
 - **One fresh subagent per PR.** Each phase-PR is implemented by a
@@ -385,8 +403,14 @@ contract; the contract here binds them all.
 ## Build/test commands the plan assumes
 
 `scripts/run-all-checks.sh` requires the virtualenv at `./venv` (or
-pointed to by `$VENV`); create it once with `python -m venv venv` at
-the repo root before first use.
+pointed to by `$VENV`); one already exists at the repo root,
+provisioned with the full A.1 dependency set (create with
+`python -m venv venv` if absent). ORDERING WARNING for Phase 0: the
+committed template `pyproject.toml` CANNOT be editable-installed —
+its placeholder `dependencies = ["TODO"]` resolves to a junk PyPI
+package named `todo`, and the dev extra's self-reference
+`pds4indextools` does not exist on PyPI. Rewrite `pyproject.toml` to
+Appendix A.1 FIRST; only then run `pip install -e ".[dev,docs]"`.
 
 ```bash
 python -m pip install -e ".[dev,docs]"
@@ -481,10 +505,9 @@ are not part of the code, tests, or documentation. Concretely:
   on top of the template defaults; keep that. The required end state
   for the enable-toggle defaults is: `ENABLE_RUFF_FORMAT=true`,
   `ENABLE_MYPY=true`, `ENABLE_VULTURE=true`, `ENABLE_BANDIT=false`.
-  (Relative to the committed script that means one edit — set
-  `: "${ENABLE_BANDIT:=false}"`; if a working-tree edit has disabled
-  vulture, restore `: "${ENABLE_VULTURE:=true}"`.) No other edits; no
-  new flags or check functions are added to this script.
+  The committed script already has all four toggles at these values —
+  VERIFY rather than edit; zero changes are expected. No other edits;
+  no new flags or check functions are added to this script.
 - `src/pds4indextools/__init__.py` — minimal stub (Phase 10 replaces it
   with the full public surface). Exact Phase 0 content:
 
@@ -509,12 +532,15 @@ are not part of the code, tests, or documentation. Concretely:
 - `tests/conftest.py` — content in [Appendix A.6](#a6-tests-conftestpy).
 - `tests/unit/__init__.py`, `tests/integration/__init__.py` — empty.
 - `tests/data/` — directory tree per [Appendix A.7](#a7-tests-data-tree),
-  populated according to Appendix B. There are NO duplicate fixture
+  populated according to Appendix B. EXCEPTION: the `expected/`
+  subdirectories are created but stay EMPTY until Phase 11 runs the
+  golden-bytes generator (their content cannot exist before the
+  pipeline does); every golden-comparison test is a Phase 11
+  deliverable for the same reason. There are NO duplicate fixture
   files: feature-variant integration tests (fixed-width, CRLF,
   multi-config, mapping-full-features) point `--bundle-root` at the
   existing `simple_pds_only` / `multi_namespace` bundles and vary only
-  the config and mapping files. All label fixtures use the `.lblx`
-  suffix.
+  the config files. All label fixtures use the `.lblx` suffix.
 - `tests/unit/test_fixture_integrity.py` — a Phase 0 deliverable with
   one test:
   - `test_bom_file_starts_with_bom_bytes` — asserts
@@ -643,7 +669,8 @@ behind at phase exit.
 - [ ] `scripts/run-all-checks.sh --pyroma` passes (the script runs
       `python -m pyroma .`); additionally `python -m pyroma --min=9 .`
       exits 0 (run manually; the script itself is not modified).
-- [ ] `tests/data/` skeleton tree exists per A.7; every label fixture
+- [ ] `tests/data/` skeleton tree exists per A.7 (`expected/` dirs
+      empty until Phase 11); every label fixture
       file name ends in `.lblx`; no fixture file is a byte-for-byte
       copy of another.
 - [ ] `tests/conftest.py` matches Appendix A.6.
@@ -870,8 +897,8 @@ mutates logger state uses `monkeypatch` to restore on teardown (critique skill
 | `test_setup_logging_keeps_propagation_enabled` | after `setup_logging(0)`, `logging.getLogger('pds4indextools').propagate is True` (R-LOG-003; `caplog` capture depends on root propagation) |
 | `test_library_setup_attaches_nullhandler` | after import (no `setup_logging` call), `pds4indextools` logger has at least one `NullHandler` |
 | `test_library_setup_does_not_affect_root_logger` | `logging.getLogger().handlers` unchanged |
-| `test_progress_bar_tty_enabled` | monkeypatch `sys.stderr.isatty` to True; `progress_bar(...).disable is False` |
-| `test_progress_bar_non_tty_disabled` | monkeypatch to False; `.disable is True` |
+| `test_progress_bar_tty_enabled` | `monkeypatch.setattr(sys, 'stderr', <delegating wrapper whose isatty() returns True>)` (mirror of A.6's `_NonTtyStream`; patching `isatty` directly on a real `TextIOWrapper` raises `AttributeError`); `progress_bar(...).disable is False` |
+| `test_progress_bar_non_tty_disabled` | same wrapper with `isatty() -> False`; `.disable is True` |
 | `test_progress_bar_total_set` | `progress_bar(5, description='x').total == 5` |
 | `test_module_logger_namespacing` | `module_logger('scraper').name == 'pds4indextools.scraper'` |
 | `test_module_logger_inherits_from_root_pds4_logger` | child logger's `parent.name == 'pds4indextools'` |
@@ -1290,13 +1317,18 @@ Provide minimal hand-curated XSD snippets as test fixtures under
 `tests/data/xsd_cache_seed/` — full content in Appendix A.11. Each snippet
 declares one or two simple types resolvable by the 22-query chain.
 
+Sanctioned exception to the public-names test boundary: the
+`test_schemacache_session_*` rows below inspect `cache._session`
+defaults directly — the internally constructed session has no public
+accessor and warrants none.
+
 | Test function | Verifies | T-ID |
 |---|---|---|
 | `test_schemacache_cache_miss_downloads_and_caches` | first `fetch(url)` issues HTTP GET; cache file created at sha256(url).xsd; second call no HTTP GET | T-SCH-001, T-SCH-002, R-SCH-010, R-SCH-020 |
 | `test_schemacache_uses_platformdirs_when_dir_none` | monkeypatch `platformdirs.user_cache_dir`; verify `SchemaCache().cache_dir` is the patched path | R-SCH-020 |
 | `test_schemacache_network_failure_raises_schemanetworkerror` | responses returns 500 → `SchemaNetworkError`; `FAIL_SLOW_ELIGIBLE is False` on raised type | T-SCH-040, R-SCH-060 |
 | `test_schemacache_connection_refused_raises_schemanetworkerror` | requests raises ConnectionError | R-SCH-060 |
-| `test_schemacache_fetch_uses_30s_timeout` | construct `SchemaCache(session=mock_session)`; `fetch(url)` → `mock_session.get` called with `timeout=30.0` (public behavior; no private-attribute access) | R-SCH-010 |
+| `test_schemacache_fetch_uses_30s_timeout` | construct `SchemaCache(session=mock_session)`; `fetch(url)` → `mock_session.get` called with `timeout=30.0` | R-SCH-010 |
 | `test_schemacache_corrupt_cache_raises_schemacacheerror` | pre-create cache file with malformed XML; `parse_xsd(url)` → SchemaCacheError | T-SCH-050, R-SCH-070 |
 | `test_schemacache_file_url_uses_filemount` | `fetch('file:///tmp/test.xsd')` reads from disk using requests-file adapter; no HTTP | R-FS-005 |
 | `test_schemacache_url_to_path_uses_sha256` | the cache filename for a URL equals `sha256(url).hexdigest() + '.xsd'` | R-SCH-020 |
@@ -2272,7 +2304,7 @@ need it.
 | `test_label_template_default_packaged_path_used` | use temp bundle; check label generated from packaged template (by sniffing a known string in the output) | T-CLI-050, T-LBL-001, R-CLI-014, R-LBL-001, R-LBL-040 |
 | `test_custom_label_template_honored` | `--label-template` pointing at a minimal valid template file containing the sentinel text `CUSTOM-TEMPLATE-SENTINEL`; the generated lblx contains the sentinel | T-LBL-002, R-LBL-002 |
 | `test_fail_slow_collects_multiple_filespec_overlength_errors` | monkeypatch the scraper so two of three labels raise the filespec-overlength `LabelError`; `--fail-slow` → `FailSlowAggregateError` with exactly 2 errors | T-AUTO-060, R-FS-010, R-FSLOW-110 |
-| `test_default_output_paths_used` | uses `chdir_tmp` + `frozen_time` + `data_root`; run main on `simple_pds_only`; assert `(chdir_tmp/'index.csv').read_bytes() == (data_root/'expected'/'simple_pds_only'/'index.csv').read_bytes()` (absolute `data_root` — safe under chdir); assert `(chdir_tmp/'index.lblx').is_file()` and its bytes match the golden after the creation-date mask: split both byte streams on the line terminator, assert each side contains EXACTLY ONE line containing `<creation_date_time>`, drop that line from both, compare the rest byte-for-byte (the CLI path offers no `csv_post_write_hook`, so the `$FILE_ZULU$`-derived line — and only it — is uncontrolled; full-byte lblx equality is proved by the programmatic-API tests in Phase 11) | T-CLI-060, R-CLI-015 |
+| `test_default_output_paths_used` | uses `chdir_tmp` + `seeded_cache_overlay`; run main on `simple_pds_only`; assert `(chdir_tmp/'index.csv').is_file()` and `(chdir_tmp/'index.lblx').is_file()` (default names per R-CLI-015). Byte-golden comparison does NOT happen here — the goldens are first generated in Phase 11; `test_default_output_paths_byte_golden` in Phase 11's `test_generate_index_file.py` covers it | T-CLI-060 (paths leg), R-CLI-015 |
 | `test_default_output_auto_numbers_when_present` | uses `chdir_tmp`; pre-create `<chdir_tmp>/index.csv` with sentinel bytes `b'OLD'`; invoke main; assert (a) `(chdir_tmp/'index_1.csv').is_file()`, (b) `(chdir_tmp/'index_1.lblx').is_file()`, (c) `(chdir_tmp/'index.csv').read_bytes() == b'OLD'` (original unchanged), (d) one `caplog` record at WARNING level naming the new path | T-CLI-061, R-CLI-015 |
 | `test_default_output_auto_numbers_finds_lowest_free_integer` | pre-create both `index.csv` and `index_1.csv` → run writes `index_2.*` | R-CLI-015 |
 | `test_default_output_auto_numbers_considers_both_csv_and_lblx` | pre-create only `index.lblx` → run writes `index_1.csv` + `index_1.lblx` | R-CLI-015 |
@@ -2319,13 +2351,15 @@ need it.
 
 ### 11.1 Deliverables
 
-Under `tests/data/bundles/`, create one subdirectory per bundle listed
-in Appendix A.7 (11 bundles; every label file suffixed `.lblx`).
+Under `tests/data/bundles/`, VERIFY the 11 bundle subdirectories
+committed in Phase 0 per Appendix A.7 (every label file suffixed
+`.lblx`); this phase adds the `expected/` golden content and the
+integration tests.
 **Bundle label content is specified verbatim in
 [Appendix B](#appendix-b-test-fixture-content).** Feature-variant tests
 (fixed-width, CRLF, multi-config, mapping-full-features) do NOT get
 bundles of their own — they reuse `simple_pds_only` or
-`multi_namespace` with a feature config/mapping (owner decision #8),
+`multi_namespace` with a feature config (owner decision #8),
 and their golden outputs live under the feature-named
 `tests/data/expected/<feature>/` directories. **Spec impact:** spec
 §24.15's bundle table (17 rows, including the copy bundles and
@@ -2380,6 +2414,7 @@ Full list with bundle and verifying R-IDs:
 |---|---|---|
 | `test_simple_pds_only_happy_path` | `simple_pds_only` | R-IDX-001, R-LBL-001, R-CSV-061 |
 | `test_simple_pds_only_byte_identical_to_expected` | `simple_pds_only` | golden CSV+lblx comparison |
+| `test_default_output_paths_byte_golden` | CLI path: `chdir_tmp` + `frozen_time` + `data_root` + `seeded_cache_overlay`; run `main` on `simple_pds_only`; assert `(chdir_tmp/'index.csv').read_bytes() == (data_root/'expected'/'simple_pds_only'/'index.csv').read_bytes()`; assert the lblx matches the golden after the creation-date mask: split both byte streams on the line terminator, assert each side contains EXACTLY ONE line containing `<creation_date_time>`, drop it from both, compare the rest byte-for-byte (the CLI path has no `csv_post_write_hook`, so only the `$FILE_ZULU$`-derived line is uncontrolled) | T-CLI-060 (bytes leg), R-CLI-015 |
 | `test_multi_namespace_three_labels_render_geom_and_rings_prefixes` | `multi_namespace` | R-XP-011, R-SCH-040 |
 | `test_nilled_label_substitutes_config_defaults` | `nilled` | T-NIL-001, R-NIL-010, R-NIL-020 |
 | `test_nilled_bad_nilreason_aborts_with_exit_2` | `nilled_bad` | T-NIL-010, R-NIL-010 |
@@ -2398,7 +2433,7 @@ Full list with bundle and verifying R-IDs:
 | `test_crlf_config_writes_crlf_csv_and_label_record_delimiter` | `simple_pds_only` + `crlf.yaml`; golden in `expected/crlf/` | T-CSV-030, R-CSV-003, R-LBL-060 |
 | `test_lf_config_writes_lf_record_delimiter` | `simple_pds_only` + `simple.yaml` (LF default; negative case) | T-CSV-031, R-LBL-060 |
 | `test_multi_config_three_yamls_merge_in_order` | `simple_pds_only` + the three `multi_config_*.yaml`; golden in `expected/multi_config/` | T-CFG-040, R-CFG-050, R-CFG-051 |
-| `test_mapping_full_features_byte_identical_to_expected_csv` | `multi_namespace` + `mapping_full_features.yaml` (every columns-entry shape); golden in `expected/mapping_full_features/` | T-MAP-090, R-MAP-320, R-AUTO-010 |
+| `test_mapping_full_features_byte_identical_to_expected_csv` | `multi_namespace` + `mapping_full_features.yaml` (every columns-entry shape); golden in `expected/mapping_full_features/` | T-MAP-090, R-MAP-300, R-MAP-320, R-AUTO-010 |
 | `test_mapping_xpath_not_in_any_label_produces_empty_column` | `multi_namespace` + chain (`multi_namespace.yaml`, `xpath_not_in_label.yaml`) | T-MAP-080, T-NIL-040, R-MAP-311, R-MISS-010 |
 | `test_columns_not_listing_an_observed_xpath_drops_it` | `simple_pds_only` + chain (`simple.yaml`, `columns_only_lid.yaml`); assert CSV header bytes equal `b"LID\n"` exactly; assert exactly 1 data row with no commas; assert `result.columns_written == 1`; assert `title`/`version_id` strings are absent from the output bytes | T-MAP-081, R-MAP-310 |
 | `test_missing_columns_exits_1_with_guidance` | `simple_pds_only` + a config chain that defines NO `columns` (e.g. `minimal.yaml` only) → exit 1; ERROR record contains `'no columns defined'` and `'generate_xpath_list'` | owner decision #10 |
@@ -2419,9 +2454,9 @@ Full list with bundle and verifying R-IDs:
 | `test_fail_slow_all_good_writes_normally` | `simple_pds_only` + `--fail-slow` → output byte-identical to the non-fail-slow run | T-FSLOW-003, R-FSLOW-130 |
 | `test_network_failure_not_masked_by_fail_slow` | no seeded cache; `responses` returns 500 for the XSD URL; `--fail-slow` → immediate exit 2 (`SchemaNetworkError` is NOT collected) | T-FSLOW-010, R-SCH-060, R-FSLOW-100 |
 | `test_non_ascii_value_under_fail_slow_accumulates_then_aborts` | `non_ascii_value` + `--fail-slow` → aggregate contains the `ScrapedValueError`; no output files | T-CSV-041, R-FSLOW-110, R-FSLOW-120 |
-| `test_sort_by_lid_ascending` | bundle with multiple LIDs; `sort_by=['LID']` with `simple.txt` (emitted header `LID`, per R-SORT-020) | T-CSV-060 |
-| `test_sort_by_lid_descending` | bundle; `sort_by=['-LID']` (emitted header) | T-CSV-060 |
-| `test_sort_by_unknown_column_aborts_with_configerror` | sort_by=['unknown'] | T-CSV-061, R-SORT-020 |
+| `test_sort_by_lid_ascending` | `multi_namespace` + chain (`multi_namespace.yaml`, tmp-path overlay YAML `output: {sort_by: ['LID']}` written by the test) → rows ordered by LID ascending (`LID` is the emitted header, R-SORT-020) | T-CSV-060 |
+| `test_sort_by_lid_descending` | same, overlay `sort_by: ['-LID']` → descending | T-CSV-060 |
+| `test_sort_by_unknown_column_aborts_with_configerror` | same, overlay `sort_by: ['unknown']` → exit 1 | T-CSV-061, R-SORT-020 |
 
 #### `test_generate_xpath_list.py`
 
@@ -2748,8 +2783,10 @@ branch). The expected end-state is `EXIT_CODE=0`. If any check fails:
 ### 14.2 Final exit criteria
 
 - [ ] `scripts/run-all-checks.sh` exits 0.
-- [ ] `pip install dist/rms_pds4indextools-*.whl` followed by
-      `pds4_create_xml_index --version` works from a fresh venv.
+- [ ] `python -m pip install build && python -m build --sdist --wheel`
+      succeeds, then `pip install dist/rms_pds4indextools-*.whl`
+      followed by `pds4_create_xml_index --version` works from a fresh
+      venv.
 - [ ] `python -m pytest` (which applies the configured
       `--cov=src --cov-branch` addopts) exits 0 and
       `coverage report --fail-under=90` reports overall coverage ≥ 90%
@@ -2764,7 +2801,9 @@ branch). The expected end-state is `EXIT_CODE=0`. If any check fails:
       tree (verified by `scripts/verify_test_coverage.py` — Appendix
       A.13). The script additionally confirms that every R-ID appears
       inside a test function body in `tests/unit/` or
-      `tests/integration/` (not only in a docstring). The `R-CI-*`,
+      `tests/integration/` (i.e., in files under those directories;
+      the script distinguishes directories, not syntactic context).
+      The `R-CI-*`,
       `R-PKG-*`, `R-DOC-*`, `R-DEP-*`, and `R-TST-*` families are
       exempt (satisfied by infrastructure/docs/policy, not test bodies;
       see A.13's `_EXEMPT_PREFIXES`).
@@ -2895,10 +2934,14 @@ scripts/run-all-checks.sh
 pds4_create_xml_index --version
 pds4_create_xml_index generate_index_file --bundle-root tests/data/bundles/simple_pds_only --config-file tests/data/configs/simple.yaml --output-file /tmp/out.csv '**/*.lblx'
 diff /tmp/out.csv tests/data/expected/simple_pds_only/index.csv
-diff /tmp/out.lblx tests/data/expected/simple_pds_only/index.lblx
+diff <(grep -v '<creation_date_time>' /tmp/out.lblx) \
+     <(grep -v '<creation_date_time>' tests/data/expected/simple_pds_only/index.lblx)
 ```
 
-Every diff exits 0 because of R-IDX-001 byte-identical determinism.
+The CSV diff exits 0 by R-IDX-001 byte-identical determinism; the lblx
+diff masks the single `creation_date_time` line (a live CLI run cannot
+freeze the CSV mtime that `$FILE_ZULU$` reads) and everything else is
+byte-identical.
 
 ---
 
@@ -3240,9 +3283,15 @@ $END_IF
 2. The `<File_Area_*>` wrapper around the Table is generated by the
    legacy template; preserve it. The implementer copies the rest of
    `legacy/pds4indextools/index_label_template_pds.xml` lines 1-223 and
-   replaces only the two Table sections per item 1 above. The `md5_checksum`
-   and `creation_date_time` elements remain populated by PdsTemplate macros
-   `$FILE_MD5(index_file_name)$` and `$FILE_ZULU(index_file_name)$`.
+   replaces the two Table sections per item 1 above PLUS one further
+   edit: every occurrence of `$DATETIME(calculated_creation_date_time)$`
+   (three in the legacy file, at its lines 135/147/156) is replaced
+   with `$FILE_ZULU(index_file_name)$` — the tool defines no
+   `calculated_creation_date_time` variable, and an undefined name is a
+   render error under `raise_exceptions=True`. `md5_checksum` keeps
+   `$FILE_MD5(index_file_name)$`. After these edits,
+   `$FILE_ZULU(index_file_name)$` is the template's ONLY
+   mtime-dependent macro (the Phase 9 exit check relies on this).
 3. The `$RECORD_DELIMITER$` variable is supplied by the tool:
    `'Line-Feed'` when `output.line_ending == 'LF'`,
    `'Carriage-Return Line-Feed'` when `'CRLF'` (R-LBL-060). It is added
@@ -3531,7 +3580,7 @@ Fixture dependency notes (critique skill §14):
 11 bundles; NO copy bundles, NO empty `non_monotone` directory, and
 NO `large_synthetic` (owner decisions
 #8 and #9). Feature variants (fixed-width, CRLF, multi-config,
-mapping-full-features) exist only as configs/mappings plus
+mapping-full-features) exist only as configs plus
 `expected/<feature>/` golden directories; their tests point
 `--bundle-root` at `simple_pds_only` or `multi_namespace`.
 
@@ -4771,9 +4820,9 @@ overrides `b`'s `true`), `output.sort_by = ['FILE_NAME']` (from `b`,
 which replaces `a`'s `['a']`), `label_contents.title = 'Final title'`
 (from `c`), and `label_contents.logical_identifier` and
 `.product_class` inherited from `a`. `FILE_NAME` is the emitted header
-for the `filename` auto-column under `simple.txt` (R-SORT-020 requires
-sort keys to name emitted columns), so the sort succeeds and a CSV is
-produced. (`a`'s `['a']` never reaches validation — merge happens
+for the `filename` auto-column in `multi_config_a.yaml`'s `columns:`
+block (R-SORT-020 requires sort keys to name emitted columns), so the
+sort succeeds and a CSV is produced. (`a`'s `['a']` never reaches validation — merge happens
 first.)
 
 Columns come from `multi_config_a.yaml`'s `columns:` block (the later
@@ -5037,7 +5086,7 @@ Architecture-overview row):
 its top block is kept as-is. The delta APPENDS one subsection per
 public submodule, each using the same directive style as the template's
 top block:
-- Subsections, in this order: errors, config, mapping, xpath_norm,
+- Subsections, in this order: errors, config, xpath_norm,
   schema_types, scraper, csv_writer, label_writer, cli. (`_logging`,
   `_io`, and `__main__` are private/entry-point modules — `__main__` is
   documented as the script entry point in a short prose paragraph, not
@@ -5089,8 +5138,8 @@ marker, and the section order `Features` → `Installation` →
 `Getting Started` → `Contributing` → `Links` → `Licensing`. The delta
 fills the template's TODO placeholders only:
 - `Features`: one-paragraph project summary + a short feature bullet
-  list (index generation, `.lblx` label generation, mapping files,
-  config merging, XPath lists).
+  list (index generation, `.lblx` label generation, column configuration,
+  config merging, starter-columns generation via `generate_xpath_list`).
 - `Getting Started` / `Usage examples`: the same quickstart invocation
   and output snippet as `docs/quickstart.rst`, using the
   `simple_pds_only` fixture bundle and `'**/*.lblx'` pattern.
