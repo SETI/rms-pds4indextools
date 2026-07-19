@@ -13,7 +13,7 @@ normalization (R-LBL-090/091), and the PdsTemplate 2.4.0 invocation boundary
 import importlib.resources
 import os
 from pathlib import Path
-from typing import Literal, NamedTuple, TypedDict
+from typing import Literal, NamedTuple, TypedDict, cast
 from unittest import mock
 
 import pytest
@@ -170,8 +170,8 @@ def test_build_substitution_dict_field_content_one_entry_per_column() -> None:
         _Column('b', '<b>', 'pds:ASCII_Real', 5),
     ]
     result = build_substitution_dict(**_make_inputs(columns))
-    field_content = result['Field_Content']
-    assert len(field_content) == 2  # type: ignore[arg-type]
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    assert len(field_content) == 2
 
 
 def test_build_substitution_dict_field_content_each_entry_has_seven_keys() -> None:
@@ -181,15 +181,32 @@ def test_build_substitution_dict_field_content_each_entry_has_seven_keys() -> No
         _Column('b', '<b>', 'pds:ASCII_Real', 5),
     ]
     result = build_substitution_dict(**_make_inputs(columns))
-    for entry in result['Field_Content']:  # type: ignore[attr-defined]
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    for entry in field_content:
         assert set(entry.keys()) == _SEVEN_KEYS
+
+
+def test_build_substitution_dict_field_content_field_number_and_name() -> None:
+    """R-LBL-020: ``field_number`` is 1-based sequential and ``name`` is the header."""
+    columns = [
+        _Column('a', '<a>', 'pds:ASCII_LID', 3),
+        _Column('b', '<b>', 'pds:ASCII_Real', 5),
+        _Column('c', '<c>', 'pds:ASCII_Real', 7),
+    ]
+    result = build_substitution_dict(**_make_inputs(columns))
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    assert [entry['field_number'] for entry in field_content] == list(
+        range(1, len(field_content) + 1)
+    )
+    assert [entry['name'] for entry in field_content] == ['a', 'b', 'c']
 
 
 def test_build_substitution_dict_data_type_namespace_stripped() -> None:
     """Spec section 11.3: ``pds:ASCII_LID`` is emitted as ``ASCII_LID``."""
     columns = [_Column('a', '<a>', 'pds:ASCII_LID', 3)]
     result = build_substitution_dict(**_make_inputs(columns))
-    assert result['Field_Content'][0]['data_type'] == 'ASCII_LID'  # type: ignore[index]
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    assert field_content[0]['data_type'] == 'ASCII_LID'
 
 
 def test_build_substitution_dict_table_character_when_fixed_width_true() -> None:
@@ -547,7 +564,8 @@ def test_field_location_fixed_width_byte_offset_parametrized(
         for index, width in enumerate(widths)
     ]
     result = build_substitution_dict(**_make_inputs(columns, fixed_width=True))
-    offsets = [entry['field_location'] for entry in result['Field_Content']]  # type: ignore[attr-defined]
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    offsets = [entry['field_location'] for entry in field_content]
     assert offsets == expected_offsets
 
 
@@ -559,7 +577,8 @@ def test_field_location_delimited_column_position() -> None:
         _Column('c', '<c>', 'pds:ASCII_Real', 7),
     ]
     result = build_substitution_dict(**_make_inputs(columns, fixed_width=False))
-    offsets = [entry['field_location'] for entry in result['Field_Content']]  # type: ignore[attr-defined]
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    offsets = [entry['field_location'] for entry in field_content]
     assert offsets == [1, 2, 3]
 
 
@@ -567,25 +586,29 @@ def test_field_content_field_length_fixed_width_uses_max_byte_length() -> None:
     """R-LBL-020: ``field_length`` equals the column ``max_byte_length``."""
     columns = [_Column('a', '<a>', 'pds:ASCII_LID', 42)]
     result = build_substitution_dict(**_make_inputs(columns, fixed_width=True))
-    assert result['Field_Content'][0]['field_length'] == 42  # type: ignore[index]
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    assert field_content[0]['field_length'] == 42
 
 
 def test_field_content_maximum_field_length_delimited_uses_max_byte_length() -> None:
     """R-LBL-020: ``maximum_field_length`` equals the column ``max_byte_length``."""
     columns = [_Column('a', '<a>', 'pds:ASCII_LID', 42)]
     result = build_substitution_dict(**_make_inputs(columns, fixed_width=False))
-    assert result['Field_Content'][0]['maximum_field_length'] == 42  # type: ignore[index]
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    assert field_content[0]['maximum_field_length'] == 42
 
 
 def test_field_content_xpath_key_uses_raw_canonical_xpath_for_mapped() -> None:
     """R-LBL-020: a mapped column carries its raw canonical XPath in ``xpath``."""
     columns = [_Column('a', '<Product>/<lid>', 'pds:ASCII_LID', 5)]
     result = build_substitution_dict(**_make_inputs(columns))
-    assert result['Field_Content'][0]['xpath'] == '<Product>/<lid>'  # type: ignore[index]
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    assert field_content[0]['xpath'] == '<Product>/<lid>'
 
 
 def test_field_content_xpath_key_uses_auto_token_for_auto_columns() -> None:
     """R-LBL-020: an auto column carries its token (e.g. ``lid``) in ``xpath``."""
     columns = [_Column('lid', 'lid', 'pds:ASCII_LID', 5, auto_token='lid')]
     result = build_substitution_dict(**_make_inputs(columns))
-    assert result['Field_Content'][0]['xpath'] == 'lid'  # type: ignore[index]
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    assert field_content[0]['xpath'] == 'lid'

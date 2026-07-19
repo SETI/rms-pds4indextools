@@ -194,7 +194,7 @@ def build_substitution_dict(
 ) -> dict[str, object]:
     """Assemble the full PdsTemplate substitution dictionary.
 
-    The dict starts from ``label_contents.model_dump()`` WITHOUT
+    The dict starts from ``label_contents.model_dump(by_alias=False)`` WITHOUT
     ``exclude_none``, so every optional declared field (``version_id``,
     ``title``, ``Citation_Information``, and the reference/source/file-area
     fields) is present with value ``None``; the packaged template tests these
