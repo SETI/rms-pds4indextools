@@ -17,6 +17,7 @@ the internal architecture, see the :doc:`/developer/index` instead.
 
    introduction
    installing
+   quick-start
    the-big-picture
    choosing-labels
    choosing-columns
@@ -25,4 +26,5 @@ the internal architecture, see the :doc:`/developer/index` instead.
    sorting-and-layout
    running-it
    command-reference
+   configuration-reference
    when-things-go-wrong
