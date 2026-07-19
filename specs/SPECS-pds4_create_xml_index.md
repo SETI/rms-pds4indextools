@@ -751,8 +751,8 @@ There are two distinct cases:
 
 ### 13.8 Sort
 
-- **R-SORT-010** If `output.sort_by` is unset (or set to an empty list),
-  rows are sorted by `filespec` (lexical, ascending).
+- **R-SORT-010** An unset or empty `sort_by` performs NO re-sort — rows
+  keep discovery order, which is already `filespec`-sorted per R-DISC-020.
 - **R-SORT-020** If `output.sort_by` is a non-empty list, rows are
   sorted using a stable Python `sorted()` keyed by the listed columns in
   order. A leading `-` on a column name means descending. Each column
