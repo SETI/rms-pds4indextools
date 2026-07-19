@@ -103,7 +103,7 @@ owner decision or a template-first consequence):
 6. §21.2 dev dependencies: as Appendix A.1 (drop `pip-audit`; add
    `freezegun`, `responses`, `pytest-timeout`, `vulture`, `lxml-stubs`,
    `types-requests`, `types-PyYAML`).
-7. R-DEP-001: permit the `rms-pdstemplate>=0.1,<2` upper bound
+7. R-DEP-001: permit the `rms-pdstemplate>=1.0,<2` upper bound
    (golden-byte stability across major versions).
 8. R-TST-030: integration tests run against the pre-seeded XSD cache by
    default (no network); real-download tests carry `@pytest.mark.live`.
@@ -546,7 +546,7 @@ applies ONLY the delta below (Appendix A.1 shows the complete resulting
 file; everything not listed here stays byte-identical to the template):
 
 - Fill the template's TODO placeholders: `description`, `keywords`, and
-  `[project.dependencies]` (the spec §21.1 list verbatim).
+  `[project.dependencies]` (the spec §21.1 list, with `rms-pdstemplate>=1.0,<2` — 1.0.0 verified against source).
 - `[project.scripts]` register `pds4_create_xml_index =
   "pds4indextools.cli:cli_entrypoint"` (R-CLI-001), replacing the
   template's commented-out TODO entry. `cli_entrypoint()` is a thin
@@ -1805,57 +1805,68 @@ a matching update):
   provide `Modification_Detail` in their config (which then passes
   through verbatim per R-LBL-090).
 
-`write_label`:
-- Constructs `pdstemplate.PdsTemplate(template_path, crlf=(line_ending == 'CRLF'))`.
-- Calls `template.write(substitution_dict, output_label_path)`.
-- Catches `pdstemplate`-emitted exceptions NARROWLY. The module-level
-  constant `_PDSTEMPLATE_RAISES: tuple[type[BaseException], ...]` is
-  constructed at import time via a probe with concrete fallbacks:
+`write_label` (behavior verified against the rms-pdstemplate 1.0.0
+source in `/seti/all_repos/rms-pdstemplate` on 2026-07-18):
+
+- On first use (module-level, once), routes pdstemplate's logging into
+  our tree: `pdstemplate.set_logger(logging.getLogger('pds4indextools.pdstemplate'))`.
+  This is REQUIRED: pdstemplate's default `PdsLogger` has no handlers
+  and therefore PRINTS to stdout, which would violate the library/CLI
+  output boundary and break `capsys`-based CLI tests.
+- Constructs `pdstemplate.PdsTemplate(template_path, crlf=(line_ending == 'CRLF'))`
+  (`crlf` is a keyword-only constructor argument; passing an explicit
+  bool overrides pdstemplate's inference from the template's own line
+  endings).
+- Calls `template.write(substitution_dict, output_label_path, raise_exceptions=True)`.
+  `raise_exceptions=True` is REQUIRED: the default (`False`) does not
+  raise — it logs errors and embeds them into the written label
+  wrapped in `[[[`/`]]]`, which would silently poison golden bytes.
+- `write` returns `(error_count, warning_count)`; as a belt-and-braces
+  check, a nonzero `error_count` (possible if a non-raising validation
+  path is ever taken) also raises `OutputError`.
+- Exception wrapping: pdstemplate exports `TemplateError` (subclass of
+  `pdslogger.LoggerError`; there is NO `PdsTemplateError` — the name
+  the earlier draft probed for does not exist). With
+  `raise_exceptions=True`, template-evaluation failures may also
+  surface as the original evaluation exceptions. Module constant (no
+  runtime probing):
 
   ```python
-  def _detect_pdstemplate_exception_types() -> tuple[type[BaseException], ...]:
-      """Return the exception types pdstemplate is known to raise.
+  from pdstemplate import TemplateError
 
-      We probe for ``pdstemplate.PdsTemplateError`` (the documented
-      class as of rms-pdstemplate >=0.1). If it is absent (older
-      versions), fall back to the concrete types pdstemplate's source
-      raises directly: ``KeyError`` and ``SyntaxError`` from template
-      parsing, ``ValueError`` and ``TypeError`` from variable
-      substitution, and ``lxml.etree.XMLSyntaxError`` from the
-      template's XML body.
-      """
-      candidates: list[type[BaseException]] = []
-      try:
-          import pdstemplate as pt
-          if hasattr(pt, 'PdsTemplateError'):
-              candidates.append(pt.PdsTemplateError)
-      except ImportError:
-          pass
-      candidates.extend((KeyError, SyntaxError, ValueError, TypeError))
-      try:
-          from lxml.etree import XMLSyntaxError
-          candidates.append(XMLSyntaxError)
-      except ImportError:
-          pass
-      return tuple(candidates)
-
-  _PDSTEMPLATE_RAISES = _detect_pdstemplate_exception_types()
+  _PDSTEMPLATE_RAISES: tuple[type[BaseException], ...] = (
+      TemplateError, KeyError, NameError, ValueError, TypeError, SyntaxError,
+  )
   ```
 
-  Pin `rms-pdstemplate>=0.1,<2` in `pyproject.toml` so the probe
-  remains stable. DO NOT catch bare `Exception` — programming bugs
-  outside this enumerated set must surface as exit-code-3 unhandled
-  exceptions. Implementation:
+  Implementation:
 
   ```python
   try:
-      template.write(substitution_dict, output_label_path)
+      errors, _warnings = template.write(
+          substitution_dict, output_label_path, raise_exceptions=True)
   except _PDSTEMPLATE_RAISES as e:
       raise OutputError(
-          f"PdsTemplate failed: {e}",
+          f'PdsTemplate failed: {e}',
           file_path=output_label_path,
       ) from e
+  if errors:
+      raise OutputError(
+          f'PdsTemplate reported {errors} error(s)',
+          file_path=output_label_path,
+      )
   ```
+
+  Pin `rms-pdstemplate>=1.0,<2` in `pyproject.toml` (1.0.0 verified).
+  DO NOT catch bare `Exception` — programming bugs outside this
+  enumerated set must surface as exit-code-3 unhandled exceptions.
+- Macro audit (all verified present as `_PREDEFINED_FUNCTIONS` in
+  1.0.0): `BASENAME`, `CURRENT_ZULU`, `DATETIME`, `FILE_MD5`,
+  `FILE_ZULU`; the `$FOR(field, k=Field_Content)` custom-name syntax
+  and `$IF`/`$ELSE_IF`/`$ELSE`/`$END_IF` are documented template
+  headers. An UNDEFINED name inside `$IF(...)$` is an evaluation
+  error — this is exactly why `build_substitution_dict` defines every
+  optional field as `None` (see above).
 - The function takes care of NOTHING else (no temp-file rename — that's
   the CLI's job, R-ERR-002).
 
@@ -1909,7 +1920,10 @@ PdsTemplate MUST request the `frozen_time` fixture (defined in
 | `test_write_label_invokes_pdstemplate_with_crlf_true_when_line_ending_crlf` | mock `pdstemplate.PdsTemplate` and assert kwargs | R-LBL-040, R-LBL-060 |
 | `test_write_label_invokes_pdstemplate_with_crlf_false_when_line_ending_lf` | reverse | R-LBL-060 |
 | `test_write_label_writes_to_supplied_output_path` | mock `template.write` and check first positional arg | R-LBL-040 |
-| `test_write_label_pdstemplate_failure_wrapped_in_outputerror` | `mock.patch("pds4indextools.label_writer.PdsTemplate", side_effect=PdsTemplateError("boom"))` (patch at the IMPORT site — critique skill §7); call `write_label(...)`; `pytest.raises(OutputError) as exc_info`; assert `"PdsTemplate failed"` in `str(exc_info.value)` AND `str(exc_info.value.__cause__)` contains `"boom"` | spec §17 |
+| `test_write_label_pdstemplate_failure_wrapped_in_outputerror` | `mock.patch("pds4indextools.label_writer.PdsTemplate", side_effect=TemplateError("boom"))` (patch at the IMPORT site — critique skill §7); call `write_label(...)`; `pytest.raises(OutputError) as exc_info`; assert `"PdsTemplate failed"` in `str(exc_info.value)` AND `str(exc_info.value.__cause__)` contains `"boom"` | spec §17 |
+| `test_write_label_nonzero_error_count_raises_outputerror` | mock `template.write` to return `(2, 0)` without raising → `OutputError` with `"2 error(s)"` in message | belt-and-braces |
+| `test_write_label_passes_raise_exceptions_true` | mock `template.write`; assert called with `raise_exceptions=True` (default False would embed `[[[...]]]` error text into the label instead of raising) | verified 1.0.0 behavior |
+| `test_write_label_routes_pdstemplate_logging_off_stdout` | after `write_label(...)` on the packaged template, `capsys.readouterr().out == ''` (pdstemplate's default logger prints to stdout unless `set_logger` is called) | library/CLI output boundary |
 | `test_field_location_fixed_width_byte_offset_parametrized` | parametrize (widths, expected_offsets) over: `([5,3,7], [1,7,11])`, `([1], [1])`, `([0,3], [1,2])` (empty first column edge case), `([10,10,10,10], [1,12,23,34])`, `([255,255], [1,257])` (byte-boundary case); for each, assert `[entry['field_location'] for entry in result['Field_Content']] == expected_offsets` | R-LBL-020 (critique skill §9) |
 | `test_field_location_delimited_column_position` | fixed_width=False → field_location[i] equals 1-based column index | R-LBL-020 |
 | `test_field_content_field_length_fixed_width_uses_max_byte_length` | matches ColumnStat.max_byte_length | R-LBL-020 |
@@ -2920,7 +2934,7 @@ dependencies = [
   "lxml>=5.0",
   "pyyaml>=6.0",
   "pydantic>=2.5",
-  "rms-pdstemplate>=0.1,<2",
+  "rms-pdstemplate>=1.0,<2",
   "requests>=2.32",
   "requests-file>=2.1",
   "platformdirs>=4.0",
@@ -5402,10 +5416,11 @@ Several integration tests assert byte-identical match against
 committed `tests/data/expected/<bundle>/index.{csv,lblx}` files. The
 following procedure is binding for producing those committed bytes:
 
-1. **Dependency pinning** (Phase 0 `pyproject.toml`): add upper bounds to
-   `rms-pdstemplate` (e.g. `rms-pdstemplate>=0.1,<2`) so byte output
-   does not drift under a major version bump. Lxml, requests, and
-   pyyaml retain `>=` floors.
+1. **Dependency pinning** (Phase 0 `pyproject.toml`):
+   `rms-pdstemplate>=1.0,<2` (1.0.0 verified against
+   `/seti/all_repos/rms-pdstemplate`) so byte output does not drift
+   under a major version bump. Lxml, requests, and pyyaml retain `>=`
+   floors.
 2. **Generator script**: `scripts/generate_expected_outputs.py`
    (committed to the repo). The script:
    1. Decorates with `@freeze_time('2026-05-14T00:00:00Z')` (uses
