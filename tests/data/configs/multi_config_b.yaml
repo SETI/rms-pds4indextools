@@ -1,0 +1,9 @@
+output:
+  fixed_width: true
+  sort_by: ['FILE_NAME']
+nillable:
+  pds:ASCII_Real:
+    inapplicable: -999.0
+    missing:      -2.0
+    unknown:      -997.0
+    anticipated:  -996.0

@@ -1,0 +1,10 @@
+label_contents:
+  logical_identifier: urn:nasa:pds:test_nilled:index:index
+  product_class: Product_Ancillary
+  version_id: '1.0'
+  title: Nilled index
+columns:
+  - auto: lid
+    name: LID
+  - xpath: pds:Product_Observational<1>/pds:Observation_Area<1>/pds:Time_Coordinates<1>/pds:stop_date_time<1>
+    name: STOP

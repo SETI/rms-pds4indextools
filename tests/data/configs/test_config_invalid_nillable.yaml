@@ -1,0 +1,10 @@
+label_contents:
+  logical_identifier: urn:nasa:pds:test_bundle:test:test_index
+  product_class: Product_Ancillary
+nillable:
+  pds:ASCII_Integer:
+    inapplicable: -999
+    missing:      -998
+    unknown:      -997
+    anticipated:  -996
+    frobnicate:   42

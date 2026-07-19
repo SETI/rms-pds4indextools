@@ -1,0 +1,13 @@
+label_contents:
+  logical_identifier: urn:nasa:pds:test_simple:index:index
+  product_class: Product_Ancillary
+output:
+  fixed_width: false
+  sort_by: ['a']
+columns:
+  - auto: lid
+    name: LID
+  - auto: filename
+    name: FILE_NAME
+  - xpath: pds:Product_Observational<1>/pds:Identification_Area<1>/pds:title<1>
+    name: TITLE

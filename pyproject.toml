@@ -5,11 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rms-pds4indextools"
 dynamic = ["version"]
-description = "TODO"
+description = "Generate tabular index files and PDS4 labels by scraping PDS4 XML label trees"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-  "TODO"
+  "lxml>=5.0",
+  "pyyaml>=6.0",
+  "pydantic>=2.5",
+  "rms-pdstemplate>=1.0,<2",
+  "requests>=2.32",
+  "requests-file>=2.1",
+  "platformdirs>=4.0",
+  "tqdm>=4.66",
 ]
 license = {text = "Apache-2.0"}
 authors = [
@@ -18,7 +25,7 @@ authors = [
 maintainers = [
   {name = "Robert S. French", email = "rfrench@seti.org"}
 ]
-keywords = ["TODO"]
+keywords = ["pds4", "planetary data system", "index", "metadata", "xml"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Natural Language :: English",
@@ -48,16 +55,39 @@ pythonpath = [
   "src"
 ]
 testpaths = ["tests"]
-# TODO Update desired parallelism
-addopts = ["-n", "auto", "--cov=src", "--strict-markers", "--strict-config"]
-markers = []
+addopts = [
+  "-n", "auto",
+  "--cov=src",
+  "--cov-branch",
+  "--strict-markers",
+  "--strict-config",
+  "--timeout=60",
+  "--timeout-method=thread",
+]
+markers = [
+  "live: marks tests requiring live network beyond XSD lookup (deselect with -m \"not live\")",
+  "integration: marks integration tests (deselect with -m \"not integration\")",
+]
+# Warnings policy lives entirely in `filterwarnings`. Do NOT add
+# `-W error` to addopts — it preempts `filterwarnings` and turns
+# pkg_resources/setuptools_scm DeprecationWarnings into collection
+# errors before the ignores fire (critique skill §22).
+filterwarnings = [
+  "error",
+  # Each ignore MUST pair with a TODO comment + tracking issue URL when
+  # the upstream fix is known (critique skill §16).
+  "ignore::DeprecationWarning:_pytest.*",           # pytest internal noise
+  "ignore::DeprecationWarning:pkg_resources.*",     # setuptools_scm/pyroma
+  "ignore::DeprecationWarning:pdstemplate.*",       # TODO: track upstream pdstemplate
+  "ignore::PendingDeprecationWarning",              # broad floor; promote specific ones as discovered
+]
 
 [tool.setuptools]
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-"pds4indextools" = ["py.typed"]
+"pds4indextools" = ["py.typed", "templates/*.yaml", "templates/*.xml"]
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
@@ -65,18 +95,24 @@ write_to = "src/pds4indextools/_version.py"
 
 [project.optional-dependencies]
 dev = [
-  "pds4indextools",
+  "rms-pds4indextools",
   "coverage>=7.0",
-  # "mypy>=1.0",
+  "freezegun>=1.4",
+  "lxml-stubs",
+  "mypy>=1.0",
   "pymarkdownlnt>=0.9.35",
   "pytest>=7.0",
   "pytest-cov>=4.0",
+  "pytest-timeout>=2.3",
   "pytest-xdist>=3.8.0",
+  "responses>=0.25",
   "ruff>=0.8",
+  "types-PyYAML",
+  "types-requests",
   # "bandit[toml]>=1.8",
   "pyroma>=4.2",
-  # "vulture>=2.14",
-  "pds4indextools[docs]",
+  "vulture>=2.14",
+  "rms-pds4indextools[docs]",
 ]
 docs = [
   "myst-parser",
@@ -86,7 +122,7 @@ docs = [
 ]
 
 [project.scripts]
-#TODO = "main.pds4indextools:main"
+pds4_create_xml_index = "pds4indextools.cli:cli_entrypoint"
 
 # Tool configuration
 
@@ -94,7 +130,7 @@ docs = [
 branch = true
 parallel = true
 source = ["pds4indextools"]
-omit = ["tests/*", "_version.py"]
+omit = ["tests/*", "*/_version.py"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -113,8 +149,8 @@ module = "pds4indextools._version"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-# module = ["pds4indextools.*"]
-# ignore_missing_imports = true
+module = ["pdstemplate.*", "requests_file.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 target-version = "py310"
@@ -153,8 +189,7 @@ enabled = false
 # exclude_dirs = ["tests", "venv", ".venv"]
 # targets = ["src"]
 
-# Uncomment when enabling vulture in [project.optional-dependencies].dev.
-# [tool.vulture]
-# paths = ["src"]
-# exclude = ["tests/"]
-# min_confidence = 70
+[tool.vulture]
+paths = ["src"]
+exclude = ["tests/"]
+min_confidence = 70

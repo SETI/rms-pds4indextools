@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns="http://pds.nasa.gov/pds4/pds/v1"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:pds="http://pds.nasa.gov/pds4/pds/v1"
+           targetNamespace="http://pds.nasa.gov/pds4/pds/v1"
+           elementFormDefault="qualified">
+  <xs:simpleType name="ASCII_NonNegative_Integer">
+    <xs:restriction base="xs:integer"/>
+  </xs:simpleType>
+  <xs:simpleType name="Wavelength_Range_WO_Units">
+    <xs:restriction base="xs:double"/>
+  </xs:simpleType>
+  <xs:complexType name="Wavelength_Range">
+    <xs:simpleContent>
+      <xs:extension base="pds:Wavelength_Range_WO_Units">
+        <xs:attribute name="unit" type="xs:string"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:element name="wavelength_range" type="pds:Wavelength_Range"/>
+</xs:schema>
