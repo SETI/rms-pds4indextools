@@ -3055,6 +3055,10 @@ filterwarnings = [
   "ignore::DeprecationWarning:_pytest.*",           # pytest internal noise
   "ignore::DeprecationWarning:pkg_resources.*",     # setuptools_scm/pyroma
   "ignore::DeprecationWarning:pdstemplate.*",       # TODO: track upstream pdstemplate
+  # google.api_core emits this at import time ONLY on Python 3.10 (EOL notice),
+  # reached transitively via pdstemplate -> rms-filecache -> google-cloud-storage;
+  # not actionable here and gone once 3.10 is dropped from the matrix.
+  "ignore:You are using a Python version:FutureWarning",
   "ignore::PendingDeprecationWarning",              # broad floor; promote specific ones as discovered
 ]
 
