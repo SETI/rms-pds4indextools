@@ -268,10 +268,13 @@ def test_scrape_is_suffix_agnostic_xml_and_lblx_identical(tmp_path: Path) -> Non
 
 
 def test_scrape_pre_order_traversal_visits_every_element(tmp_path: Path) -> None:
-    """Every leaf XPath is scraped and no parent element is stored.
+    """Every leaf XPath across a deeply nested label is scraped in one pass.
 
-    The whole parsed DOM is held in memory and walked in a single pass with no
-    streaming (R-PARSE-003).
+    R-PARSE-003 is an unobservable implementation note (the whole DOM is held
+    in memory with no streaming pass over large labels); its faithful
+    behavioral proxy is that a single scrape captures every leaf regardless of
+    nesting depth, including one buried five levels down, while storing no
+    interior parent element.
     Implements R-SCRAPE-010, R-SCRAPE-030, R-PARSE-003.
     """
     body = (
@@ -279,9 +282,14 @@ def test_scrape_pre_order_traversal_visits_every_element(tmp_path: Path) -> None
         '        <first>1</first>\n'
         '        <group>\n'
         '            <second>2</second>\n'
-        '            <third>3</third>\n'
+        '            <subgroup>\n'
+        '                <third>3</third>\n'
+        '                <deep>\n'
+        '                    <deepest>4</deepest>\n'
+        '                </deep>\n'
+        '            </subgroup>\n'
         '        </group>\n'
-        '        <fourth>4</fourth>\n'
+        '        <fifth>5</fifth>\n'
         '    </Observation_Area>\n'
     )
     path = _write(tmp_path, 'nested.lblx', _label(_id(), body))
@@ -293,9 +301,13 @@ def test_scrape_pre_order_traversal_visits_every_element(tmp_path: Path) -> None
         'first',
         'second',
         'third',
-        'fourth',
+        'deepest',
+        'fifth',
     ]
+    assert any(key.endswith('pds:deepest<1>') for key in result.rows)
     assert not any(key.endswith('pds:group<1>') for key in result.rows)
+    assert not any(key.endswith('pds:subgroup<1>') for key in result.rows)
+    assert not any(key.endswith('pds:deep<1>') for key in result.rows)
     assert not any(key.endswith('pds:Observation_Area<1>') for key in result.rows)
 
 

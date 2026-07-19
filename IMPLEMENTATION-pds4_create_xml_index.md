@@ -2582,8 +2582,12 @@ minimally and adds NEW documentation pages only:
   TODO sections per [Appendix C.12](#c12-readmemd). No logo.
 - `CONTRIBUTING.md` — keep the committed template content; extend only
   as needed per [Appendix C.13](#c13-contributingmd).
-- `tests/unit/test_documentation_conventions.py` — eleven tests, all
-  parametrized where applicable:
+- `tests/unit/test_documentation_conventions.py` — the eleven tests below
+  (plus three public-API traceability tests added for R-API-001/R-API-002:
+  `test_every_public_callable_has_docstring`,
+  `test_every_public_function_is_fully_type_annotated`, and
+  `test_every_public_class_annotations_resolve`), all parametrized where
+  applicable:
   - `test_every_public_name_in_root_all_appears_in_module_rst` —
     parametrize over every name in `pds4indextools.__all__`; for each
     name, assert `name` appears in `docs/module.rst` text (read once
@@ -4956,8 +4960,17 @@ delta; every other line stays byte-identical to the committed file:
    If the `-n -W` build surfaces further unresolvable THIRD-PARTY
    references (e.g. `lxml.etree._Element`, `tqdm.tqdm`, pydantic
    internals), appending them to `nitpick_ignore` is part of this
-   enumerated delta — never ignore references to `pds4indextools.*`
-   symbols; those are real docs bugs.
+   enumerated delta — never ignore references to PUBLIC `pds4indextools.*`
+   symbols; a missing public target is a real docs bug. The one sanctioned
+   exception is a PRIVATE symbol that autodoc leaks as a rendering artifact
+   of pydantic type-alias expansion — specifically
+   `pds4indextools.config._require_absolute`, surfaced when autodoc expands
+   the `AbsolutePath = Annotated[Path, AfterValidator(_require_absolute)]`
+   alias in `IndexConfig.xsd_cache_dir` (and, without
+   `from __future__ import annotations`, the alias is evaluated eagerly so
+   `autodoc_type_aliases` cannot suppress it). The public `AbsolutePath`
+   alias itself is documented in `module.rst`, so ignoring the leaked
+   private ref hides no public API.
 
 No other settings are changed: the template already enables autodoc,
 napoleon, viewcode, intersphinx, mermaid (`mermaid_output_format =
@@ -5096,10 +5109,18 @@ Architecture-overview row):
 §3 Module-index row). The committed template `module.rst` (the
 `.. automodule:: pds4indextools` block with its `:member-order:`,
 `:members:`, `:undoc-members:`, `:special-members:`,
-`:show-inheritance:`, and `:exclude-members:` options) is the basis and
-its top block is kept as-is. The delta APPENDS one subsection per
-public submodule, each using the same directive style as the template's
-top block:
+`:show-inheritance:`, and `:exclude-members:` options) is the basis.
+The root `.. automodule:: pds4indextools` block is REDUCED to render only
+the package docstring (its `:members:`/`:special-members:`/
+`:exclude-members:` options are dropped): because the root re-exports
+every public name, keeping `:members:` there would document each symbol a
+SECOND time and the `-n -W` build fails with duplicate-object-description
+and ambiguous-cross-reference warnings. The per-symbol documentation lives
+in the appended per-submodule subsections instead. The delta APPENDS one
+subsection per public submodule, each using explicit `:members:` lists
+(plus `.. autodata::`/`.. py:data::` for the module-level constants and
+type aliases that `automodule :members:` does not emit) so every
+`__all__` name still appears in `module.rst` text:
 - Subsections, in this order: errors, config, xpath_norm,
   schema_types, scraper, csv_writer, label_writer, cli. (`_logging`,
   `_io`, and `__main__` are private/entry-point modules — `__main__` is

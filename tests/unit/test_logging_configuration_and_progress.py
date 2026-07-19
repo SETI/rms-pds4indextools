@@ -19,6 +19,7 @@ import logging
 import subprocess
 import sys
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -143,14 +144,35 @@ def test_setup_logging_format_string(
 def test_setup_logging_emits_to_stderr(capsys: pytest.CaptureFixture[str]) -> None:
     """The rendered record body appears on stderr and not on stdout.
 
-    Warnings are emitted to stderr through the standard logging facility; no
-    separate warning-log file is written (R-FSLOW-140).
+    Warnings are emitted to stderr through the standard logging facility.
     """
     setup_logging(0)
     module_logger('test').warning('body-text')
     captured = capsys.readouterr()
     assert 'body-text' in captured.err
     assert 'body-text' not in captured.out
+
+
+def test_setup_logging_writes_no_warning_log_file(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """R-FSLOW-140: a warning goes to stderr and writes no warning-log file.
+
+    Running the warning flow from an empty working directory leaves no ``*.log``
+    file behind, and the configured logger carries no ``FileHandler``, so every
+    warning reaches stderr through the standard logging facility and none is
+    persisted to a warning-log file (R-FSLOW-140).
+    """
+    monkeypatch.chdir(tmp_path)
+    setup_logging(0)
+    module_logger('test').warning('warn-body')
+    captured = capsys.readouterr()
+    assert 'warn-body' in captured.err
+    logger = logging.getLogger(ROOT_LOGGER_NAME)
+    assert not any(isinstance(handler, logging.FileHandler) for handler in logger.handlers)
+    assert list(tmp_path.rglob('*.log')) == []
 
 
 def test_setup_logging_keeps_propagation_enabled() -> None:

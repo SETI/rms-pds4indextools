@@ -104,9 +104,11 @@ myst_enable_extensions = [
 mermaid_output_format = 'raw'
 
 # Third-party types that publish no Sphinx inventory, plus autodoc-rendered
-# type-alias/annotation fragments that nitpicky mode cannot resolve. Only
-# non-pds4indextools targets are listed; every pds4indextools.* symbol must
-# resolve for real (see Appendix C.1).
+# type-alias/annotation fragments that nitpicky mode cannot resolve. Every
+# PUBLIC pds4indextools.* symbol must resolve for real (see Appendix C.1); the
+# single pds4indextools entry below is a PRIVATE symbol leaked as a rendering
+# artifact of pydantic alias expansion, not a missing public doc (see its
+# comment).
 nitpick_ignore = [
     # PdsTemplate types are not documented externally; skip in nitpicky mode.
     ('py:class', 'pdstemplate.PdsTemplate'),

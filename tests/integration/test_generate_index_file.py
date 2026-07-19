@@ -155,11 +155,11 @@ def test_simple_pds_only_byte_identical_to_expected(
 def test_default_output_paths_byte_golden(
     chdir_tmp: Path, frozen_time: None, data_root: Path, seeded_cache_overlay: Path
 ) -> None:
-    """T-CLI-060 (bytes leg), R-CLI-015, R-LBL-080: default-path CLI output matches golden.
+    """T-CLI-060 (bytes leg), R-CLI-015: default-path CLI output matches golden.
 
     The label carries exactly one ``<creation_date_time>`` line, produced by a
     PdsTemplate timestamp macro rather than any tool-computed value; masking it
-    is what lets the rest of the label match golden byte-for-byte (R-LBL-080).
+    is what lets the rest of the label match golden byte-for-byte.
     """
     argv = _index_argv(
         BUNDLES / 'simple_pds_only',

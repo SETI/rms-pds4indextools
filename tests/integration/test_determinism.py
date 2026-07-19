@@ -130,12 +130,11 @@ def test_two_runs_byte_identical_with_filesystem_order_randomization(
     frozen_csv_mtime: int,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """R-IDX-002, R-DISC-020: reversing filesystem iteration order changes nothing byte-wise.
+    """R-IDX-002: reversing filesystem iteration order changes nothing byte-wise.
 
-    Discovered files are sorted by ``filespec`` before any per-label work, so
-    scrape order, row order, and output bytes are independent of the order
-    ``Path.glob`` returns; reversing that order yields identical output
-    (R-DISC-020).
+    Discovered files are sorted before any per-label work, so scrape order, row
+    order, and output bytes are independent of the order ``Path.glob`` returns;
+    reversing that order yields identical output.
     """
     first = _run(
         'multi_namespace',
@@ -164,3 +163,40 @@ def test_two_runs_byte_identical_with_filesystem_order_randomization(
     assert calls
     assert _sha256(first) == _sha256(second)
     assert _sha256(first.with_suffix('.lblx')) == _sha256(second.with_suffix('.lblx'))
+
+
+def test_csv_data_rows_sorted_ascending_by_filespec(
+    seeded_cache_overlay: Path,
+    tmp_path: Path,
+    frozen_time: None,
+    frozen_csv_mtime: int,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """R-DISC-020: CSV data rows appear in ascending lexical ``filespec`` order.
+
+    Discovery is forced to hand back labels in reverse-sorted order, yet the
+    emitted ``FILE_NAME`` column (one entry per label, derived from each label's
+    ``filespec``) still lands in ascending lexical order equal to its own sort,
+    proving the pipeline sorts by ``filespec`` ascending before any per-label
+    work rather than preserving file-system iteration order (R-DISC-020).
+    """
+    original_glob = Path.glob
+
+    def reversed_glob(self: Path, pattern: str) -> list[Path]:
+        return list(reversed(list(original_glob(self, pattern))))
+
+    monkeypatch.setattr(Path, 'glob', reversed_glob)
+    out = _run(
+        'multi_namespace',
+        'multi_namespace.yaml',
+        tmp_path / 'a',
+        seeded_cache_overlay,
+        frozen_csv_mtime,
+    )
+
+    lines = out.read_text(encoding='utf-8').splitlines()
+    header = lines[0].split(',')
+    file_col = header.index('FILE_NAME')
+    file_names = [line.split(',')[file_col] for line in lines[1:]]
+    assert len(file_names) > 1
+    assert file_names == sorted(file_names)
