@@ -1,0 +1,4 @@
+LID,FILE_NAME,TITLE,GEOM_METHOD,RING_NAME
+urn:nasa:pds:test_multi_ns:index:row_a,a.lblx,Row A,row_a_method,row_a_ring
+urn:nasa:pds:test_multi_ns:index:row_b,b.lblx,Row B,row_b_method,row_b_ring
+urn:nasa:pds:test_multi_ns:index:row_c,c.lblx,Row C,row_c_method,row_c_ring

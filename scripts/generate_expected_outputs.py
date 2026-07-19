@@ -25,7 +25,9 @@ from pds4indextools import (
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'tests' / 'data'
 EXPECTED = DATA / 'expected'
-FROZEN_MTIME = 1778716800  # 2026-05-14T00:00:00Z (POSIX seconds, UTC); equals conftest._FROZEN_MTIME_EPOCH
+FROZEN_MTIME = (
+    1778716800  # 2026-05-14T00:00:00Z (POSIX seconds, UTC); equals conftest._FROZEN_MTIME_EPOCH
+)
 
 
 def _freeze_csv_mtime(csv_path: Path) -> None:
@@ -51,9 +53,7 @@ def _build_seeded_cache_overlay(work: Path) -> Path:
     cache.mkdir(parents=True, exist_ok=True)
     for url, seed in _FIXTURE_SCHEMA_URLS.items():
         digest = hashlib.sha256(url.encode('utf-8')).hexdigest()
-        (cache / f'{digest}.xsd').write_bytes(
-            (DATA / 'xsd_cache_seed' / seed).read_bytes()
-        )
+        (cache / f'{digest}.xsd').write_bytes((DATA / 'xsd_cache_seed' / seed).read_bytes())
     overlay = work / 'xsd_cache_overlay.yaml'
     overlay.write_text(f'xsd_cache_dir: {cache}\n', encoding='utf-8')
     return overlay
@@ -65,15 +65,15 @@ def _build_seeded_cache_overlay(work: Path) -> Path:
 # the second names the bundle directory actually scraped.
 _INDEX_FEATURES: tuple[tuple[str, str, str], ...] = (
     # (expected_dir, bundle_name, config_file_or_first_of_chain)
-    ('simple_pds_only',       'simple_pds_only', 'simple.yaml'),
-    ('multi_namespace',       'multi_namespace', 'multi_namespace.yaml'),
-    ('nilled',                'nilled',          'nilled.yaml'),
-    ('repeated_tags',         'repeated_tags',   'repeated_tags.yaml'),
-    ('quote_in_value',        'quote_in_value',  'quote_in_value_fixed.yaml'),
-    ('fixed_width',           'simple_pds_only', 'fixed_width.yaml'),
-    ('crlf',                  'simple_pds_only', 'crlf.yaml'),
-    ('multi_config',          'simple_pds_only', 'multi_config_a.yaml'),
+    ('simple_pds_only', 'simple_pds_only', 'simple.yaml'),
+    ('multi_namespace', 'multi_namespace', 'multi_namespace.yaml'),
+    ('nilled', 'nilled', 'nilled.yaml'),
+    ('quote_in_value', 'quote_in_value', 'quote_in_value_fixed.yaml'),
+    ('fixed_width', 'simple_pds_only', 'fixed_width.yaml'),
+    ('crlf', 'simple_pds_only', 'crlf.yaml'),
+    ('multi_config', 'simple_pds_only', 'multi_config_a.yaml'),
     ('mapping_full_features', 'multi_namespace', 'mapping_full_features.yaml'),
+    ('repeated_tags', 'repeated_tags', 'repeated_tags.yaml'),
 )
 
 # Bundles whose runs always raise (no expected/ directory; the integration
@@ -108,10 +108,12 @@ def _regen_index_feature(expected_dir: str, bundle: str, cfg: str) -> None:
 
 def _configs_for(expected_dir: str, primary: str) -> tuple[Path, ...]:
     if expected_dir == 'multi_config':
-        return (DATA / 'configs' / 'multi_config_a.yaml',
-                DATA / 'configs' / 'multi_config_b.yaml',
-                DATA / 'configs' / 'multi_config_c.yaml',
-                _OVERLAY)
+        return (
+            DATA / 'configs' / 'multi_config_a.yaml',
+            DATA / 'configs' / 'multi_config_b.yaml',
+            DATA / 'configs' / 'multi_config_c.yaml',
+            _OVERLAY,
+        )
     return (DATA / 'configs' / primary, _OVERLAY)
 
 
