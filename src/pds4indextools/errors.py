@@ -1,14 +1,15 @@
 """Exception hierarchy and exit-code constants for pds4indextools.
 
 This module defines the single-rooted exception tree of the specification
-(section 17.1). Every library error is a :class:`Pds4IndexError`, which
+(section 17.1). Every library error is a
+:exc:`~pds4indextools.errors.Pds4IndexError`, which
 carries optional ``file_path`` / ``lineno`` diagnostic context and renders
 that context through ``__str__`` so that ``logging.Logger.exception`` and
 ``repr`` surface it automatically. The module also defines the process
 exit-code constants (section 17.2) and the ``FAIL_SLOW_ELIGIBLE`` class flag
 (R-ERR-001) that marks which errors ``--fail-slow`` is allowed to accumulate
 per label. The SIGINT exit code (R-ERR-002) is exposed as
-:data:`EXIT_SIGINT`.
+:data:`~pds4indextools.errors.EXIT_SIGINT`.
 """
 
 from collections.abc import Sequence
@@ -110,7 +111,7 @@ class CliError(Pds4IndexError):
     """Argparse or user-input error; maps to exit code 1 (section 17.2).
 
     Raised for invalid command-line usage that argparse itself does not
-    reject. Uses the shared :class:`Pds4IndexError` constructor.
+    reject.
 
     Implements spec section 17.1 (``CliError``) and R-ERR-001.
     """
@@ -123,7 +124,7 @@ class ConfigError(Pds4IndexError):
     """Config-validation error; maps to exit code 1 (section 17.2).
 
     Raised for invalid configuration such as bad columns or ``sort_by``
-    misuse. Uses the shared :class:`Pds4IndexError` constructor.
+    misuse.
 
     Implements spec section 17.1 (``ConfigError``) and R-ERR-001.
     """
@@ -135,8 +136,7 @@ class ConfigError(Pds4IndexError):
 class LabelError(Pds4IndexError):
     """Label-content error; maps to exit code 2 (section 17.2).
 
-    Base for the per-label content errors. Uses the shared
-    :class:`Pds4IndexError` constructor.
+    Base for the per-label content errors.
 
     Implements spec section 17.1 (``LabelError``) and R-ERR-001.
     """
@@ -148,8 +148,6 @@ class LabelError(Pds4IndexError):
 class ParseError(LabelError):
     """XML parse failure, BOM, or missing default namespace in a label.
 
-    Uses the shared :class:`Pds4IndexError` constructor.
-
     Implements spec section 17.1 (``ParseError``) and R-ERR-001.
     """
 
@@ -159,8 +157,6 @@ class ParseError(LabelError):
 
 class LidError(LabelError):
     """LID regex, missing ``version_id``, or cross-label LID collision.
-
-    Uses the shared :class:`Pds4IndexError` constructor.
 
     Implements spec section 17.1 (``LidError``), R-LID-020, and R-ERR-001.
     """
@@ -172,8 +168,6 @@ class LidError(LabelError):
 class XPathError(LabelError):
     """Non-monotone interleave detected while renumbering XPaths.
 
-    Uses the shared :class:`Pds4IndexError` constructor.
-
     Implements spec section 17.1 (``XPathError``) and R-ERR-001.
     """
 
@@ -183,8 +177,6 @@ class XPathError(LabelError):
 
 class NilError(LabelError):
     """Bad ``nilReason`` or an unknown data type in a label.
-
-    Uses the shared :class:`Pds4IndexError` constructor.
 
     Implements spec section 17.1 (``NilError``) and R-ERR-001.
     """
@@ -197,7 +189,7 @@ class ScrapedValueError(LabelError):
     """Scraped value has non-ASCII, control characters, or a double quote.
 
     Named ``ScrapedValueError`` rather than ``ValueError`` to avoid shadowing
-    the built-in. Uses the shared :class:`Pds4IndexError` constructor.
+    the built-in.
 
     Implements spec section 17.1 (``ScrapedValueError``) and R-ERR-001.
     """
@@ -209,8 +201,7 @@ class ScrapedValueError(LabelError):
 class SchemaError(Pds4IndexError):
     """XSD-related error; maps to exit code 2 (section 17.2).
 
-    Base for the schema errors. Uses the shared :class:`Pds4IndexError`
-    constructor.
+    Base for the schema errors.
 
     Implements spec section 17.1 (``SchemaError``) and R-ERR-001.
     """
@@ -223,8 +214,6 @@ class SchemaError(Pds4IndexError):
 class SchemaResolutionError(SchemaError):
     """A type could not be resolved in any consulted XSD.
 
-    Uses the shared :class:`Pds4IndexError` constructor.
-
     Implements spec section 17.1 (``SchemaResolutionError``) and R-ERR-001.
     """
 
@@ -234,8 +223,6 @@ class SchemaResolutionError(SchemaError):
 
 class SchemaVersionError(SchemaError):
     """Cross-label namespace/version inconsistency across the bundle.
-
-    Uses the shared :class:`Pds4IndexError` constructor.
 
     Implements spec section 17.1 (``SchemaVersionError``), R-SCH-040, and
     R-ERR-001.
@@ -248,8 +235,6 @@ class SchemaVersionError(SchemaError):
 class SchemaNetworkError(SchemaError):
     """XSD download failure; NOT fail-slow eligible.
 
-    Uses the shared :class:`Pds4IndexError` constructor.
-
     Implements spec section 17.1 (``SchemaNetworkError``) and R-ERR-001.
     """
 
@@ -261,8 +246,6 @@ class SchemaNetworkError(SchemaError):
 class SchemaCacheError(SchemaError):
     """XSD cache file unreadable; NOT fail-slow eligible.
 
-    Uses the shared :class:`Pds4IndexError` constructor.
-
     Implements spec section 17.1 (``SchemaCacheError``) and R-ERR-001.
     """
 
@@ -273,8 +256,6 @@ class SchemaCacheError(SchemaError):
 
 class OutputError(Pds4IndexError):
     """CSV or label write failure; maps to exit code 2 (section 17.2).
-
-    Uses the shared :class:`Pds4IndexError` constructor.
 
     Implements spec section 17.1 (``OutputError``) and R-ERR-001.
     """
@@ -294,8 +275,9 @@ class FailSlowAggregateError(Pds4IndexError):
     one per line.
 
     Parameters:
-        errors: The non-empty sequence of accumulated :class:`Pds4IndexError`
-            instances. Stored as a defensive copy on ``.errors``.
+        errors: The non-empty sequence of accumulated
+            :exc:`~pds4indextools.errors.Pds4IndexError` instances. Stored as a
+            defensive copy on ``.errors``.
 
     Raises:
         ValueError: If ``errors`` is empty.
@@ -320,7 +302,9 @@ class FailSlowAggregateError(Pds4IndexError):
         if len(errors) == 0:
             raise ValueError('FailSlowAggregateError requires at least one error')
         self.errors: list[Pds4IndexError] = list(errors)
-        super().__init__(str(len(self.errors)))
+        # Keep .message / .args coherent with the __str__ count prefix so that
+        # a caller logging .message never sees a bare digit.
+        super().__init__(f'{len(self.errors)} errors')
 
     def __str__(self) -> str:
         """Render the count prefix followed by each sub-error, one per line.
@@ -329,6 +313,5 @@ class FailSlowAggregateError(Pds4IndexError):
             ``"<n> errors"`` followed by ``str(e)`` for each sub-error, joined
             with newlines.
         """
-        count = len(self.errors)
         body = '\n'.join(str(sub_error) for sub_error in self.errors)
-        return f'{count} errors\n{body}'
+        return f'{self.message}\n{body}'

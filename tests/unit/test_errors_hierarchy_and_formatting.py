@@ -69,29 +69,6 @@ SCHEMA_ERROR_SUBCLASSES: list[type[SchemaError]] = [
     SchemaCacheError,
 ]
 
-EXPECTED_PUBLIC_SURFACE: set[str] = {
-    'Pds4IndexError',
-    'CliError',
-    'ConfigError',
-    'LabelError',
-    'ParseError',
-    'LidError',
-    'XPathError',
-    'NilError',
-    'ScrapedValueError',
-    'SchemaError',
-    'SchemaResolutionError',
-    'SchemaVersionError',
-    'SchemaNetworkError',
-    'SchemaCacheError',
-    'OutputError',
-    'FailSlowAggregateError',
-    'EXIT_USER_ERROR',
-    'EXIT_RUNTIME_ERROR',
-    'EXIT_INTERNAL_ERROR',
-    'EXIT_SIGINT',
-}
-
 
 def test_pds4indexerror_is_exception_subclass() -> None:
     """``Pds4IndexError`` is a subclass of the built-in ``Exception``."""
@@ -266,8 +243,20 @@ def test_exit_code_constants(constant: int, expected: int) -> None:
 
 
 def test_all_exports_match_module_public_surface() -> None:
-    """``__all__`` enumerates exactly the intended public names."""
-    assert set(errors.__all__) == EXPECTED_PUBLIC_SURFACE
+    """``__all__`` enumerates exactly the module's real public surface.
+
+    The expected surface is computed by introspection (public classes
+    defined in this module plus the module-level ``EXIT_*`` constants), so a
+    new public name that is defined but forgotten in ``__all__`` — or an
+    ``__all__`` entry with no backing attribute — fails this test.
+    """
+    actual_surface = {
+        name
+        for name, obj in vars(errors).items()
+        if not name.startswith('_')
+        and ((isinstance(obj, type) and obj.__module__ == errors.__name__) or name.isupper())
+    }
+    assert set(errors.__all__) == actual_surface
 
 
 def test_raise_from_chains_traceback() -> None:
