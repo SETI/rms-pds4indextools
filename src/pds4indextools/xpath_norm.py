@@ -103,8 +103,9 @@ def canonicalize_xpath(raw: str, nsmap: Mapping[str | None, str]) -> str:
 
     Raises:
         ParseError: If ``nsmap`` declares no default namespace, i.e.
-            ``nsmap.get(None) is None`` (R-XP-013); or if any segment is
-            structurally malformed, e.g. it lacks the ``{uri}`` wrapper.
+            ``nsmap.get(None) is None`` (R-XP-013); if any segment is
+            structurally malformed, e.g. it lacks the ``{uri}`` wrapper; or if
+            a segment's namespace URI is not declared in ``nsmap``.
 
     Implements R-XP-001, R-XP-002, R-XP-003, R-XP-010, R-XP-011, R-XP-012,
     and R-XP-013.
@@ -128,7 +129,9 @@ def canonicalize_xpath(raw: str, nsmap: Mapping[str | None, str]) -> str:
             local_name=match.group('name'),
             raw_index=int(idx_group) if idx_group is not None else 1,
         )
-        prefix = uri_to_prefix[part.namespace_uri]
+        prefix = uri_to_prefix.get(part.namespace_uri)
+        if prefix is None:
+            raise ParseError(f'namespace {part.namespace_uri!r} is not declared on the label root')
         canonical_segments.append(f'{prefix}:{part.local_name}<{part.raw_index}>')
 
     return '/'.join(canonical_segments)

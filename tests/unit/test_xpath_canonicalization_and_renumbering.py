@@ -28,7 +28,7 @@ _GEOM_NS = 'http://pds.nasa.gov/pds4/geom/v1'
 
 
 def test_canonicalize_default_namespace_aliased_to_pds() -> None:
-    """The default namespace (key ``None``) is aliased to ``pds:`` (T-XP-001, R-XP-010)."""
+    """The default namespace (key ``None``) aliases to ``pds:`` (T-XP-001, R-XP-010)."""
     result = canonicalize_xpath(
         f'/{{{_PDS_NS}}}Product_Observational[1]',
         {None: _PDS_NS},
@@ -72,6 +72,15 @@ def test_canonicalize_malformed_segment_raises_parseerror() -> None:
     """A segment lacking namespace braces raises ParseError (edge case)."""
     with pytest.raises(ParseError, match='malformed lxml xpath segment'):
         canonicalize_xpath('/foo[1]', {None: _PDS_NS})
+
+
+def test_canonicalize_undeclared_namespace_raises_parseerror() -> None:
+    """A segment whose namespace URI is absent from nsmap raises ParseError."""
+    with pytest.raises(ParseError, match='is not declared on the label root'):
+        canonicalize_xpath(
+            f'/{{{_PDS_NS}}}A[1]/{{http://example.com/undeclared}}B[1]',
+            {None: _PDS_NS},
+        )
 
 
 def test_canonicalize_segment_with_dot_in_localname() -> None:
@@ -167,43 +176,16 @@ def test_renumber_first_occurrence_order_preserved() -> None:
     ],
 )
 def test_renumber_input_output_invariants_parametrized(inputs: list[str]) -> None:
-    """Renumbering preserves key set and order and is idempotent on its own output.
+    """Renumbering preserves the key set and order and is idempotent (R-XP-020/030).
 
-    Covers R-XP-020 and R-XP-030 per the critique skill (sections 5 and 9): the
-    output keys equal the inputs as a set and as an ordered list, and feeding the
-    renumbered values back through :func:`renumber_xpaths` is the identity.
+    Per the critique skill (sections 5 and 9): (a) the output keys equal the
+    inputs as a set, (b) the output-key order matches the input order, and
+    (c) feeding the renumbered values back through
+    :func:`~pds4indextools.xpath_norm.renumber_xpaths` is the identity.
     """
     out = renumber_xpaths(inputs)
     assert set(out.keys()) == set(inputs)
-
-
-@pytest.mark.parametrize(
-    'inputs',
-    [
-        [],
-        ['pds:A<1>'],
-        ['pds:A<2>', 'pds:A<5>'],
-        ['pds:A<1>', 'pds:A<2>', 'pds:A<3>'],
-    ],
-)
-def test_renumber_output_preserves_input_order_parametrized(inputs: list[str]) -> None:
-    """The output-key order matches the input order (R-XP-030)."""
-    out = renumber_xpaths(inputs)
     assert list(out.keys()) == list(inputs)
-
-
-@pytest.mark.parametrize(
-    'inputs',
-    [
-        [],
-        ['pds:A<1>'],
-        ['pds:A<2>', 'pds:A<5>'],
-        ['pds:A<1>', 'pds:A<2>', 'pds:A<3>'],
-    ],
-)
-def test_renumber_idempotent_on_renumbered_form_parametrized(inputs: list[str]) -> None:
-    """Feeding the renumbered values back through renumbering is the identity (R-XP-020)."""
-    out = renumber_xpaths(inputs)
     renumbered_values = list(out.values())
     round_trip = renumber_xpaths(renumbered_values)
     assert round_trip == {value: value for value in renumbered_values}
