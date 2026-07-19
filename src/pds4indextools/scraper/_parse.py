@@ -109,8 +109,10 @@ def iter_leaves(tree: etree._ElementTree) -> Iterator[tuple[etree._Element, str]
     """Yield every leaf element with its canonical XPath in pre-order.
 
     Parameters:
-        tree: The parsed label :class:`lxml.etree._ElementTree`. Its root's
-            ``nsmap`` supplies the namespace context for canonicalization.
+        tree: The parsed label :class:`lxml.etree._ElementTree`. Each leaf's
+            own ``nsmap`` supplies the namespace context for canonicalizing
+            that leaf's XPath, so a prefix declared on a non-root ancestor is
+            resolved correctly.
 
     Yields:
         ``(element, canonical_xpath)`` pairs for each leaf element (an element
@@ -120,7 +122,8 @@ def iter_leaves(tree: etree._ElementTree) -> Iterator[tuple[etree._Element, str]
 
     Raises:
         ParseError: If a segment cannot be canonicalized, e.g. a namespace URI
-            used by an element is not declared on the root (R-XP-013).
+            used by an element is not in that element's namespace scope
+            (R-XP-013).
 
     The canonical XPath is built from the element's qualified path relative to
     the root, prefixed with the root's own tag, so the first segment is always
@@ -130,7 +133,6 @@ def iter_leaves(tree: etree._ElementTree) -> Iterator[tuple[etree._Element, str]
     """
     root = tree.getroot()
     root_tag = root.tag
-    nsmap = root.nsmap
     for element in root.iter():
         if not isinstance(element.tag, str):
             continue
@@ -138,4 +140,9 @@ def iter_leaves(tree: etree._ElementTree) -> Iterator[tuple[etree._Element, str]
             continue
         relative = tree.getelementpath(element)
         native = root_tag if relative == '.' else f'{root_tag}/{relative}'
-        yield element, canonicalize_xpath(native, nsmap)
+        # Canonicalize against the leaf's own namespace scope, not the root's:
+        # lxml's element.nsmap carries the inherited root prefixes plus any
+        # namespace declared on an ancestor or the leaf itself, so a prefix
+        # introduced below the root (e.g. <Obs xmlns:geom="..."><geom:angle/>)
+        # still resolves instead of raising a false ParseError (#60).
+        yield element, canonicalize_xpath(native, element.nsmap)

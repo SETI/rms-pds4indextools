@@ -213,6 +213,14 @@ def test_scrape_simple_label_returns_rows_dict(tmp_path: Path) -> None:
     assert result.rows[title_keys[0]] == 'Row 1'
 
 
+def test_scrape_records_canonical_root_tag_and_version_id(tmp_path: Path) -> None:
+    """The result records the canonical root tag and version_id (R-LID-010)."""
+    path = _write(tmp_path, 'roottag.lblx', SIMPLE_LABEL)
+    result = _scrape(path)
+    assert result.canonical_root_tag == 'pds:Product_Observational'
+    assert result.version_id == '1.0'
+
+
 def test_scrape_is_suffix_agnostic_xml_and_lblx_identical(tmp_path: Path) -> None:
     """A ``.xml`` label scrapes identically to a ``.lblx`` label (owner #1)."""
     lblx = _write(tmp_path, 'a.lblx', SIMPLE_LABEL)
@@ -566,7 +574,22 @@ def test_auto_columns_filespec_uses_forward_slashes(tmp_path: Path) -> None:
     label_path = _write(sub, 'row.lblx', SIMPLE_LABEL)
     result = _scrape(label_path, bundle_root=tmp_path)
     assert result.auto_columns['filespec'] == 'sub_dir/row.lblx'
+    # On POSIX a Path never contains a backslash, so this verifies the
+    # as_posix() guarantee rather than an actual backslash-to-slash conversion.
     assert '\\' not in result.auto_columns['filespec']
+
+
+def test_auto_columns_insertion_order(tmp_path: Path) -> None:
+    """The auto_columns keys follow the fixed derivation order (section 7.1)."""
+    path = _write(tmp_path, 'autoorder.lblx', SIMPLE_LABEL)
+    result = _scrape(path)
+    assert list(result.auto_columns) == [
+        'lid',
+        'lidvid',
+        'filespec',
+        'filename',
+        'bundle_name',
+    ]
 
 
 def test_auto_columns_lid_strips_whitespace(tmp_path: Path) -> None:
@@ -676,6 +699,26 @@ def test_renumber_applied_after_walk(tmp_path: Path) -> None:
         if 'Observing_System<' in key
     }
     assert indexes == {'1', '2', '3'}
+
+
+def test_scrape_namespace_declared_on_non_root_element(tmp_path: Path) -> None:
+    """A prefix declared below the root still canonicalizes (R-XP-013, #60).
+
+    The root declares only the default namespace; a non-root element
+    introduces ``geom`` and a leaf uses it. The leaf must scrape successfully
+    with a canonical XPath carrying the ``geom`` prefix rather than raising a
+    false ParseError from the root-only namespace map.
+    """
+    body = (
+        f'    <Observation_Area xmlns:geom="{NS_GEOM}">\n'
+        '        <geom:angle>45</geom:angle>\n'
+        '    </Observation_Area>\n'
+    )
+    path = _write(tmp_path, 'nonrootns.lblx', _label(_id(), body))
+    result = _scrape(path)
+    angle_keys = [k for k in result.rows if k.endswith('geom:angle<1>')]
+    assert len(angle_keys) == 1
+    assert result.rows[angle_keys[0]] == '45'
 
 
 def test_namespaces_recorded(tmp_path: Path) -> None:
