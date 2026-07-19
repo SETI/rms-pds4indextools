@@ -93,7 +93,7 @@ def test_atomic_rename_outputerror_file_path_is_final(
     final = tmp_path / 'out.txt'
     monkeypatch.setattr(os, 'replace', _boom_replace)
 
-    with pytest.raises(OutputError) as exc_info:
+    with pytest.raises(OutputError, match='atomic rename failed') as exc_info:
         _atomic_rename(temp, final)
 
     assert exc_info.value.file_path == final
