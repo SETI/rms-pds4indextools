@@ -10,7 +10,7 @@ you, :doc:`the-settings-file` teaches the little you need.
 
 The file has these top-level sections: ``columns:``, ``output:``,
 ``label_contents:``, ``nillable:``, and ``xsd_cache_dir:``. A run may also
-draw on the tool's built-in defaults and on more than one settings file layered
+draw on the index tool's built-in defaults and on more than one settings file layered
 together, which the final section explains.
 
 ``columns:``
@@ -138,7 +138,7 @@ the *new index you are making*, not the data labels you are reading. See
 
 ``Modification_Detail:`` (optional)
    One entry, or a list of entries, each with ``modification_date``,
-   ``version_id``, and ``description``. If you leave this out, the tool writes
+   ``version_id``, and ``description``. If you leave this out, the index tool writes
    a sensible default history entry for you.
 
    .. code-block:: yaml
@@ -156,18 +156,18 @@ the *new index you are making*, not the data labels you are reading. See
    Blocks describing a file area, carried through into the label.
 
 Any other keys you add under ``label_contents:`` are carried straight through
-into the finished label, **except** a set of reserved names that the tool fills
+into the finished label, **except** a set of reserved names that the index tool fills
 in itself, such as the file's own name, its size, its checksum, its record and
 field counts, and its creation date. Using one of those reserved names is
-rejected, so leave those details to the tool.
+rejected, so leave those details to the index tool.
 
 ``nillable:``
 -------------
 
-Tells the tool how to fill a cell when a label marks that field as having no
+Tells the index tool how to fill a cell when a label marks that field as having no
 value. It maps a PDS4 data-type name to a set of replacement values, one for
 each reason a value can be absent: ``inapplicable``, ``missing``, ``unknown``,
-and ``anticipated``. The tool ships with sensible defaults for common date,
+and ``anticipated``. The index tool ships with sensible defaults for common date,
 number, and text types; you may add more types or override the shipped ones.
 
 .. code-block:: yaml
@@ -186,7 +186,7 @@ To see the full set of shipped defaults, write them out with
 ------------------
 
 A folder, given as an absolute path, or ``null``. Default ``null``. This is
-where the tool keeps the PDS4 schema files it downloads. ``null`` means a
+where the index tool keeps the PDS4 schema files it downloads. ``null`` means a
 standard per-user cache location chosen for you. The first run downloads the
 schemas your labels refer to; later runs reuse the cache and can work with no
 network connection.
@@ -199,7 +199,7 @@ Layering settings files
 -----------------------
 
 You may give ``--config-file`` more than once. The files are applied in order
-onto the tool's built-in defaults, and a later file wins wherever they overlap.
+onto the index tool's built-in defaults, and a later file wins wherever they overlap.
 The rules for how they combine are:
 
 - Individual values and lists are **replaced** by the later file.

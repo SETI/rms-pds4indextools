@@ -2,11 +2,11 @@ Describing your index product
 =============================
 
 Your index table is itself an archive product, so it needs its own PDS4 label.
-The tool writes that label for you, but a few things about the index only you
+The index tool writes that label for you, but a few things about the index only you
 can decide: what to call it, what kind of product it is, and how to title it.
 You provide those in the ``label_contents:`` section of your settings file.
 This page walks through each piece of information you can give, which pieces
-are required, and what the tool fills in on its own.
+are required, and what the index tool fills in on its own.
 
 Keep in mind throughout that this section describes the *index you are
 creating*, not the data labels you are reading. The identifier and title here
@@ -15,7 +15,7 @@ belong to your new index table.
 The two required pieces
 -----------------------
 
-Two settings must always be present. The tool needs them for every run, even
+Two settings must always be present. The index tool needs them for every run, even
 when you are only listing columns.
 
 **A logical identifier for your index.** This is the unique name you are
@@ -42,7 +42,7 @@ unsure, follow the convention already used in your project.
 
    product_class: Product_Ancillary
 
-With just those two lines the tool will run, but a good label deserves a couple
+With just those two lines the index tool will run, but a good label deserves a couple
 more details.
 
 The recommended extras
@@ -110,15 +110,15 @@ each entry with a dash:
          version_id: '1.0'
          description: First public release of the index.
 
-If you leave the modification note out entirely, the tool writes a sensible
+If you leave the modification note out entirely, the index tool writes a sensible
 default for you: a single entry dated the day you run it, carrying your version
 and the note ``Initial version.`` So a first release needs no modification
 block at all unless you want to word it yourself.
 
-What the tool fills in for you
-------------------------------
+What the index tool fills in for you
+------------------------------------
 
-You only supply the information above. Everything else in the label, the tool
+You only supply the information above. Everything else in the label, the index tool
 works out and writes automatically, so you never hand-edit the finished label:
 
 - the current date and a creation timestamp,

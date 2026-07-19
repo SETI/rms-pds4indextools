@@ -21,7 +21,7 @@ is required on every run that reads labels. For our example it is the
 The bundle root does two jobs. First, it is the starting point for the
 patterns you write: a pattern like ``data/*.xml`` is understood as "inside the
 bundle root, in the ``data`` folder." Second, and just as important, it sets
-how file paths appear in your output. Every path the tool writes is measured
+how file paths appear in your output. Every path the index tool writes is measured
 *relative to the bundle root*. So with a bundle root of ``moon_images``, the
 label at ``moon_images/data/crater_north.xml`` is recorded in the index as
 ``data/crater_north.xml``. Choose your bundle root thoughtfully, then, because
@@ -34,7 +34,7 @@ Patterns: choosing the files
 ----------------------------
 
 After the options, you give one or more *patterns*. A pattern is a filename
-sketch with wildcards in it, and the tool includes every label whose path
+sketch with wildcards in it, and the index tool includes every label whose path
 (relative to the bundle root) matches. The simplest useful pattern reaches
 into every subfolder and grabs every ``.xml`` file:
 
@@ -89,14 +89,14 @@ Quote your patterns
 Always wrap your patterns in quotation marks, as every example here does. The
 reason is that your terminal's shell also understands ``*``, ``?``, and
 ``[...]``, and if you leave a pattern unquoted the shell may try to expand it
-*before* the tool ever sees it. Quoting the pattern hands it to the tool
-untouched, so the tool matches it against your bundle exactly as you wrote it.
+*before* the index tool ever sees it. Quoting the pattern hands it to the index tool
+untouched, so the index tool matches it against your bundle exactly as you wrote it.
 Single quotes (``'**/*.xml'``) and double quotes (``"**/*.xml"``) both work.
 
 Using several patterns at once
 ------------------------------
 
-You may give more than one pattern, separated by spaces, and the tool includes
+You may give more than one pattern, separated by spaces, and the index tool includes
 any label that matches *any* of them. This is the easy way to combine
 selections. For example, to include labels ending in either ``.xml`` or
 ``.lblx`` (PDS4 labels come with both extensions), give both patterns:
@@ -112,7 +112,7 @@ You can also list specific files, or mix broad and narrow patterns:
    $ pds4_create_xml_index generate_index_file --bundle-root moon_images "data/crater_north.xml" "data/mare_plain.xml"
 
 If a label happens to match more than one of your patterns, it still appears
-only once in the index; the tool never duplicates a label.
+only once in the index; the index tool never duplicates a label.
 
 Patterns must stay inside the bundle
 ------------------------------------

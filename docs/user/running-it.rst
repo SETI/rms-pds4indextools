@@ -1,9 +1,9 @@
-Running the tool and understanding the results
-==============================================
+Running the index tool and understanding the results
+====================================================
 
 Everything comes together here. You have a bundle, you have picked your labels
 and columns, and you have a settings file. One command now turns all of that
-into a finished index. This page runs that command, reads what the tool prints,
+into a finished index. This page runs that command, reads what the index tool prints,
 opens the two files it produces, tours the generated label in plain language,
 and covers what happens when you run it again.
 
@@ -26,13 +26,13 @@ every* ``.xml`` *label anywhere in the bundle.*
 What a successful run looks like
 --------------------------------
 
-When the run succeeds, the tool is quiet: it simply returns you to your prompt
+When the run succeeds, the index tool is quiet: it simply returns you to your prompt
 with no message. That silence is good news; it means the index was built
 without anything worth flagging. (If it is the very first run on your machine,
-you may notice a short pause while the tool fetches the PDS4 schemas it needs,
+you may notice a short pause while the index tool fetches the PDS4 schemas it needs,
 as described on the :doc:`installing` page. That happens once.)
 
-If you would like to watch it work, add ``-v`` to the command. The tool then
+If you would like to watch it work, add ``-v`` to the command. The index tool then
 prints progress as it generates the label. Add ``-vv`` (or ``-vvv``) for the
 fullest detail. This is purely for your reassurance or curiosity; it
 does not change the result.
@@ -104,7 +104,7 @@ data type, and a note of where its values came from:
        ...
    </Field_Delimited>
 
-You do not have to produce any of that; the tool measures your table and writes
+You do not have to produce any of that; the index tool measures your table and writes
 this description to match it exactly. The upshot is that ``index.lblx`` is a
 complete, valid PDS4 label ready to archive alongside ``index.csv``. Together,
 the two files are a finished index product.
@@ -112,9 +112,9 @@ the two files are a finished index product.
 Running it again: the auto-numbered names
 ------------------------------------------
 
-Suppose you run the tool again, letting it use its default output name of
+Suppose you run the index tool again, letting it use its default output name of
 ``index.csv`` and its matching ``index.lblx``, but those files already exist
-from a previous run. Rather than overwrite your earlier work, the tool leaves
+from a previous run. Rather than overwrite your earlier work, the index tool leaves
 it in place and writes to the next free numbered name, telling you so:
 
 .. code-block:: text
@@ -123,7 +123,7 @@ it in place and writes to the next free numbered name, telling you so:
 
 Run it a third time and you get ``index_2.csv``, and so on. This safety net
 applies to the default names. If you name the output yourself with
-``--output-file`` and that file already exists, the tool assumes you meant it
+``--output-file`` and that file already exists, the index tool assumes you meant it
 and overwrites, printing a brief note that it is doing so. So the rule of thumb
 is: rely on the default names and old results are preserved automatically;
 name the file yourself and you are in charge of it.
@@ -132,7 +132,7 @@ When one label has a problem
 ----------------------------
 
 If one of your labels cannot be read, perhaps it is not well-formed XML or is
-missing a required piece, the tool stops at that first problem, tells you which
+missing a required piece, the index tool stops at that first problem, tells you which
 file and what was wrong, and writes nothing:
 
 .. code-block:: text
@@ -141,7 +141,7 @@ file and what was wrong, and writes nothing:
 
 Stopping early is helpful when you want to fix problems one at a time. But when
 you would rather see *every* troubled label in one pass, add ``--fail-slow``.
-The tool then works through all the labels, collects every problem, and reports
+The index tool then works through all the labels, collects every problem, and reports
 them together at the end:
 
 .. code-block:: text
@@ -150,6 +150,6 @@ them together at the end:
    .../data/no_lid.xml: label must contain exactly one <logical_identifier>; found 0
    2 errors
 
-Either way, if any label failed, no index is written; the tool never produces a
+Either way, if any label failed, no index is written; the index tool never produces a
 half-built index that quietly omits products. Fix the labels it named and run
 again, and once every label is clean you will get your two files.

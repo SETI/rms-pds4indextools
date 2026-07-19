@@ -5,14 +5,14 @@ Columns are the heart of your index. Each column you choose becomes one column
 in the finished table, filled in with a value pulled from every label. There
 are two kinds of column: a small set of *ready-made* columns for the facts
 almost every index wants, and *custom* columns that reach in and pull out any
-value from your labels. This page explains both, shows how the tool can write
+value from your labels. This page explains both, shows how the index tool can write
 the list of available custom columns *for you* so you rarely have to compose
 one by hand, and covers how to name and order your columns.
 
 The ready-made columns
 ----------------------
 
-Some facts are so commonly wanted that the tool offers them as named
+Some facts are so commonly wanted that the index tool offers them as named
 shortcuts. You ask for one by writing ``auto:`` followed by its short name.
 There are five:
 
@@ -38,7 +38,7 @@ There are five:
      - The name of the bundle the product belongs to, such as
        ``moon_images``, taken from the logical identifier.
 
-You do not have to look inside any label to use these; the tool works them out
+You do not have to look inside any label to use these; the index tool works them out
 for you. A column entry for a ready-made column looks like this, and the next
 page explains the exact file it lives in:
 
@@ -50,7 +50,7 @@ Custom columns: the "column address" idea
 ------------------------------------------
 
 For everything else, such as a title or a version buried inside a label, you
-name *where* the value sits, and the tool reads it. We call that location a
+name *where* the value sits, and the index tool reads it. We call that location a
 *column address*. It is written as a path from the outside of the label
 inward, a bit like a trail of nested folders, with each step separated by a
 slash. Here is the address of the title in our example labels:
@@ -80,10 +80,10 @@ Two small pieces of punctuation are worth explaining:
 If addresses look fussy, here is the good news: you almost never write one
 from scratch.
 
-Let the tool list the columns for you
--------------------------------------
+Let the index tool list the columns for you
+-------------------------------------------
 
-The tool can read your labels and hand you a ready-to-edit list of every
+The index tool can read your labels and hand you a ready-to-edit list of every
 column address it finds. That is what the ``generate_xpath_list`` command is
 for. You run it once, look at what comes back, and keep the lines you want.
 
@@ -102,7 +102,7 @@ inner lines are indented by two spaces):
      logical_identifier: urn:nasa:pds:moon_images:index
      product_class: Product_Ancillary
 
-Now ask the tool for the list of columns, pointing it at your bundle and that
+Now ask the index tool for the list of columns, pointing it at your bundle and that
 small settings file:
 
 .. code-block:: console
@@ -128,7 +128,7 @@ It writes a file named ``columns.yaml`` that looks like this:
      - xpath: pds:Product_Observational<1>/pds:Identification_Area<1>/pds:product_class<1>
        name: pds:Product_Observational<1>/pds:Identification_Area<1>/pds:product_class<1>
 
-Every value the tool could find in your labels is listed, one entry each, with
+Every value the index tool could find in your labels is listed, one entry each, with
 its address already filled in. This is your menu. When your labels are richer
 than these three, the list will be longer, but the shape is always the same.
 
@@ -142,7 +142,7 @@ these two.
 
 Notice each entry has both an ``xpath:`` line (the address, which you leave
 alone) and a ``name:`` line. The ``name:`` is the header that will appear at
-the top of that column in your table. The tool fills it in with the long
+the top of that column in your table. The index tool fills it in with the long
 address so the file is usable as-is, but those long headers make an unfriendly
 table. So the next thing you do is rename them.
 

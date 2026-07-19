@@ -9,7 +9,7 @@ tutorial treatment of any topic, follow the links back into the earlier pages.
 The three commands
 ------------------
 
-The tool does three things, and you pick one by naming it right after
+The index tool does three things, and you pick one by naming it right after
 ``pds4_create_xml_index``. Each command can be spelled with underscores or with
 hyphens, whichever you prefer; both are identical.
 
@@ -23,21 +23,21 @@ hyphens, whichever you prefer; both are identical.
    :doc:`choosing-columns`.
 
 ``copy_default_config`` (or ``copy-default-config``)
-   Writes out a copy of the tool's built-in default settings for you to build
+   Writes out a copy of the index tool's built-in default settings for you to build
    on. See :doc:`the-settings-file`.
 
 Getting help and the version
 ----------------------------
 
 ``--version``
-   Prints the tool's version and exits. Example:
+   Prints the index tool's version and exits. Example:
 
    .. code-block:: console
 
       $ pds4_create_xml_index --version
 
 ``--help`` (or ``-h``)
-   Prints a usage summary and exits. It works on the tool as a whole and on
+   Prints a usage summary and exits. It works on the index tool as a whole and on
    each command, so you can always ask a specific command what it accepts:
 
    .. code-block:: console
@@ -98,7 +98,7 @@ Options that control the output
    to ``index.csv`` (with a matching ``index.lblx``), and the column-list
    command defaults to ``columns.yaml``. The extension you choose is honored
    for the table; the label is always written next to it with a ``.lblx``
-   extension. When a *default* name is already in use, the tool writes to the
+   extension. When a *default* name is already in use, the index tool writes to the
    next free numbered name (``index_1.csv``, ``index_2.csv``, and so on) rather
    than overwriting. See :doc:`running-it`.
 
@@ -117,7 +117,7 @@ Watching what it does
 ---------------------
 
 ``-v``, ``-vv``, ``-vvv`` (or ``--verbose``)
-   Increase how much detail the tool prints as it works. A plain run is quiet;
+   Increase how much detail the index tool prints as it works. A plain run is quiet;
    ``-v`` prints progress, and ``-vv`` (or ``-vvv``) prints the fullest detail.
    This affects only what is shown, never the result. Available on every
    command.
@@ -141,7 +141,7 @@ These belong to ``copy_default_config``.
       $ pds4_create_xml_index copy_default_config --output-file moon_index.yaml
 
 ``--force``
-   Overwrite the destination if it already exists. Without it, the tool
+   Overwrite the destination if it already exists. Without it, the index tool
    declines to overwrite an existing file so you cannot lose your work by
    accident.
 

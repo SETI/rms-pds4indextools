@@ -4,7 +4,7 @@ User Guide
 The User Guide is a friendly, task-oriented walkthrough for archivists and
 data producers who want to build an index over a bundle of PDS4 labels
 without needing to read any source code. It explains, in plain language,
-what the tool does, how to install and run it, how to choose the labels and
+what the index tool does, how to install and run it, how to choose the labels and
 columns that go into your index, how to write the settings file, and what to
 do when something goes wrong.
 

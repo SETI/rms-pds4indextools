@@ -10,7 +10,7 @@ PDS4 label, ``index.lblx``.
 1. Get a starter settings file
 ------------------------------
 
-Ask the tool for a copy of its built-in defaults to build on:
+Ask the index tool for a copy of its built-in defaults to build on:
 
 .. code-block:: console
 
@@ -23,7 +23,7 @@ also start from a blank file and type the few settings by hand.) See
 2. See the columns you can choose from (optional)
 -------------------------------------------------
 
-If you are not sure what to put in your columns, let the tool read your labels
+If you are not sure what to put in your columns, let the index tool read your labels
 and hand you a ready-to-edit list of every available custom column:
 
 .. code-block:: console
@@ -69,7 +69,7 @@ Every setting is spelled out on the :doc:`configuration-reference` page.
 4. Build the index
 ------------------
 
-Point the tool at your bundle, hand it the settings file, and give it a glob
+Point the index tool at your bundle, hand it the settings file, and give it a glob
 pattern for the labels to include:
 
 .. code-block:: console

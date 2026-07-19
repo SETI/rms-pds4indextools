@@ -2,7 +2,8 @@ Usage Examples
 ==============
 
 Each example below builds on the same self-contained ``moon_images`` bundle
-introduced in :doc:`quickstart`: three ``Product_Observational`` labels,
+used throughout the :doc:`User Guide </user/index>`: three
+``Product_Observational`` labels,
 ``crater_north.xml``, ``crater_south.xml``, and ``mare_plain.xml``, under a
 ``data/`` directory, with the titles ``North Polar Crater Field``,
 ``South Polar Crater Field``, and ``Mare Basalt Plain``. Every example shows
@@ -193,8 +194,8 @@ The command writes ``config.yaml`` beginning with::
 
 Pass ``--force`` to overwrite an existing destination.
 
-Using the tool from Python
---------------------------
+Using the index tool from Python
+--------------------------------
 
 The same pipeline is available in Python through
 :func:`~pds4indextools.cli.run_generate_index_file`, which takes a

@@ -11,7 +11,7 @@ the finished ``index.csv``.
 Sorting the rows
 ----------------
 
-By default, the rows come out in the order the tool reads the labels, which is
+By default, the rows come out in the order the index tool reads the labels, which is
 alphabetical by each label's path within the bundle. For ``moon_images`` that
 means ``crater_north``, then ``crater_south``, then ``mare_plain``:
 
@@ -51,7 +51,7 @@ that column Z to A (and high to low). To list titles in reverse:
      sort_by:
        - -TITLE
 
-**Sort by more than one column.** List several columns and the tool sorts by
+**Sort by more than one column.** List several columns and the index tool sorts by
 the first, breaking ties with the second, and so on. This sorts by version,
 and within each version by title:
 
@@ -82,7 +82,7 @@ comma-separated table that spreadsheets expect:
    urn:nasa:pds:moon_images:data:crater_north,crater_north.xml,North Polar Crater Field,1.0
    urn:nasa:pds:moon_images:data:crater_south,crater_south.xml,South Polar Crater Field,1.0
 
-With ``fixed_width: true``, the tool pads each value with trailing spaces so
+With ``fixed_width: true``, the index tool pads each value with trailing spaces so
 that every column is the same width all the way down. The commas are still
 there, but now the columns line up into neat vertical stripes when you open the
 file in a plain text editor:
@@ -117,5 +117,5 @@ record stops and the next begins. The ``line_ending`` setting picks which one:
 You cannot see the difference by looking at the table, and most programs
 happily read either. Choose ``CRLF`` only if you know your files will be used
 by Windows tools that specifically expect it; otherwise ``LF`` is the safe
-choice. Whichever you pick, the tool records it in the accompanying label so
+choice. Whichever you pick, the index tool records it in the accompanying label so
 the description always matches the file.

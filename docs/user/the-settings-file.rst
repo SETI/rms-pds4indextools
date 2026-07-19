@@ -37,7 +37,7 @@ the inner settings are indented underneath it. Here ``fixed_width`` and
 trip over. Use two spaces per level (any consistent number of spaces works,
 but be consistent). If your editor inserts a tab when you press the Tab key,
 turn that setting off or type the spaces by hand; a stray tab makes the whole
-file unreadable to the tool.
+file unreadable to the index tool.
 
 **Lists use a dash.** When a setting holds several items, write each on its own
 line, indented, starting with a dash and a space:
@@ -71,7 +71,7 @@ would otherwise be read as the number one, so write it quoted:
    version_id: '1.0'
 
 **Comments start with a hash.** Anything after a ``#`` on a line is a note for
-humans and is ignored by the tool. Use comments freely to remind yourself what
+humans and is ignored by the index tool. Use comments freely to remind yourself what
 a setting is for:
 
 .. code-block:: yaml
@@ -85,7 +85,7 @@ That is genuinely all the YAML you need. Now let us build the real file.
 A friendly starting point
 -------------------------
 
-You can start from a blank file, or you can ask the tool to hand you a copy of
+You can start from a blank file, or you can ask the index tool to hand you a copy of
 its built-in defaults to build on:
 
 .. code-block:: console
@@ -95,7 +95,7 @@ its built-in defaults to build on:
 This writes a file of sensible default settings, with comments, that you can
 open and edit. It is a comfortable place to begin, though you will still add
 your own columns and a description of your index, which the next sections walk
-through. (If the file you name already exists, the tool declines to overwrite
+through. (If the file you name already exists, the index tool declines to overwrite
 it unless you add ``--force``, so you cannot clobber your work by accident.)
 
 Building the file, section by section
@@ -172,13 +172,13 @@ settings file:
      version_id: '1.0'
      title: Moon Images Index
 
-Save that as ``moon_index.yaml``. It is everything the tool needs to build the
+Save that as ``moon_index.yaml``. It is everything the index tool needs to build the
 index, and on the page :doc:`running-it` you will use it to do exactly that.
 
 Layering more than one settings file
 -------------------------------------
 
-You can hand the tool more than one settings file, and it combines them in the
+You can hand the index tool more than one settings file, and it combines them in the
 order you list them, with later files winning where they overlap. You do this
 by giving ``--config-file`` more than once:
 

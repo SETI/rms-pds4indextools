@@ -11,19 +11,19 @@ The whole journey in one picture
 
 Building an index is a straight line with four stops:
 
-1. **You point the tool at a folder of labels.** This folder is your *bundle
-   root*. Every file the tool reports is named relative to it, so it is the
+1. **You point the index tool at a folder of labels.** This folder is your *bundle
+   root*. Every file the index tool reports is named relative to it, so it is the
    anchor for the whole run.
 
-2. **You tell the tool which labels to read.** You do this with one or more
+2. **You tell the index tool which labels to read.** You do this with one or more
    *patterns*, like ``**/*.xml``, which pick out label files inside the
-   bundle. The tool opens each matching label and looks inside.
+   bundle. The index tool opens each matching label and looks inside.
 
-3. **You tell the tool what you want in the table.** Your *columns* and a few
+3. **You tell the index tool what you want in the table.** Your *columns* and a few
    layout choices live in a small *settings file* written in YAML. This is the
    one place your decisions are recorded, so you never have to retype them.
 
-4. **The tool writes the two output files.** It produces the ``index.csv``
+4. **The index tool writes the two output files.** It produces the ``index.csv``
    table and a matching ``.lblx`` label that describes it. Both land in the
    same folder, ready to use or archive.
 
@@ -54,7 +54,7 @@ One label, up close
 
 Here is the full content of ``crater_north.xml``. If you have seen a PDS4
 label before, it will look familiar; if you have not, do not worry, because
-the tool reads it for you and you only ever pick out the pieces you want:
+the index tool reads it for you and you only ever pick out the pieces you want:
 
 .. code-block:: xml
 

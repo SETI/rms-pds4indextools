@@ -1,7 +1,7 @@
-Installing the tool
-===================
+Installing the index tool
+=========================
 
-The tool ships as a small Python package. Installing it puts a single new
+The index tool ships as a small Python package. Installing it puts a single new
 command on your system, ``pds4_create_xml_index``, which you run from a
 terminal. This page walks you through the install, shows you how to confirm it
 worked, and explains the one thing it needs from the internet.
@@ -26,13 +26,13 @@ same spelling throughout.) If neither is found, install Python from
 Installing with pip
 -------------------
 
-Install the tool with a single command:
+Install the index tool with a single command:
 
 .. code-block:: console
 
    $ pip install rms-pds4indextools
 
-That downloads the tool and everything it depends on, then installs the
+That downloads the index tool and everything it depends on, then installs the
 ``pds4_create_xml_index`` command. When it finishes you will see a line such
 as ``Successfully installed rms-pds4indextools`` near the end of the
 output.
@@ -47,14 +47,14 @@ output.
 Confirming it worked
 --------------------
 
-Two quick checks tell you the install succeeded. First, ask the tool for its
+Two quick checks tell you the install succeeded. First, ask the index tool for its
 version:
 
 .. code-block:: console
 
    $ pds4_create_xml_index --version
 
-This prints the tool's name followed by a version number. If you see that,
+This prints the index tool's name followed by a version number. If you see that,
 the command is installed and on your path.
 
 Second, ask it for help:
@@ -63,7 +63,7 @@ Second, ask it for help:
 
    $ pds4_create_xml_index --help
 
-This prints a short usage summary listing the three things the tool can do,
+This prints a short usage summary listing the three things the index tool can do,
 which the rest of this guide explains. You can also ask any individual command
 for its own help, for example:
 
@@ -78,12 +78,12 @@ A note about the internet and schemas
 -------------------------------------
 
 PDS4 labels point at official schema files that spell out the rules of the
-PDS4 standard, and the tool reads those schemas so it can describe your
+PDS4 standard, and the index tool reads those schemas so it can describe your
 columns correctly. The first time you run it, it downloads the handful of
 schemas your labels refer to. This happens automatically; you do not configure
 anything, and you will not usually notice it beyond a brief pause on that first
 run.
 
-After that first download the tool keeps a local copy, so later runs reuse it,
+After that first download the index tool keeps a local copy, so later runs reuse it,
 start faster, and can even work with no network connection at all. In short:
 be online the first time, and after that it takes care of itself.
