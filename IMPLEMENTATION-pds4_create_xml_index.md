@@ -4320,7 +4320,9 @@ import sys
 from pathlib import Path
 
 
-R_ID_RE = re.compile(r'R-[A-Z]+-\d{3}')
+# Uses [0-9] (not \d): this same pattern string is handed to ``git grep -oE``
+# (POSIX ERE), where ``\d`` is a literal 'd' and would match nothing.
+R_ID_RE = re.compile(r'R-[A-Z]+-[0-9]{3}')
 ROOT = Path(__file__).resolve().parent.parent
 
 # R-ID families satisfied by repository infrastructure, packaging,
@@ -5267,7 +5269,17 @@ SUBMODULES = (
 
 
 def public_names(mod: object) -> set[str]:
-    """Return the set of public, module-scoped names in mod."""
+    """Return the set of public names DEFINED in mod (not imported ones).
+
+    ``dir()`` also surfaces names imported into the module (e.g. ``Path``,
+    ``BaseModel``, or symbols re-exported by the package ``__init__``). Those
+    are not part of THIS module's own public surface, so a name is kept only
+    when it is defined here: a class/function whose ``__module__`` equals this
+    module, or a module-level constant that carries no ``__module__`` (ints,
+    frozensets, typing aliases). Imported classes/functions (``__module__``
+    set to another module) are excluded.
+    """
+    modname = mod.__name__
     out: set[str] = set()
     for name in dir(mod):
         if name.startswith('_'):
@@ -5275,6 +5287,10 @@ def public_names(mod: object) -> set[str]:
         attr = inspect.getattr_static(mod, name)
         if inspect.ismodule(attr):
             # imported submodules are not part of this module's public surface
+            continue
+        owner = getattr(attr, '__module__', None)
+        if owner is not None and owner != modname:
+            # imported from another module; not this module's own definition
             continue
         out.add(name)
     return out
@@ -5315,14 +5331,14 @@ def main() -> int:
             failures.append(f'{modname}: __all__ is not defined')
         else:
             unexpected = public - all_set
-            missing = all_set - public
+            missing = {name for name in all_set if not hasattr(mod, name)}
             if unexpected:
                 failures.append(
                     f'{modname}: public names not in __all__: {sorted(unexpected)}',
                 )
             if missing:
                 failures.append(
-                    f'{modname}: __all__ names not exported: {sorted(missing)}',
+                    f'{modname}: __all__ names not present on module: {sorted(missing)}',
                 )
         if modname not in documented:
             failures.append(f'{modname}: missing .. automodule:: in docs/module.rst')
