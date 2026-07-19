@@ -90,8 +90,11 @@ for. You run it once, look at what comes back, and keep the lines you want.
 This command reads your labels, so it also needs to know a little about the
 index you intend to build, namely its name and what kind of product it is.
 That information lives in a small settings file. You will learn to write these
-properly on the next page; for now, create a file named ``moon_index.yaml``
-containing just these lines:
+properly on the next page; for now you only need three things about the format:
+indent with spaces (never tabs), put each setting on its own line as
+``name: value``, and line up items at the same level with the same indentation.
+Create a file named ``moon_index.yaml`` containing just these lines (the two
+inner lines are indented by two spaces):
 
 .. code-block:: yaml
 

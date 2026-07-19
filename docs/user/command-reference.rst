@@ -118,7 +118,7 @@ Watching what it does
 
 ``-v``, ``-vv``, ``-vvv`` (or ``--verbose``)
    Increase how much detail the tool prints as it works. A plain run is quiet;
-   ``-v`` prints progress, and ``-vv`` or ``-vvv`` print successively more.
+   ``-v`` prints progress, and ``-vv`` (or ``-vvv``) prints the fullest detail.
    This affects only what is shown, never the result. Available on every
    command.
 

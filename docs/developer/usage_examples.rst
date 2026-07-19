@@ -122,6 +122,9 @@ maximum width::
     urn:nasa:pds:moon_images:data:crater_south,crater_south.xml,South Polar Crater Field
     urn:nasa:pds:moon_images:data:mare_plain  ,mare_plain.xml  ,Mare Basalt Plain
 
+The final column is padded to its own width as well; the trailing spaces after
+the two shorter titles simply cannot be shown in this rendered block.
+
 Ending lines with CRLF
 ----------------------
 

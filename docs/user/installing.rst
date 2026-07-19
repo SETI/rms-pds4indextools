@@ -30,11 +30,11 @@ Install the tool with a single command:
 
 .. code-block:: console
 
-   $ pip install pds4-create-xml-index
+   $ pip install rms-pds4indextools
 
 That downloads the tool and everything it depends on, then installs the
 ``pds4_create_xml_index`` command. When it finishes you will see a line such
-as ``Successfully installed pds4-create-xml-index`` near the end of the
+as ``Successfully installed rms-pds4indextools`` near the end of the
 output.
 
 .. tip::

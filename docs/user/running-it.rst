@@ -33,8 +33,8 @@ you may notice a short pause while the tool fetches the PDS4 schemas it needs,
 as described on the :doc:`installing` page. That happens once.)
 
 If you would like to watch it work, add ``-v`` to the command. The tool then
-prints progress as it generates the label. Add ``-vv`` or ``-vvv`` for
-successively more detail. This is purely for your reassurance or curiosity; it
+prints progress as it generates the label. Add ``-vv`` (or ``-vvv``) for the
+fullest detail. This is purely for your reassurance or curiosity; it
 does not change the result.
 
 The two files it produced
