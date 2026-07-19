@@ -1,7 +1,7 @@
 Configuration
 =============
 
-The tool is configured with YAML files layered on top of a packaged
+The index tool is configured with YAML files layered on top of a packaged
 default. Each ``--config-file`` is deep-merged onto the default in the order
 given (nested mappings merge recursively; lists and scalars replace
 wholesale), and the result is validated into an
@@ -128,7 +128,7 @@ A complete configuration for the quickstart bundle looks like:
 Reserved BASE variables
 -----------------------
 
-The tool computes several label variables itself and rejects any
+The index tool computes several label variables itself and rejects any
 ``label_contents`` key that would shadow one of them (R-LBL-012). The
 reserved names are ``index_file_name``, ``Field_Content``, ``fields``,
 ``records``, ``Table_Character``, ``Table_Delimited``, ``Product_Ancillary``,

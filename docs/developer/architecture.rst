@@ -8,7 +8,7 @@ model.
 Exception hierarchy
 -------------------
 
-Every error the tool raises derives from a single root,
+Every error the index tool raises derives from a single root,
 :exc:`~pds4indextools.errors.Pds4IndexError`. The class-level
 ``FAIL_SLOW_ELIGIBLE`` flag records whether an error may be accumulated
 under ``--fail-slow`` (R-ERR-001).
