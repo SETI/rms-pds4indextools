@@ -24,6 +24,7 @@ import yaml
 from pds4indextools.config import (
     AUTO_COLUMN_TOKENS,
     IndexConfig,
+    ModificationDetail,
     load_config,
     parse_sort_key,
 )
@@ -206,6 +207,37 @@ def test_product_class_invalid_literal_rejected(tmp_path: Path) -> None:
         load_config([path])
 
 
+def test_label_contents_citation_and_modification_round_trip(tmp_path: Path) -> None:
+    """A ``Citation_Information`` and ``Modification_Detail`` block loads intact.
+
+    Exercises the otherwise-untested optional label sub-models through the
+    public API, asserting the parsed values are accessible on the model.
+    T-ID: R-CFG-022, R-LBL-090.
+    """
+    content = (
+        _VALID_LABEL_CONTENTS + '  Citation_Information:\n'
+        '    author_list: [Smith, Jones]\n'
+        '    publication_year: 2026\n'
+        '    description: A test index citation.\n'
+        '  Modification_Detail:\n'
+        '    modification_date: "2026-07-18"\n'
+        '    version_id: "1.0"\n'
+        '    description: Initial version.\n'
+    )
+    path = _write_config(tmp_path, 'citation.yaml', content)
+    config = load_config([path])
+    citation = config.label_contents.Citation_Information
+    assert citation is not None
+    assert citation.author_list == ['Smith', 'Jones']
+    assert citation.publication_year == 2026
+    assert citation.description == 'A test index citation.'
+    modification = config.label_contents.Modification_Detail
+    assert isinstance(modification, ModificationDetail)
+    assert modification.modification_date == '2026-07-18'
+    assert modification.version_id == '1.0'
+    assert modification.description == 'Initial version.'
+
+
 # --- Path fields ----------------------------------------------------------
 
 
@@ -214,11 +246,15 @@ def test_relative_path_in_xsd_cache_dir_rejected(configs_dir: Path) -> None:
 
     T-ID: T-CFG-030, R-CFG-040.
     """
+    config_path = configs_dir / 'test_config_relative_path.yaml'
     with pytest.raises(ConfigError) as exc_info:
-        load_config([configs_dir / 'test_config_relative_path.yaml'])
+        load_config([config_path])
     message = str(exc_info.value)
     assert 'must be absolute' in message
     assert 'relative/cache' in message
+    # A single-path load attaches the offending config path to the error
+    # (validation-error file_path, deviation c).
+    assert exc_info.value.file_path == config_path
 
 
 @pytest.mark.parametrize(
@@ -244,14 +280,20 @@ def test_absolute_path_in_xsd_cache_dir_accepted(
 
 
 def test_three_config_merge_order(tmp_path: Path) -> None:
-    """Later configs override earlier ones for a scalar. T-ID: T-CFG-040, R-CFG-050."""
+    """The last config in the chain wins for a scalar. T-ID: T-CFG-040, R-CFG-050.
+
+    Chosen to be discriminating: the packaged default and config A both set
+    ``fixed_width: false``, so a ``True`` final value can only come from config
+    C winning over B (which also sets True) -- proving later configs override
+    earlier ones rather than the default merely leaking through.
+    """
     config_a = _write_config(
         tmp_path, 'a.yaml', _VALID_LABEL_CONTENTS + 'output:\n  fixed_width: false\n'
     )
     config_b = _write_config(tmp_path, 'b.yaml', 'output:\n  fixed_width: true\n')
-    config_c = _write_config(tmp_path, 'c.yaml', 'output:\n  fixed_width: false\n')
+    config_c = _write_config(tmp_path, 'c.yaml', 'output:\n  fixed_width: true\n')
     config = load_config([config_a, config_b, config_c])
-    assert config.output.fixed_width is False
+    assert config.output.fixed_width is True
 
 
 def test_three_config_merge_dict_deep_merge(tmp_path: Path) -> None:
@@ -418,6 +460,22 @@ def test_parse_sort_key_empty_rejected() -> None:
         parse_sort_key('')
 
 
+def test_load_config_invalid_sort_by_rejected(tmp_path: Path) -> None:
+    """A malformed ``output.sort_by`` key is rejected during load.
+
+    Exercises the config-integration path (``OutputSection._validate_sort_by``
+    reaching :func:`parse_sort_key`), not just the standalone parser.
+    T-ID: R-SORT-020.
+    """
+    content = _VALID_LABEL_CONTENTS + "output:\n  sort_by: ['--x']\n"
+    path = _write_config(tmp_path, 'bad_sort.yaml', content)
+    with pytest.raises(ConfigError) as exc_info:
+        load_config([path])
+    message = str(exc_info.value)
+    assert 'invalid sort key' in message
+    assert "'--x'" in message
+
+
 # --- Purity, path, and error-context sanity checks ------------------------
 
 
@@ -431,6 +489,7 @@ def test_load_config_relative_path_resolved_at_call_site(
     monkeypatch.chdir(configs_dir)
     config = load_config([Path('minimal.yaml').absolute()])
     assert isinstance(config, IndexConfig)
+    assert config.label_contents.logical_identifier == 'urn:nasa:pds:test_bundle:test:test_index'
 
 
 def test_load_config_error_includes_file_path_attribute(tmp_path: Path) -> None:
@@ -576,8 +635,10 @@ def test_columns_duplicate_selector_rejected(columns_block: str, tmp_path: Path)
     with pytest.raises(ConfigError) as exc_info:
         load_config([path])
     message = str(exc_info.value)
-    assert '0' in message
-    assert '1' in message
+    # Assert the exact both-index phrasing the validator emits ("...in entries
+    # 0 and 1") rather than the bare '1', which the 'pds:A<1>' selector text in
+    # the dup-xpath case would satisfy vacuously.
+    assert 'entries 0 and 1' in message
 
 
 def test_columns_duplicate_name_rejected(tmp_path: Path) -> None:
@@ -595,11 +656,16 @@ def test_columns_duplicate_name_rejected(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    'bad_name',
-    ['has"quote', 'has,comma', 'ctrl\x07char', 'accenté'],
+    ('bad_name', 'expected_reason'),
+    [
+        ('has"quote', 'must not contain a double-quote'),
+        ('has,comma', 'must not contain a comma'),
+        ('ctrl\x07char', 'non-printable or non-ASCII character'),
+        ('accenté', 'non-printable or non-ASCII character'),
+    ],
     ids=['double-quote', 'comma', 'control', 'non-ascii'],
 )
-def test_columns_name_charset_enforced(bad_name: str, tmp_path: Path) -> None:
+def test_columns_name_charset_enforced(bad_name: str, expected_reason: str, tmp_path: Path) -> None:
     """A ``name`` outside printable ASCII (or with comma/quote) is rejected.
 
     T-ID: R-MAP-043.
@@ -612,7 +678,7 @@ def test_columns_name_charset_enforced(bad_name: str, tmp_path: Path) -> None:
         'columns': [{'auto': 'lid', 'name': bad_name}],
     }
     path = _write_config(tmp_path, 'badname.yaml', yaml.safe_dump(config_dict))
-    with pytest.raises(ConfigError, match='name'):
+    with pytest.raises(ConfigError, match=expected_reason):
         load_config([path])
 
 
