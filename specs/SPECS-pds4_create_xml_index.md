@@ -21,11 +21,11 @@ distributed as the Python package `pds4indextools` published to PyPI as
 The tool exposes three subcommands:
 
 1. `generate_index_file` — scrape a curated set of label files, project the discovered
-   XPaths through a user-supplied mapping file to short column names, and write both
+   XPaths through the config's `columns:` list to short column headers, and write both
    a CSV-format index file and a `.lblx` PDS4 label describing it.
-2. `generate_xpath_list` — perform the same scrape and emit a plain-text file listing
-   every distinct canonical XPath that was found, suitable for use as a starting
-   point when authoring a mapping file.
+2. `generate_xpath_list` — perform the same scrape and emit a paste-ready YAML
+   `columns:` block listing every distinct canonical XPath that was found, suitable
+   for use as a starting point when authoring a config `columns:` list.
 3. `copy_default_config` — copy the packaged default configuration YAML to a
    user-specified destination so it can be edited.
 
@@ -100,7 +100,6 @@ pds4_create_xml_index [--version] <subcommand> [SUBCOMMAND_ARGS...]
 pds4_create_xml_index generate_index_file
     --bundle-root PATH
     [--config-file PATH ...]
-    [--mapping-file PATH]
     [--label-template PATH]
     [--output-file PATH]
     [--fail-slow]
@@ -122,10 +121,6 @@ pds4_create_xml_index generate_index_file
   (`action='append'`). Each path is resolved against the current working
   directory or treated as absolute. Files are loaded in the order given and
   overlaid on the system default (see §15.4).
-- **R-CLI-013** `--mapping-file` is optional. If absent, the tool prints a
-  multi-line WARNING describing the consequences (raw XPath headers, no
-  auto-columns) per R-MAP-101 and pauses for 3 seconds before scraping
-  begins per R-MAP-102.
 - **R-CLI-014** `--label-template` is optional. If absent, the packaged default
   template is used (see §14.1). When supplied, the path is resolved against cwd.
 - **R-CLI-015** `--output-file` is optional. If absent, the tool writes
@@ -168,21 +163,21 @@ pds4_create_xml_index generate_xpath_list
 
 - **R-CLI-020** `--bundle-root`, `PATTERN`, `--config-file`, `--fail-slow`, and
   the verbosity flags behave identically to `generate_index_file`.
-- **R-CLI-021** `--mapping-file` and `--label-template` are NOT accepted by this
-  subcommand (argparse rejects them with code 2 and the standard
-  "unrecognized argument" message).
+- **R-CLI-021** `--label-template` is NOT accepted by this subcommand
+  (argparse rejects it with code 2 and the standard "unrecognized
+  argument" message).
 - **R-CLI-022** `--output-file` semantics for this subcommand mirror
-  R-CLI-015 / R-OUT-010..R-OUT-013 with the data file `.txt`
+  R-CLI-015 / R-OUT-010..R-OUT-013 with the YAML data file `.yaml`
   substituted for `.csv` and NO paired label file:
-  - When omitted, the tool writes `./xpaths.txt`. If that name is
-    taken, the basename auto-numbers to `xpaths_1.txt`,
-    `xpaths_2.txt`, …, choosing the lowest free integer.
+  - When omitted, the tool writes `./columns.yaml`. If that name is
+    taken, the basename auto-numbers to `columns_1.yaml`,
+    `columns_2.yaml`, …, choosing the lowest free integer.
   - When supplied, the path is used verbatim. If the supplied path
-    has no extension, `.txt` is appended; any other extension is
+    has no extension, `.yaml` is appended; any other extension is
     honored verbatim. If the target file already exists at write
     time, it is overwritten and a WARNING-level log message is
     emitted naming the path. Auto-numbering applies ONLY to the
-    default `./xpaths.txt` case.
+    default `./columns.yaml` case.
 
 ### 3.5 `copy_default_config` subcommand
 
@@ -198,7 +193,7 @@ pds4_create_xml_index copy_default_config
   unless `--force` is supplied (in which case the file is overwritten with a
   WARNING).
 - **R-CLI-032** This subcommand does NOT accept `--bundle-root`, `--config-file`,
-  `--mapping-file`, `--label-template`, `--fail-slow`, or any positional patterns.
+  `--label-template`, `--fail-slow`, or any positional patterns.
 
 ### 3.6 Help text
 
@@ -218,8 +213,9 @@ in subsequent sections (§7–§14).
 1. **Parse CLI args** (§3.3). Resolve `--bundle-root` to absolute (R-FS-001).
 2. **Load config chain** (§15). System default → each `--config-file` in order,
    deep-merged. Pydantic validates the merged result (R-CFG-010..R-CFG-052).
-3. **Load mapping file** if supplied (§7), otherwise emit the stern warning
-   (R-MAP-101) and proceed without one.
+3. **Resolve output columns** from the merged config's `columns:` list
+   (§7). A missing or empty `columns` list is a `ConfigError` and the
+   run fails fast (§7).
 4. **Discover label files**. Apply each `PATTERN` via
    `Path.glob()`; union the matches; dedup by `Path.resolve()`. If the result is
    empty, fail-fast (R-DISC-010). Sort alphabetically by `filespec` for
@@ -247,16 +243,13 @@ in subsequent sections (§7–§14).
    5. Build per-label dict of `{canonical_xpath → text_value}` by walking the
       tree (§9–§10). Apply `xsi:nil="true"` substitution (§12).
    6. Compute auto-columns (§8) for this label.
-6. **Filter / project columns**. If a mapping file was supplied, restrict the
-   per-label dict to entries whose canonical XPath appears in the mapping
-   (R-MAP-310). Drop unmapped XPaths silently. Auto-columns are added per the
-   mapping. Order the output columns exactly as listed in the mapping file
-   (R-MAP-320). If after filtering the final column set is empty (i.e. the
-   mapping yielded zero columns and there are no auto-columns), the run
-   fails fast (R-MAP-312). If no mapping file was supplied, every distinct
-   XPath ever observed across all labels becomes a column with the raw
-   canonical XPath as the header, and no auto-columns are emitted
-   (R-MAP-110).
+6. **Filter / project columns**. Restrict each per-label dict to the
+   selectors named in the config's `columns:` list: XPath columns keep
+   the entry whose canonical form matches exactly (R-MAP-310), auto-columns
+   are computed per §8. Drop unselected XPaths silently. Order the output
+   columns exactly as declared in the `columns:` list (R-MAP-320). The
+   empty-column-set case is rejected earlier at config validation time
+   (R-MAP-312).
 7. **Sort rows** alphabetically by `filespec` by default; if `output.sort_by` is
    set in the merged config, use that (R-SORT-010..R-SORT-030).
 8. **Per-column quoting analysis** (R-CSV-040..R-CSV-050).
@@ -273,38 +266,14 @@ in subsequent sections (§7–§14).
 - **R-IDX-002** Discovery order, column order, row order, and field-width
   computations are independent of OS file-system iteration order.
 
-### 4.3 Stern warning when mapping file is omitted
-
-- **R-MAP-101** When `--mapping-file` is not supplied, the tool emits this
-  WARNING (verbatim text; format may use the standard log header `WARNING [cli]
-  ...`, but the body is the multi-line message below) before any work begins:
-
-  ```text
-  No mapping file was supplied. Index column headers will be the raw canonical
-  XPath strings discovered in the labels. This is rarely what you want for
-  production index files because:
-    1. Headers are long and ugly (e.g.
-       `pds:Product_Observational<1>/pds:Identification_Area<1>/pds:logical_identifier<1>`).
-    2. Field names cannot be cleaned up later without regenerating the index.
-    3. Auto-columns (lid, lidvid, filespec, filename, bundle_name) are NOT included.
-  Consider re-running with `--mapping-file PATH`. The list of discovered
-  XPaths can be obtained with the `generate_xpath_list` subcommand.
-  Continuing in 3 seconds...
-  ```
-
-- **R-MAP-102** After printing the warning, the tool sleeps for 3 seconds
-  (`time.sleep(3.0)`) before continuing. The pause is mandatory; there is no
-  flag to disable it. The pause and the warning are emitted to stderr.
-
 ## 5. Subcommand semantics — `generate_xpath_list`
 
 ### 5.1 Pipeline
 
 1. Parse CLI args (§3.4).
-2. Load the config chain (§15). Mapping-file load (§4.1 step 3) is
-   SKIPPED — `--mapping-file` is not a valid argument for this
-   subcommand (R-CLI-021), so the stern warning of R-MAP-101 is also
-   not emitted.
+2. Load the config chain (§15). Column resolution (§4.1 step 3) is
+   SKIPPED — this subcommand derives its output from the discovered
+   XPaths themselves and needs no `columns:` list.
 3. Discover label files (§4.1 step 4, including R-DISC-010 and
    R-DISC-020).
 4. Scrape each label (§4.1 step 5 sub-steps 1–5). Auto-column
@@ -312,19 +281,26 @@ in subsequent sections (§7–§14).
 5. Aggregate the union of all canonical XPaths discovered across all
    labels, preserving the order of first appearance across the
    alphabetically-sorted `filespec` order (R-XPL-010).
-6. Write the resulting list to the output text file, one XPath per
-   line, LF line ending, UTF-8 (R-XPL-020). No header line. No
-   annotations. No PDS4 label is generated. The "filter / project
-   columns", "sort rows", "per-column quoting analysis", "write CSV",
-   and "generate label" steps of §4.1 (steps 6–10) do not apply.
+6. Write the resulting XPaths to the output file as a paste-ready YAML
+   `columns:` block, one entry per first-occurrence XPath, with `name:`
+   defaulted to the XPath text for the user to edit (R-XPL-020). The
+   file is UTF-8 with LF line endings. The default output file is
+   `./columns.yaml` (auto-numbered `columns_1.yaml`, … when present); a
+   user-supplied `--output-file` without an extension gets `.yaml`
+   appended, and any explicit extension is honored. No PDS4 label is
+   generated. The "filter / project columns", "sort rows", "per-column
+   quoting analysis", "write CSV", and "generate label" steps of §4.1
+   (steps 6–10) do not apply.
 7. Exit 0.
 
-### 5.2 Mapping file
+### 5.2 Output format
 
-- **R-XPL-001** `generate_xpath_list` does NOT consult any mapping file. Even if
-  the user has one in the bundle, it is not read.
+- **R-XPL-001** `generate_xpath_list` reads no `columns:` list and no
+  external selection file; its output is derived solely from the XPaths
+  discovered in the labels.
 - **R-XPL-002** The XPaths emitted are in the canonical form defined in §10 and
-  are suitable for direct copy-paste into a mapping file authored manually.
+  are suitable for direct use as `xpath:` selectors in a config `columns:`
+  block.
 
 ## 6. Subcommand semantics — `copy_default_config`
 
@@ -344,110 +320,82 @@ in subsequent sections (§7–§14).
 - **R-CFG-201** The packaged file is the canonical reference. If it is updated,
   this subcommand reflects the change without requiring code edits.
 
-## 7. Mapping file specification
+## 7. Column selection (`columns:` config)
 
-### 7.1 Encoding and line endings
+Output columns are declared in the merged config's `columns:` list
+(there is no separate mapping-file format). Each list entry is a
+`ColumnSpec` model (defined in `pds4indextools/config.py`):
 
-- **R-MAP-001** The file is read as UTF-8 with universal newlines
-  (`newline=None` semantics). LF, CRLF, and CR are all accepted; the tool does
-  not warn or alter behavior based on which is encountered.
-- **R-MAP-002** A trailing newline at end of file is allowed but not required.
+```python
+class ColumnSpec(BaseModel):
+    model_config = {"extra": "forbid"}  # future per-column keys added deliberately
+    xpath: str | None = None   # canonical XPath selector
+    auto:  str | None = None   # one of the five auto-column tokens (R-AUTO-001)
+    name:  str | None = None   # emitted header; None/blank -> selector text
+```
 
-### 7.2 Line classifications
+### 7.1 Entry shape
 
-Each line is classified after stripping leading and trailing whitespace:
+- **R-MAP-300** Exactly one of `xpath` / `auto` is set per entry (a
+  validation error names the offending entry's zero-based index). An
+  `xpath` selector is matched against a label's canonical XPaths by
+  exact string equality — no globbing, wildcarding, or pattern
+  matching; it must match exactly the form produced by §10. An `auto`
+  selector MUST be one of the five auto-column tokens (R-AUTO-001); any
+  other token is a hard error whose message names the bad token and
+  lists the five valid tokens.
+- The emitted header is `name.strip()` when non-blank, else the raw
+  selector text verbatim (the omitted-rename case: an XPath or auto
+  token used as its own header).
+- An `xpath` value MUST NOT contain internal whitespace.
 
-- **R-MAP-010** A line that, after strip, is empty is ignored.
-- **R-MAP-011** A line that, after strip, begins with `#` is ignored (comment).
-- **R-MAP-012** A line that contains exactly one comma after strip is a
-  **rename line**. The portion before the comma is the **selector** (a
-  canonical XPath OR one of the five auto-column tokens listed in
-  R-AUTO-001); the portion after the comma is the short name. Both
-  halves are individually stripped of leading/trailing whitespace.
-  - **R-MAP-012.1** If the post-comma half is empty (`xpath,` or
-    `lid,`), the line means "include this column with the raw selector
-    as the header" (no rename).
-  - **R-MAP-012.2** Internal whitespace inside the selector half is
-    rejected (R-MAP-040 for XPaths; auto-column tokens contain no
-    whitespace). Internal whitespace inside the short-name half is
-    preserved.
-  - Example 1: `pds:Foo<1>/pds:Bar<1>,bar` → XPath rename to header `bar`.
-  - Example 2: `lid,LID` → auto-column `lid` rendered with header `LID`.
-- **R-MAP-013** A line that contains zero commas after strip is an
-  **auto-column line**. The token MUST be one of the five recognized
-  auto-column names (R-AUTO-001); any other zero-comma token is a hard
-  error.
-- **R-MAP-014** A line that contains more than one comma after strip is
-  always a hard error (per R-MAP-020). Canonical XPaths never contain
-  commas (R-MAP-041), short names never contain commas (the tokenizer
-  treats the first comma as the rename separator, and any second
-  comma therefore lies inside what would be a short name and is
-  rejected), and auto-column tokens never contain commas. There is no
-  legal multi-comma form.
+### 7.2 Validation
 
-### 7.3 Validation
+- **R-MAP-030** Two entries with the same selector (two identical
+  `xpath` values, or two identical `auto` tokens) are a hard
+  `ConfigError` citing both entry indexes.
+- **R-MAP-031** Two entries that resolve to the same emitted header are
+  a hard `ConfigError` citing both entry indexes. The check is over the
+  post-rename headers, with the selector itself acting as the implicit
+  header when `name` is omitted.
+- **R-MAP-043** A `name` MUST consist of ASCII printable characters in
+  the range 0x20–0x7E only, MUST NOT contain a comma or a double-quote
+  (`"`), and MUST be non-empty after strip. An omitted/blank `name`
+  falls back to the raw selector as the header.
 
-- **R-MAP-020** Any line not matching the above classifications is a hard error
-  with line number and a reproduction of the offending line.
-- **R-MAP-030** Duplicate XPath (or duplicate auto-column token) on different
-  lines is a hard error citing both line numbers.
-- **R-MAP-031** Any two distinct selectors (whether two XPaths, two
-  auto-column tokens, or one of each) that resolve to the same final
-  column header is a hard error citing both line numbers. The
-  collision check is over the post-rename short names, with the
-  selector itself acting as the implicit short name in the
-  empty-rename case (R-MAP-012.1) or the bare auto-column case
-  (R-MAP-013).
-- **R-MAP-040** XPaths with internal whitespace are rejected.
-- **R-MAP-041** Short names with embedded commas are not possible (the
-  tokenizer treats the first comma as the separator). A short name that
-  contains a comma after the rename character was already past the separator
-  is rejected as if it were a multi-comma line.
-- **R-MAP-042** Non-ASCII characters anywhere in the file are a hard error
-  (consistent with the global ASCII-only rule R-CSV-080).
-- **R-MAP-043** A short name (the post-comma half of a rename line, or
-  the bare auto-column rename name) MUST consist of ASCII printable
-  characters in the range 0x20–0x7E only, MUST NOT contain a comma
-  (already enforced by the tokenizer per R-MAP-041) or a double-quote
-  (`"`), and MUST be non-empty after strip. Empty short names are
-  handled separately by R-MAP-012.1 (use the raw XPath as header).
+### 7.3 Application during scrape
 
-### 7.4 Application during scrape
-
-- **R-MAP-110** When `--mapping-file` is omitted, every distinct canonical
-  XPath observed across the union of all scraped labels becomes a column
-  in the output. The header for each such column is the raw canonical
-  XPath (with `<n>` predicates intact). No auto-columns are emitted
-  unless a mapping file was supplied.
-- **R-MAP-300** A canonical XPath comparison is exact string equality. There is
-  no globbing, wildcarding, or pattern matching. The XPath in the mapping file
-  must match exactly the form produced by §10.
-- **R-MAP-310** Per label, after scrape and renumbering, every XPath whose
-  canonical form is NOT in the mapping is silently dropped from the row dict.
-- **R-MAP-311** A mapping entry that never matches any XPath in any scraped
-  label produces a column whose value is empty for every row. This is not a
-  warning; the run succeeds.
-- **R-MAP-312** If after applying R-MAP-310 and adding auto-columns the
-  final column set is empty, the run fails with `MappingFileError` and
-  exit code 1 (NOT fail-slow eligible: this is a user/configuration
-  error, not label-content).
-- **R-MAP-320** Output column order is exactly the order of mapping lines
-  (excluding blanks/comments). Auto-column lines and rename lines interleave
+- **R-MAP-310** Per label, after scrape and renumbering, every XPath
+  whose canonical form is NOT named by an `xpath` entry is silently
+  dropped from the row dict.
+- **R-MAP-311** An `xpath` entry that never matches any XPath in any
+  scraped label produces a column whose value is empty for every row.
+  This is not a warning; the run succeeds.
+- **R-MAP-312** A merged config whose `columns` list is empty (`[]`) is
+  rejected at config-validation time with a `ConfigError` and exit code
+  1 (NOT fail-slow eligible: this is a user/configuration error, not
+  label-content). A merged config with NO `columns` key is likewise a
+  `ConfigError` for `generate_index_file` (there is no all-columns
+  fallback).
+- **R-MAP-320** Output column order is exactly the declaration order of
+  the `columns` list. Auto-column entries and XPath entries interleave
   freely.
 
-### 7.5 Errors and exit codes
+### 7.4 Errors and exit codes
 
-Mapping-file errors are user errors, not label-content errors. They raise
-`MappingFileError` and exit with code 1 (NOT eligible for `--fail-slow`,
-because the mapping file is independent of label content).
+Column-configuration errors are user errors, not label-content errors.
+They raise `ConfigError` and exit with code 1 (NOT eligible for
+`--fail-slow`, because the column configuration is independent of label
+content). The `columns` list is replaced wholesale by a later
+`--config-file` in the chain (like every list, per R-CFG-050).
 
 ## 8. Auto-columns
 
 ### 8.1 Recognized tokens
 
 - **R-AUTO-001** Exactly five auto-column tokens are recognized:
-  `lid`, `lidvid`, `filespec`, `filename`, `bundle_name`. Any other bare
-  token in a mapping file is a hard error (R-MAP-013).
+  `lid`, `lidvid`, `filespec`, `filename`, `bundle_name`. Any other
+  value in a column entry's `auto` field is a hard error (§7.1).
 
 ### 8.2 Derivations
 
@@ -499,10 +447,9 @@ For a given label file with absolute path `P` parsed into tree `T`:
 
 ### 8.4 Renaming auto-columns
 
-- **R-AUTO-010** An auto-column may appear in the mapping file in either
-  bare form (`filename`) or rename form (`filename,FILE_NAME`). Bare form
-  uses the token itself as the column header; rename form uses the supplied
-  short name. Either way, the data type recorded in the generated label is
+- **R-AUTO-010** An auto-column entry may omit `name` (the token itself
+  becomes the column header) or supply `name` (the supplied header is
+  used). Either way, the data type recorded in the generated label is
   the type listed in the table in §8.2.
 
 ## 9. Label scraping
@@ -526,9 +473,9 @@ For a given label file with absolute path `P` parsed into tree `T`:
 ### 9.2 Tree walk
 
 - **R-SCRAPE-010** The tool performs a full pre-order traversal of the DOM,
-  visiting every element exactly once. Filtering (when a mapping is
-  supplied) is applied AFTER renumbering (R-MAP-310), not during the walk,
-  because renumbering requires complete knowledge of sibling occurrences.
+  visiting every element exactly once. Column projection is applied
+  AFTER renumbering (R-MAP-310), not during the walk, because
+  renumbering requires complete knowledge of sibling occurrences.
 - **R-SCRAPE-020** For each element with non-empty stripped text content,
   the value `' '.join(element.text.strip().split())` is stored under the
   canonical XPath of the element (whitespace collapse; see R-VAL-010).
@@ -568,8 +515,8 @@ For a given label file with absolute path `P` parsed into tree `T`:
 The output of step 9.2 is an in-memory dict keyed by the lxml-native XPath
 form (e.g. `/{http://pds.nasa.gov/pds4/pds/v1}Product_Observational/...`).
 Before further processing, every key is rewritten to a canonical form
-suitable for comparison against the mapping file and for emission as a
-header.
+suitable for comparison against the config's `columns:` selectors and
+for emission as a header.
 
 ### 10.1 Canonical form
 
@@ -711,9 +658,9 @@ There are two distinct cases:
 
 ### 12.2 Missing elements (no XPath in this label)
 
-- **R-MISS-010** When a mapping file lists an XPath that is not present in a
-  given label, the cell value is the empty string. No nillable substitution
-  occurs.
+- **R-MISS-010** When a config `columns:` entry names an XPath that is not
+  present in a given label, the cell value is the empty string. No nillable
+  substitution occurs.
 - **R-MISS-020** This applies whether or not the XPath is present in OTHER
   labels in the same run.
 
@@ -741,9 +688,9 @@ There are two distinct cases:
 ### 13.2 Header row
 
 - **R-CSV-010** Exactly one header row is written, before any data row.
-- **R-CSV-011** Header values are the short names from the mapping file
-  (or auto-column tokens / their renames). When no mapping file was used,
-  header values are the raw canonical XPaths.
+- **R-CSV-011** Header values are the emitted headers of the config
+  `columns:` entries (each entry's `name`, or its raw selector text when
+  `name` is omitted, per §7).
 - **R-CSV-012** Headers are emitted unquoted in BOTH variable-width and
   fixed-width modes. (Per Round 6 user choice: header is not padded in
   fixed-width mode either.)
@@ -931,16 +878,17 @@ PdsTemplate documentation; do not duplicate effort").
 
 ### 14.7 Modification history
 
-- **R-LBL-090** `Modification_Detail` (or `Modification_History`) data is
-  passed through verbatim from `config.label_contents`. The tool does
-  not append a "generated by pds4_create_xml_index" entry; that is the
-  user's responsibility via their config.
+- **R-LBL-090** `Modification_Detail` (or `Modification_History`) data,
+  when supplied in `config.label_contents`, is passed through. When the
+  user supplies NO `Modification_Detail`, the tool GENERATES a default
+  single-entry modification history (rather than emitting an empty one)
+  so the generated label always carries a valid `Modification_History`.
 - **R-LBL-091** Normalization of `Modification_Detail` before passthrough
   to PdsTemplate:
   - A single dict is wrapped into a one-element list.
   - A list is passed through unchanged (in declared order).
-  - `None` (or absent) becomes an empty list, allowing the template to
-    use a `$FOR(...)$`-style iteration without conditional guards.
+  - `None` (or absent) becomes a default single-entry list (one
+    generated `Modification_Detail`), never an empty list.
 
 ## 15. Configuration file
 
@@ -1008,8 +956,13 @@ class IndexConfig(BaseModel):
     nillable:        dict[str, NillableEntry] = {}   # extra='allow' on the keys
     label_contents:  LabelContents
     output:          OutputSection           = OutputSection()
+    columns:         list[ColumnSpec] | None = None  # column selection, §7
     xsd_cache_dir:   AbsolutePath | None     = None
 ```
+
+> `ColumnSpec` is defined in §7. `columns` is optional at load time
+> (`generate_xpath_list` and `copy_default_config` need no columns);
+> `generate_index_file` requires a non-empty list (R-MAP-312).
 
 > `AbsolutePath` above is shorthand for `Annotated[Path,
 > AfterValidator(_require_absolute)]` defined in
@@ -1017,7 +970,7 @@ class IndexConfig(BaseModel):
 > path is not absolute (per R-CFG-040); pydantic converts that into a
 > `ValidationError`.
 
-- **R-CFG-020** The TOP-LEVEL config has `extra='forbid'`: only the four
+- **R-CFG-020** The TOP-LEVEL config has `extra='forbid'`: only the five
   keys above are accepted. Any other top-level key is a hard error.
 - **R-CFG-021** `OutputSection` has `extra='forbid'`.
 - **R-CFG-022** `LabelContents` has `extra='allow'`. Unknown keys are
@@ -1073,7 +1026,7 @@ The system default lives at
 ## 16. Path resolution and filesystem
 
 - **R-FS-001** Every path supplied on the CLI (`--bundle-root`,
-  `--mapping-file`, `--label-template`, `--output-file`, the
+  `--label-template`, `--output-file`, the
   `copy_default_config` destination, every `--config-file`) is treated
   as absolute if it starts with the platform's path-anchor; otherwise
   it is resolved against the current working directory at startup.
@@ -1102,8 +1055,7 @@ All custom exceptions live in `pds4indextools.errors`:
 ```text
 Pds4IndexError                       (base; never instantiated directly)
 ├── CliError                         (argparse / user-input errors → exit 1)
-├── ConfigError                      (config validation, sort_by misuse → exit 1)
-├── MappingFileError                 (mapping file syntax/semantics → exit 1)
+├── ConfigError                      (config validation, columns, sort_by misuse → exit 1)
 ├── LabelError                       (label-content errors → exit 2)
 │   ├── ParseError                   (XML parse, BOM, missing default ns)
 │   ├── LidError                     (LID regex, missing version_id, cross-label LID collision per R-LID-020)
@@ -1144,7 +1096,7 @@ Pds4IndexError                       (base; never instantiated directly)
 | Code | Meaning |
 |---|---|
 | 0 | Success |
-| 1 | User / CLI error (`CliError`, `ConfigError`, `MappingFileError`) |
+| 1 | User / CLI error (`CliError`, `ConfigError`) |
 | 2 | Runtime / data error (`LabelError`, `SchemaError`, `OutputError`, `FailSlowAggregateError`) |
 | 3 | Internal / unhandled exception (any non-`Pds4IndexError` reaching the top level; the traceback is printed) |
 | 130 | SIGINT |
@@ -1199,8 +1151,7 @@ Pds4IndexError                       (base; never instantiated directly)
 | `-vvv` | DEBUG (clamped; reserved for future TRACE-style output) |
 
 - **R-LOG-010** The logger level is established before any subcommand
-  begins work, including before the stern warning of R-MAP-101 is
-  emitted.
+  begins work, including before any label discovery or scraping starts.
 
 ### 18.3 Progress
 
@@ -1219,15 +1170,15 @@ Pds4IndexError                       (base; never instantiated directly)
 ```text
 src/pds4indextools/
 ├── __init__.py             # public API; __all__
-├── cli.py                  # argparse, subparser dispatch, main()
-├── scraper.py              # lxml parse, full-tree walk, value extraction, nil
+├── cli/                    # argparse, subparser dispatch, main(), run_* (sub-package)
+├── scraper/                # lxml parse, full-tree walk, value extraction, nil (sub-package)
 ├── xpath_norm.py           # namespace alias + renumbering + canonicalization
-├── mapping.py              # MappingFile parser, MappingEntry dataclass
-├── config.py               # pydantic models, YAML load+merge, default lookup
+├── config.py               # pydantic models (incl. ColumnSpec), YAML load+merge, default lookup
 ├── schema_types.py         # XSD download, on-disk cache, base-type resolver
 ├── csv_writer.py           # per-column quoting analysis, var/fixed writers
 ├── label_writer.py         # PdsTemplate variable assembly, write
 ├── errors.py               # Pds4IndexError hierarchy
+├── _io.py                  # atomic write/rename helpers (package-internal)
 ├── _logging.py             # log setup + tqdm wiring
 ├── _version.py             # setuptools_scm-managed
 ├── py.typed
@@ -1235,6 +1186,11 @@ src/pds4indextools/
     ├── default_config.yaml
     └── index_label_template.xml
 ```
+
+The `cli/` and `scraper/` directories are sub-packages (each near the
+1000-line ceiling of R-PKG-001 as a single module, so split from the
+outset). Column selection lives in `config.py` (`ColumnSpec`), not a
+separate module.
 
 - **R-PKG-001** Every module above MUST stay under 1000 lines (per
   `python_best_practices.mdc` §2). If a module nears the limit it is
@@ -1246,16 +1202,8 @@ src/pds4indextools/
 
 ```text
 tests/
-├── unit/
-│   ├── test_cli.py
-│   ├── test_config.py
-│   ├── test_csv_writer.py
-│   ├── test_errors.py
-│   ├── test_label_writer.py
-│   ├── test_mapping.py
-│   ├── test_schema_types.py
-│   ├── test_scraper.py
-│   └── test_xpath_norm.py
+├── unit/                   # descriptive behavior-named test files
+│   └── ...
 ├── integration/
 │   ├── test_generate_index_file.py
 │   ├── test_generate_xpath_list.py
@@ -1263,56 +1211,53 @@ tests/
 │   └── test_subprocess_smoke.py
 └── data/
     ├── bundles/<feature_name>/...
-    ├── mapping_files/...
     ├── configs/...
     └── expected/...
 ```
 
-- **R-PKG-010** Test files mirror source modules where possible. New
-  tests are colocated with the module they exercise.
+- **R-PKG-010** Unit-test file names describe the behavior under test
+  (e.g. `test_config_loading_and_merging.py`), not bare source-module
+  names. New tests are colocated with the behavior they exercise.
 
 ## 20. Public API
 
-The top-level `pds4indextools/__init__.py` defines `__all__` exposing:
+The top-level `pds4indextools/__init__.py` defines `__all__` as the
+exact union of every public submodule's `__all__` plus `module_logger`
+(59 names). This list is the binding authority:
 
 ```python
 __all__ = [
-    # CLI entry
-    "main",
-    # subcommand programmatic entry points (RORO)
-    "run_generate_index_file",
-    "run_generate_xpath_list",
-    "run_copy_default_config",
-    # RORO arg / result dataclasses (required to call the run_* APIs)
-    "GenerateIndexFileArgs",
-    "GenerateIndexFileResult",
-    "GenerateXpathListArgs",
-    "GenerateXpathListResult",
-    "CopyDefaultConfigArgs",
-    "CopyDefaultConfigResult",
-    # configuration / data classes
-    "IndexConfig",
-    "LabelContents",
-    "OutputSection",
-    "MappingFile",
-    "MappingEntry",
-    "ScrapeResult",
-    # commonly useful helpers
-    "parse_mapping_file",
-    "load_config",
-    "scrape_label",
-    "renumber_xpaths",
-    "canonicalize_xpath",
     # errors
-    "Pds4IndexError",
-    "CliError",
-    "ConfigError",
-    "MappingFileError",
-    "LabelError",
-    "ScrapedValueError",
-    "SchemaError",
-    "OutputError",
-    "FailSlowAggregateError",
+    "Pds4IndexError", "CliError", "ConfigError", "LabelError",
+    "ParseError", "LidError", "XPathError", "NilError",
+    "ScrapedValueError", "SchemaError", "SchemaResolutionError",
+    "SchemaVersionError", "SchemaNetworkError", "SchemaCacheError",
+    "OutputError", "FailSlowAggregateError",
+    "EXIT_USER_ERROR", "EXIT_RUNTIME_ERROR", "EXIT_INTERNAL_ERROR",
+    "EXIT_SIGINT",
+    # config
+    "IndexConfig", "LabelContents", "OutputSection", "NillableEntry",
+    "CitationInformation", "ModificationDetail", "ColumnSpec",
+    "AbsolutePath", "AUTO_COLUMN_TOKENS", "load_config", "parse_sort_key",
+    # xpath_norm
+    "canonicalize_xpath", "renumber_xpaths",
+    # schema_types
+    "SchemaCache", "SchemaTypeResolver", "AUTO_COLUMN_TYPES",
+    # scraper
+    "ScrapeResult", "scrape_label",
+    # csv_writer
+    "ColumnStat", "CsvWritePlan", "build_plan", "write_csv", "sort_rows",
+    # label_writer
+    "build_substitution_dict", "normalize_modification_detail",
+    "write_label", "load_packaged_template",
+    # cli
+    "main", "cli_entrypoint", "run_generate_index_file",
+    "run_generate_xpath_list", "run_copy_default_config",
+    "GenerateIndexFileArgs", "GenerateIndexFileResult",
+    "GenerateXpathListArgs", "GenerateXpathListResult",
+    "CopyDefaultConfigArgs", "CopyDefaultConfigResult",
+    # logging
+    "module_logger",
 ]
 ```
 
@@ -1327,8 +1272,8 @@ __all__ = [
   raised from the `run_*` function, NOT as an "error" field on the
   result dataclass.
   - Exit 1 / 2 → the corresponding `Pds4IndexError` subclass is raised
-    (`CliError`, `ConfigError`, `MappingFileError`, `LabelError`,
-    `SchemaError`, or `OutputError`).
+    (`CliError`, `ConfigError`, `LabelError`, `SchemaError`, or
+    `OutputError`).
   - `--fail-slow` accumulated-warnings abort (R-FSLOW-120) → raises
     `FailSlowAggregateError` (a `Pds4IndexError` subclass with an
     `errors: list[Pds4IndexError]` attribute holding each accumulated
@@ -1346,13 +1291,15 @@ __all__ = [
 @dataclass
 class GenerateIndexFileArgs:
     bundle_root: Path
-    patterns: list[str]
-    config_files: list[Path] = field(default_factory=list)
-    mapping_file: Path | None = None
+    patterns: tuple[str, ...]
+    config_files: tuple[Path, ...] = ()
     label_template: Path | None = None
     output_file: Path | None = None
     fail_slow: bool = False
     verbosity: int = 0      # 0 = WARNING, 1 = INFO, 2 = DEBUG, 3 = DEBUG
+    # Hook invoked after the CSV is atomically renamed and before label
+    # substitution; used by the golden-bytes generator to freeze CSV mtime.
+    csv_post_write_hook: Callable[[Path], None] | None = None
 
 @dataclass
 class GenerateIndexFileResult:
@@ -1374,14 +1321,16 @@ Analogous shapes exist for `generate_xpath_list` and `copy_default_config`.
 | `lxml` | `>=5.0` | XML parsing, XPath evaluation |
 | `pyyaml` | `>=6.0` | YAML config loading via `safe_load` |
 | `pydantic` | `>=2.5` | Config validation, RORO dataclasses |
-| `rms-pdstemplate` | `>=0.1` | Template-driven label generation |
+| `rms-pdstemplate` | `>=1.0,<2` | Template-driven label generation |
 | `requests` | `>=2.32` | XSD downloads (HTTP / HTTPS) |
 | `requests-file` | `>=2.1` | `file://` URL adapter for `requests` (R-FS-005) |
 | `platformdirs` | `>=4.0` | Cache directory location |
 | `tqdm` | `>=4.66` | Progress bars |
 
 - **R-DEP-001** Versions are minimum bounds (not pinned) per
-  `dependency_management.mdc` §3.
+  `dependency_management.mdc` §3, EXCEPT `rms-pdstemplate`, which
+  carries an upper bound `>=1.0,<2` to keep golden-byte output stable
+  across major versions.
 - **R-DEP-002** Pandas is NOT a dependency. The legacy code's use of
   pandas is replaced by stdlib `csv` and small home-grown helpers in
   `csv_writer.py`.
@@ -1393,12 +1342,18 @@ Analogous shapes exist for `generate_xpath_list` and `copy_default_config`.
 | `pytest` | `>=7.0` |
 | `pytest-cov` | `>=4.0` |
 | `pytest-xdist` | `>=3.8` |
+| `pytest-timeout` | `>=2.3` |
 | `coverage` | `>=7.0` |
+| `freezegun` | `>=1.4` |
+| `responses` | `>=0.25` |
 | `mypy` | `>=1.0` |
+| `lxml-stubs` | (any recent) |
+| `types-requests` | (any recent) |
+| `types-PyYAML` | (any recent) |
 | `ruff` | `>=0.8` |
 | `pymarkdownlnt` | `>=0.9.35` |
 | `pyroma` | `>=4.2` |
-| `pip-audit` | `>=2.7` |
+| `vulture` | `>=2.14` |
 
 ### 21.3 Docs
 
@@ -1457,13 +1412,14 @@ Analogous shapes exist for `generate_xpath_list` and `copy_default_config`.
 
 ### 22.4 Live network for XSDs
 
-- **R-TST-030** Integration tests use real XSD downloads from
-  pds.nasa.gov on cache miss. Within one test session, the
-  session-scoped cache from R-TST-021 amortizes the cost across test
-  cases.
-- **R-TST-031** A `@pytest.mark.live` decorator is reserved for
-  optional opt-in tests that require network for reasons OTHER than
-  XSD lookup (currently none).
+- **R-TST-030** Integration tests run by default against a pre-seeded
+  XSD cache (the seed files under `tests/data/xsd_cache_seed/`, mapped
+  by URL in `tests/conftest.py`), so the ordinary test run performs NO
+  network access. Tests that exercise a real download from
+  pds.nasa.gov carry `@pytest.mark.live` and are opt-in.
+- **R-TST-031** The `@pytest.mark.live` decorator marks the opt-in
+  tests of R-TST-030 (real XSD downloads) and any future test needing
+  network for other reasons.
 
 ### 22.5 Fixtures
 
@@ -1475,8 +1431,8 @@ Analogous shapes exist for `generate_xpath_list` and `copy_default_config`.
   small as possible while still exercising the targeted feature
   (1–5 labels typical).
 - **R-TST-042** Fixtures live under `tests/data/` with subdirectories
-  by feature: `bundles/<feature>/`, `mapping_files/<feature>.txt`,
-  `configs/<feature>.yaml`, `expected/<feature>/{index.csv,index.lblx}`.
+  by feature: `bundles/<feature>/`, `configs/<feature>.yaml`,
+  `expected/<feature>/{index.csv,index.lblx}`.
 
 ### 22.6 Assertion style
 
@@ -1495,19 +1451,18 @@ Analogous shapes exist for `generate_xpath_list` and `copy_default_config`.
 
 ### 23.1 GitHub Actions matrix
 
-- **R-CI-001** Tests run on the matrix of:
-  - Python: `3.10`, `3.11`, `3.12`, `3.13`.
-  - OS: `ubuntu-latest`, `macos-latest`, `windows-latest`.
-- **R-CI-002** All matrix legs run `ruff check`, `ruff format --check`,
-  `mypy src tests`, `pytest -n auto --cov=src`, `pymarkdownlnt`,
-  `sphinx-build -W -b html`, `sphinx-build -n -b html`, and
-  `pyroma --min=10 .` (PyPI-metadata quality gate).
-- **R-CI-003** A separate job runs `pip-audit` on the resolved
-  dependency tree.
-- **R-CI-004** A `docs` job builds `docs/` and uploads the HTML
-  artifact.
-- **R-CI-005** PR status checks block merge unless every matrix leg
-  and the docs job are green.
+CI is the repo template's `run-tests.yml`, unchanged by this project.
+
+- **R-CI-001** The test job runs on an Ubuntu-only matrix over Python
+  `3.10`, `3.11`, `3.12`, `3.13`.
+- **R-CI-002** A lint job runs `ruff`, `mypy`, `sphinx`, and
+  `pymarkdownlnt`, plus the PyPI-metadata quality gate
+  `pyroma --min=9 .`.
+- **R-CI-003** There is no `pip-audit` job.
+- **R-CI-004** There is no separate `docs` job; documentation is built
+  by the lint job's `sphinx` step.
+- **R-CI-005** PR status checks block merge unless every matrix leg and
+  the lint job are green.
 
 ### 23.2 Publishing
 
@@ -1541,7 +1496,6 @@ namespace-prefixed by the module they primarily exercise. Every
 | T-CLI-021 | Three patterns whose union is empty exits 1 | R-CLI-011, R-DISC-010 |
 | T-CLI-022 | A pattern that is absolute on the host platform (POSIX: `/abs/path/*.xml`; Windows: `C:\\abs\\path\\*.xml`) exits 1 with `CliError`; the test parametrizes the absolute-pattern string by `os.name` | R-CLI-011 |
 | T-CLI-030 | `--config-file` repeated three times merges in order; later overrides earlier | R-CLI-012, R-CFG-051 |
-| T-CLI-040 | `--mapping-file` not supplied → stern warning printed and 3-second pause occurs | R-CLI-013, R-MAP-101, R-MAP-102 |
 | T-CLI-050 | `--label-template` defaults to packaged template | R-CLI-014, R-LBL-001 |
 | T-CLI-060 | `--output-file` defaults to `./index.csv` and `./index.lblx` | R-CLI-015 |
 | T-CLI-061 | When `index.csv` already exists, default auto-numbers to `index_1.csv` | R-CLI-015 |
@@ -1551,7 +1505,6 @@ namespace-prefixed by the module they primarily exercise. Every
 | T-CLI-065 | Specified `--output-file foo` (no extension): data file becomes `foo.csv`, label `foo.lblx` | R-OUT-011 |
 | T-CLI-070 | Top-level `--help` epilog includes example invocation | R-CLI-040 |
 | T-CLI-071 | Each subcommand `--help` epilog includes 2+ examples | R-CLI-040 |
-| T-CLI-080 | `generate_xpath_list --mapping-file foo.txt` is rejected by argparse | R-CLI-021 |
 | T-CLI-081 | `generate_xpath_list --label-template foo.xml` is rejected by argparse | R-CLI-021 |
 | T-CLI-090 | `copy_default_config` rejects `--bundle-root` | R-CLI-032 |
 | T-CLI-091 | `copy_default_config` without `--output-file` exits 2 | R-CLI-030 |
@@ -1559,31 +1512,22 @@ namespace-prefixed by the module they primarily exercise. Every
 | T-CLI-093 | `copy_default_config --output-file existing.yaml --force` overwrites with WARNING | R-CLI-031 |
 | T-CLI-100 | `-v` sets logger to INFO; `-vv` sets DEBUG; `-vvv` sets DEBUG (clamped); no flag = WARNING | R-CLI-017 |
 
-### 24.2 Mapping file (T-MAP-*)
+### 24.2 Column selection (T-MAP-*)
 
 | Test | Description | Verifies |
 |---|---|---|
-| T-MAP-001 | UTF-8 file with mixed CRLF/LF/CR parses identically | R-MAP-001 |
-| T-MAP-010 | Blank lines, comment lines, and trailing newlines are ignored | R-MAP-010, R-MAP-011 |
-| T-MAP-020 | `xpath,short` rename | R-MAP-012 |
-| T-MAP-021 | `xpath,` (empty rename) keeps raw XPath as header | R-MAP-012.1 |
-| T-MAP-022 | XPath with embedded space rejected | R-MAP-012.2, R-MAP-040 |
-| T-MAP-030 | Bare `filename` token recognized as auto-column | R-MAP-013, R-AUTO-001 |
-| T-MAP-031 | Bare `filenmae` (typo) rejected as unknown auto-column | R-MAP-013 |
-| T-MAP-040 | `filename,FILE_NAME` renames an auto-column (single-comma rename line whose selector is an auto-column token) | R-MAP-012, R-AUTO-010 |
-| T-MAP-050 | Two-comma line (XPath form) rejected | R-MAP-014, R-MAP-020 |
-| T-MAP-060 | Duplicate XPath on different lines exits 1 with both line numbers | R-MAP-030 |
-| T-MAP-061 | Duplicate auto-column token on different lines exits 1 | R-MAP-030 |
-| T-MAP-062 | Two XPaths mapping to identical short name exits 1 | R-MAP-031 |
-| T-MAP-063 | An XPath rename and an auto-column rename mapping to the same short name exits 1 | R-MAP-031 |
-| T-MAP-070 | Non-ASCII char in mapping file rejected | R-MAP-042 |
-| T-MAP-071 | Short name containing `"` rejected | R-MAP-043 |
-| T-MAP-072 | Short name containing a control char rejected | R-MAP-043 |
-| T-MAP-080 | XPath in mapping not found in any label produces empty column with warnings absent | R-MAP-311 |
-| T-MAP-081 | Discovered XPath not in mapping is silently dropped | R-MAP-310 |
-| T-MAP-082 | Mapping file containing only comment/blank lines (zero columns) exits 1 | R-MAP-312 |
-| T-MAP-090 | Output column order matches mapping line order with auto-cols and renames interleaved | R-MAP-320 |
-| T-MAP-100 | No `--mapping-file`: every distinct discovered XPath becomes a column with the raw canonical XPath as header, in first-occurrence order, no auto-columns | R-MAP-110 |
+| T-MAP-023 | A column entry setting both `xpath` and `auto`, and one setting neither, each rejected with the entry index | R-MAP-300 |
+| T-MAP-024 | An `xpath` selector matches a label XPath by exact string equality (no wildcarding) | R-MAP-300 |
+| T-MAP-060 | Two entries with the same `xpath` selector rejected citing both entry indexes | R-MAP-030 |
+| T-MAP-061 | Two entries with the same `auto` token rejected citing both entry indexes | R-MAP-030 |
+| T-MAP-062 | Two entries resolving to the same emitted header rejected | R-MAP-031 |
+| T-MAP-063 | An `xpath` entry and an `auto` entry resolving to the same header rejected | R-MAP-031 |
+| T-MAP-071 | `name` containing `"` rejected | R-MAP-043 |
+| T-MAP-072 | `name` containing a control char or a non-ASCII char rejected | R-MAP-043 |
+| T-MAP-080 | An `xpath` entry not found in any label produces an empty column; run succeeds | R-MAP-311 |
+| T-MAP-081 | A discovered XPath not named by any `xpath` entry is silently dropped | R-MAP-310 |
+| T-MAP-082 | A merged config with an empty (or missing) `columns` list exits 1 | R-MAP-312 |
+| T-MAP-090 | Output column order matches `columns` declaration order with auto and xpath entries interleaved | R-MAP-320 |
 
 ### 24.3 Auto-columns (T-AUTO-*)
 
@@ -1712,9 +1656,9 @@ namespace-prefixed by the module they primarily exercise. Every
 
 | Test | Description | Verifies |
 |---|---|---|
-| T-XPL-001 | Output is one XPath per line, LF terminator | R-XPL-020 |
+| T-XPL-001 | Output is a YAML `columns:` block, one entry per XPath with `name:` defaulted, LF terminators, default file `./columns.yaml` | R-XPL-020 |
 | T-XPL-002 | First-occurrence order across alphabetically-sorted labels | R-XPL-010 |
-| T-XPL-003 | Mapping file ignored even when `--mapping-file` was set on the command line (CLI rejects) | R-CLI-021, R-XPL-001 |
+| T-XPL-003 | `generate_xpath_list` consults no `columns:` list; output is derived only from discovered XPaths | R-XPL-001 |
 | T-XPL-004 | XPaths emitted in canonical form including `<1>` | R-XP-002 |
 | T-XPL-010 | `--fail-slow` works the same as for index generation | R-FSLOW-100 |
 
@@ -1750,18 +1694,20 @@ full pipeline. Bundles are kept as small as possible (1–5 labels).
 | `nilled` | Nilled date/integer/string fields | R-NIL-010, R-NIL-020 |
 | `nilled_bad` | Bad `nilReason` triggers error | R-NIL-010, R-FSLOW-110 |
 | `repeated_tags` | Multiple `Observing_System` blocks for renumbering | R-XP-020 |
-| `non_monotone` | Non-monotone interleave for renumber error | R-XP-021 |
 | `multi_lid` | Two labels with the same `<logical_identifier>` value | R-LID-020 |
 | `bom` | Label file with UTF-8 BOM | R-PARSE-001 |
 | `non_ascii_value` | Label with non-ASCII char | R-VAL-030 |
 | `quote_in_value` | Label with literal `"` (Future Issue F1 placeholder) | R-VAL-040 |
 | `version_mismatch` | Two labels with different schema URLs for `pds` namespace | R-SCH-040 |
 | `no_schema_location` | Label without `xsi:schemaLocation` | R-SCH-050 |
-| `fixed_width` | Same as `simple_pds_only` but config has `fixed_width: true` | R-CSV-070, R-CSV-071, R-CSV-073 |
-| `crlf` | Same with `line_ending: CRLF` | R-CSV-003, R-LBL-060 |
-| `multi_config` | Three configs that exercise merge | R-CFG-050, R-CFG-051 |
-| `mapping_full_features` | Mapping file with renames, raw-XPath lines, auto-cols, and renamed auto-cols | R-MAP-012, R-MAP-013, R-MAP-014, R-AUTO-010 |
-| `large_synthetic` | 1,000 generated labels stress test | R-IDX-002 (determinism), R-LOG-020 (progress on TTY only) |
+
+Feature variants (fixed-width, CRLF, multi-config merge, full-feature
+column mapping) reuse the `simple_pds_only` / `multi_namespace` bundles
+above with different config files and have `expected/<feature>/`
+golden directories rather than dedicated bundle directories. The
+non-monotone renumber path (R-XP-021) cannot be produced by a real
+PDS4 label and is exercised by a unit test (T-XP-021) rather than an
+integration bundle.
 
 ## 25. Documentation deliverables
 
@@ -1777,7 +1723,7 @@ exist under `docs/` and build cleanly with both
 | `docs/quickstart.rst` | End-to-end walkthrough: scrape a tiny bundle, view the CSV and lblx |
 | `docs/cli.rst` | Full subcommand reference (auto-generated from argparse where possible) |
 | `docs/config.rst` | Pydantic schema documented with `:data:`/`:class:` cross-refs and example YAML |
-| `docs/mapping_file.rst` | Mapping file syntax with examples (rename, raw-XPath, auto-col, rename-auto-col) |
+| `docs/config.rst` (columns section) | `columns:` config syntax with examples (xpath rename, raw-XPath, auto-col, renamed auto-col) |
 | `docs/architecture.rst` | Data-flow narrative: discover → parse → renumber → filter → write CSV → write label |
 | `docs/module.rst` | Auto-doc'd public API (`autodoc` of names in `__all__`) |
 | `docs/contributing.rst` | Standard `CONTRIBUTING.md` reference |
@@ -1831,10 +1777,9 @@ duplicated content makes maintenance painful.)
 
 - **R-CLI-001..R-CLI-041** — CLI grammar (§3)
 - **R-IDX-001..R-IDX-002** — Determinism (§4.2)
-- **R-MAP-001..R-MAP-043** — Mapping file syntax/validation (§7.1–§7.3)
-- **R-MAP-101..R-MAP-102** — Stern warning (§4.3)
-- **R-MAP-110** — No-mapping projection rule (§7.4)
-- **R-MAP-300..R-MAP-320** — Mapping application (§7.4)
+- **R-MAP-030, R-MAP-031, R-MAP-043** — Column selector/name
+  validation (§7.1–§7.2)
+- **R-MAP-300..R-MAP-320** — Column projection and application (§7)
 - **R-AUTO-001, R-AUTO-010** — Auto-columns (§8)
 - **R-LID-001, R-LID-010, R-LID-020** — LID validation including
   cross-label uniqueness (§8.3)
