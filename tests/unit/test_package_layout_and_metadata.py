@@ -32,3 +32,10 @@ def test_label_template_packaged() -> None:
         'templates/index_label_template.xml'
     )
     assert resource.is_file()
+
+
+def test_scraper_package_is_a_package_not_a_module() -> None:
+    """The scraper is shipped as a package (has ``__path__``), not a module."""
+    import pds4indextools.scraper
+
+    assert hasattr(pds4indextools.scraper, '__path__')
