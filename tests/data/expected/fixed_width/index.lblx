@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.sch"
+    schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_Ancillary xmlns="http://pds.nasa.gov/pds4/pds/v1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.xsd">
+    <Identification_Area>
+        <logical_identifier>urn:nasa:pds:test_simple:index:index</logical_identifier>
+        <version_id>1.0</version_id>
+        <title>Fixed-width index file</title>
+        <information_model_version>1.21.0.0</information_model_version>
+        <product_class>Product_Ancillary</product_class>
+        <Modification_History>
+            <Modification_Detail>
+                <modification_date>2026-05-14</modification_date>
+                <version_id>1.0</version_id>
+                <description>Initial version.</description>
+            </Modification_Detail>
+        </Modification_History>
+        <License_Information>
+            <name>Creative Common Public License CC0 1.0 (2024)</name>
+            <description>Creative Commons Zero (CC0) license information.</description>
+            <Internal_Reference>
+                <lid_reference>urn:nasa:pds:system_bundle:document_pds4_standards:creative_commons_1.0.0::1.0</lid_reference>
+                <reference_type>product_to_license</reference_type>
+            </Internal_Reference>
+        </License_Information>
+    </Identification_Area>
+    <File_Area_Ancillary>
+        <File>
+            <file_name>index.csv</file_name>
+            <local_identifier>index-table</local_identifier>
+            <creation_date_time>2026-05-14T00:00:00Z</creation_date_time>
+            <md5_checksum>64349dd62b69a619b264c312b0a68343</md5_checksum>
+            <comment></comment>
+        </File>
+        <Header>
+            <offset unit="byte">0</offset>
+            <object_length unit="byte">20</object_length>
+            <parsing_standard_id>UTF-8 Text</parsing_standard_id>
+            <description>Provides the column headers, separated by commas, for the data table.</description>
+        </Header>
+        <Table_Character>
+            <name>index.csv</name>
+            <local_identifier>index</local_identifier>
+            <offset unit="byte">20</offset>
+            <records>1</records>
+            <description>Index of metadata scraped from PDS4 labels.</description>
+            <record_character>
+                <fields>3</fields>
+                <groups>0</groups>
+                <record_length unit="byte">52</record_length>
+                <Field_Character>
+                    <name>LID</name>
+                    <field_number>1</field_number>
+                    <field_location unit="byte">1</field_location>
+                    <data_type>ASCII_LID</data_type>
+                    <field_length unit="byte">35</field_length>
+                    <description>XPath: lid</description>
+                </Field_Character>
+                <Field_Character>
+                    <name>FILE_NAME</name>
+                    <field_number>2</field_number>
+                    <field_location unit="byte">37</field_location>
+                    <data_type>ASCII_File_Name</data_type>
+                    <field_length unit="byte">9</field_length>
+                    <description>XPath: filename</description>
+                </Field_Character>
+                <Field_Character>
+                    <name>TITLE</name>
+                    <field_number>3</field_number>
+                    <field_location unit="byte">47</field_location>
+                    <data_type>ASCII_Short_String_Collapsed</data_type>
+                    <field_length unit="byte">5</field_length>
+                    <description>XPath: pds:Product_Observational&lt;1&gt;/pds:Identification_Area&lt;1&gt;/pds:title&lt;1&gt;</description>
+                </Field_Character>
+            </record_character>
+        </Table_Character>
+    </File_Area_Ancillary>
+</Product_Ancillary>

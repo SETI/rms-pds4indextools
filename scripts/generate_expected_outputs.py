@@ -68,7 +68,6 @@ _INDEX_FEATURES: tuple[tuple[str, str, str], ...] = (
     ('simple_pds_only',       'simple_pds_only', 'simple.yaml'),
     ('multi_namespace',       'multi_namespace', 'multi_namespace.yaml'),
     ('nilled',                'nilled',          'nilled.yaml'),
-    ('repeated_tags',         'repeated_tags',   'repeated_tags.yaml'),
     ('quote_in_value',        'quote_in_value',  'quote_in_value_fixed.yaml'),
     ('fixed_width',           'simple_pds_only', 'fixed_width.yaml'),
     ('crlf',                  'simple_pds_only', 'crlf.yaml'),
@@ -86,6 +85,12 @@ _FAILING_BUNDLES: tuple[str, ...] = (
     'non_ascii_value',
     'version_mismatch',
     'no_schema_location',
+    # repeated_tags: its columns reference pds:name, which the committed
+    # seed XSD (Appendix A.11) does not define, so type resolution raises
+    # SchemaResolutionError and no golden index.{csv,lblx} can be produced.
+    # R-XP-020 (canonical-form renumbering) is verified directly against
+    # scrape_label in test_generate_index_file.py.
+    'repeated_tags',
     # non_monotone: no bundle directory exists; R-XP-021 is unit-tested directly.
 )
 

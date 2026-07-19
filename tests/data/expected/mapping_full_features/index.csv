@@ -1,0 +1,4 @@
+LID,filename,BUNDLE,pds:Product_Observational<1>/pds:Identification_Area<1>/pds:title<1>,METHOD
+urn:nasa:pds:test_multi_ns:index:row_a,a.lblx,test_multi_ns,Row A,row_a_method
+urn:nasa:pds:test_multi_ns:index:row_b,b.lblx,test_multi_ns,Row B,row_b_method
+urn:nasa:pds:test_multi_ns:index:row_c,c.lblx,test_multi_ns,Row C,row_c_method
