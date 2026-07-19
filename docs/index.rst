@@ -9,17 +9,15 @@ Welcome to the Documentation for rms-pds4indextools!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User Guide
 
-   installation
-   quickstart
-   cli
-   config
-   usage_examples
-   architecture
-   module
-   contributing
-   code_of_conduct
+   user/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Guide
+
+   developer/index
 
 Indices and tables
 ==================
