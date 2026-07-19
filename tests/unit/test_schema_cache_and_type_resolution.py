@@ -295,12 +295,66 @@ def test_typeresolver_basic_resolution_logical_identifier(
 
 
 def test_typeresolver_unit_aware_wo_units_fallback(isolated_xsd_cache: Path) -> None:
-    """R-SCH-030: a unit-aware simpleContent/extension type resolves to its ``_WO_Units`` base."""
+    """R-SCH-030: a ``_WO_Units`` complexType resolves through the extension/base chain.
+
+    ``Wavelength_Range`` is a named complexType whose ``xs:simpleContent`` wraps an
+    ``xs:extension base="pds:Wavelength_Range_WO_Units"``. That base is returned by
+    Appendix G query #1
+    (``.//xs:complexType[@name='{tag}']//xs:extension/@base``): its ``//`` descendant
+    step reaches the simpleContent-nested extension, so query #1 is the FIRST
+    non-empty match and DECIDES this case. This test therefore verifies the
+    named-complexType extension/base resolution -- it does NOT reach the deeper
+    simpleContent slots (queries 13-17), which query #1 subsumes for this shape.
+    The deep tail (a non-query-1 slot) is exercised by
+    ``test_typeresolver_deep_query_direct_element_type_decides`` below.
+    """
     _seed_cache(isolated_xsd_cache, PDS_URL, 'pds_v1_units.xsd')
     resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
     resolver.register_label(Path('label.xml'), _label_root(f'{NS_PDS} {PDS_URL}'))
 
     assert resolver.resolve('pds:Wavelength_Range') == 'pds:Wavelength_Range_WO_Units'
+
+
+def test_typeresolver_deep_query_direct_element_type_decides(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-SCH-030: a bare ``xs:element/@type`` resolves via a deep Appendix G query.
+
+    This gives the fallback tail of the 22-query chain real behavioral coverage.
+    The crafted schema declares ONLY ``<xs:element name="direct_typed_leaf"
+    type="pds:ASCII_Real"/>`` -- no ``complexType``, no ``xs:extension``, and no
+    ``xs:restriction`` anywhere. Reasoning against Appendix G's order shows the
+    ONLY non-empty query is #22 (``.//*[local-name()='element' and
+    @name='{tag}']/@type``), which therefore DECIDES the result:
+
+    * Query #1 (``.//xs:complexType[@name='{tag}']//xs:extension/@base``) matches
+      only a NAMED ``complexType``; there is none here, so it returns empty and
+      cannot subsume this slot.
+    * Queries #2/#3 need a descendant ``restriction`` under the element/attribute;
+      there is none. Queries #4-#17 need a ``simpleType``/``complexType`` named
+      ``direct_typed_leaf``; none exists. Queries #18-#20 need an inline
+      ``complexType``/``simpleType`` child; the element has neither. Query #21
+      targets an ``attribute``.
+
+    The schema is loaded through the public API via a ``file://`` URL (served by
+    the session's ``requests_file.FileAdapter``, no network), proving the deep
+    query fires end-to-end and returns the prefixed base type.
+    """
+    xsd_path = tmp_path / 'deep_direct_type.xsd'
+    xsd_path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:pds="{NS_PDS}"\n'
+        f'           targetNamespace="{NS_PDS}"\n'
+        '           elementFormDefault="qualified">\n'
+        '  <xs:element name="direct_typed_leaf" type="pds:ASCII_Real"/>\n'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(Path('label.xml'), _label_root(f'{NS_PDS} {xsd_path.as_uri()}'))
+
+    assert resolver.resolve('pds:direct_typed_leaf') == 'pds:ASCII_Real'
 
 
 def test_typeresolver_unresolved_xpath_raises_schemaresolutionerror(
