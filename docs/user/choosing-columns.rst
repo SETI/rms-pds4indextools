@@ -77,6 +77,18 @@ Two small pieces of punctuation are worth explaining:
   one you mean: ``<1>`` is the first, ``<2>`` the second, and so on. When an
   element appears only once, as ``title`` does here, it is simply ``<1>``.
 
+.. note::
+
+   **Long or multi-line values become a single line.** Some label values, such
+   as a free-text description or comment, may span several lines or contain
+   extra spacing in the original label. Because every value has to fit in one
+   cell of the table, the index tool tidies each value onto a single line: line
+   breaks and any run of spaces or tabs are replaced by one space, and spacing
+   at the start and end is removed. The wording is preserved in full; only its
+   layout is flattened. If keeping the exact line breaks of a long text field
+   matters to you, that field is better read from the original label than from
+   the index.
+
 If addresses look fussy, here is the good news: you almost never write one
 from scratch.
 
