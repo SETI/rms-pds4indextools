@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xmlns:rings="http://pds.nasa.gov/pds4/rings/v1"
+ xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.xsd
+                      http://pds.nasa.gov/pds4/rings/v1 https://pds.nasa.gov/pds4/rings/v1/PDS4_RINGS_1L00_1G00.xsd">
+    <Identification_Area>
+        <logical_identifier>urn:nasa:pds:stress:imaging:ence2</logical_identifier>
+        <version_id>1.0</version_id>
+        <title>Enceladus, south polar terrain, tiger stripes</title>
+    </Identification_Area>
+    <Observation_Area>
+        <Time_Coordinates>
+            <start_date_time>2018-07-08</start_date_time>
+        </Time_Coordinates>
+        <Target_Identification>
+            <target_name>Enceladus</target_name>
+        </Target_Identification>
+        <Observation_Parameters>
+            <observation_id>80</observation_id>
+        </Observation_Parameters>
+        <rings:Ring>
+            <rings:ring_name>E Ring</rings:ring_name>
+        </rings:Ring>
+    </Observation_Area>
+</Product_Observational>

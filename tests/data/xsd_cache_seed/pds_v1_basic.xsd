@@ -67,4 +67,34 @@
       <xs:restriction base="pds:ASCII_Date_YMD"/>
     </xs:simpleType>
   </xs:element>
+  <xs:element name="start_date_time">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Date_YMD"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="target_name">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="purpose">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="observation_id">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Integer"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="exposure_duration">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Real"/>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="comment">
+    <xs:simpleType>
+      <xs:restriction base="pds:ASCII_Text_Preserved"/>
+    </xs:simpleType>
+  </xs:element>
 </xs:schema>
