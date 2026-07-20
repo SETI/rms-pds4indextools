@@ -110,6 +110,7 @@ dev = [
   "pytest-timeout",
   "pytest-xdist",
   "responses",
+  "rms-pdstable",
   "ruff",
   "types-PyYAML",
   "types-requests",
