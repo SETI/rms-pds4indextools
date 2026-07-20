@@ -1,0 +1,14 @@
+label_contents:
+  logical_identifier: urn:nasa:pds:test_rep:index:index
+  product_class: Product_Ancillary
+  version_id: '1.0'
+  title: Repeated-tags index file
+columns:
+  - auto: lid
+    name: LID
+  - xpath: pds:Product_Observational<1>/pds:Observation_Area<1>/pds:Observing_System<1>/pds:name<1>
+    name: OS1
+  - xpath: pds:Product_Observational<1>/pds:Observation_Area<1>/pds:Observing_System<2>/pds:name<1>
+    name: OS2
+  - xpath: pds:Product_Observational<1>/pds:Observation_Area<1>/pds:Observing_System<3>/pds:name<1>
+    name: OS3

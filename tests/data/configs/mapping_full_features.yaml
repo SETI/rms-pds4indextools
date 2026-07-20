@@ -1,0 +1,14 @@
+label_contents:
+  logical_identifier: urn:nasa:pds:test_simple:index:index
+  product_class: Product_Metadata_Supplemental
+  version_id: '1.0'
+  title: Mapping features index
+columns:
+  - auto: lid
+    name: LID
+  - auto: filename
+  - auto: bundle_name
+    name: BUNDLE
+  - xpath: pds:Product_Observational<1>/pds:Identification_Area<1>/pds:title<1>
+  - xpath: pds:Product_Observational<1>/pds:Observation_Area<1>/geom:Geometry<1>/geom:method<1>
+    name: METHOD

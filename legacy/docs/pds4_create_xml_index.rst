@@ -1,3 +1,9 @@
+.. note::
+
+   Historical. This is the pre-rewrite reference implementation, kept for
+   algorithm reference only. See the top-level ``docs/`` for the current
+   documentation.
+
 ``pds4_create_xml_index`` Program
 =================================
 

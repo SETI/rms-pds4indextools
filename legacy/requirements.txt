@@ -1,0 +1,12 @@
+coverage
+flake8
+lxml
+myst-parser
+pandas
+pytest
+pyyaml
+requests
+rms-pdstemplate
+sphinx
+sphinxcontrib-napoleon
+sphinx-rtd-theme

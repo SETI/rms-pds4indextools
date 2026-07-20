@@ -1,0 +1,14 @@
+label_contents:
+  logical_identifier: urn:nasa:pds:test_simple:index:index
+  product_class: Product_Ancillary
+  version_id: '1.0'
+  title: Fixed-width index file
+output:
+  fixed_width: true
+columns:
+  - auto: lid
+    name: LID
+  - auto: filename
+    name: FILE_NAME
+  - xpath: pds:Product_Observational<1>/pds:Identification_Area<1>/pds:title<1>
+    name: TITLE

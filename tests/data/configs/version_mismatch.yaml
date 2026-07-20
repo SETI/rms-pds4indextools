@@ -1,0 +1,8 @@
+label_contents:
+  logical_identifier: urn:nasa:pds:test_vm:index:index
+  product_class: Product_Ancillary
+  version_id: '1.0'
+  title: Version mismatch index
+columns:
+  - auto: lid
+    name: LID

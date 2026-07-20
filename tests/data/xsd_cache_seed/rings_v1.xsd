@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns="http://pds.nasa.gov/pds4/rings/v1"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:rings="http://pds.nasa.gov/pds4/rings/v1"
+           targetNamespace="http://pds.nasa.gov/pds4/rings/v1"
+           elementFormDefault="qualified">
+  <xs:simpleType name="ASCII_Short_String_Collapsed">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+  <xs:element name="ring_name">
+    <xs:simpleType>
+      <xs:restriction base="rings:ASCII_Short_String_Collapsed"/>
+    </xs:simpleType>
+  </xs:element>
+</xs:schema>

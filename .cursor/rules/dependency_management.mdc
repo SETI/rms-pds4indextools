@@ -1,0 +1,62 @@
+---
+alwaysApply: true
+description: Standards for declaring, installing, and maintaining Python project dependencies.
+---
+
+# Dependency Management
+
+## 1. Single Source of Truth
+
+- Declare ALL dependencies in **`pyproject.toml`** under `[project]` (PEP 621).
+- Do NOT maintain a separate hand-written `requirements.txt` for runtime dependencies. If a `requirements.txt` is kept, it should contain only `-e .` for backward compatibility.
+
+## 2. Dependency Groups
+
+| Group | Section | Install command | Purpose |
+|-------|---------|-----------------|---------|
+| **Runtime** | `[project].dependencies` | `pip install .` | Required for the package to function. |
+| **Dev** | `[project.optional-dependencies].dev` | `pip install -e ".[dev]"` | Testing, linting, type-checking, coverage. |
+| **Docs** | `[project.optional-dependencies].docs` | `pip install -e ".[docs]"` | Sphinx and documentation extensions. |
+
+## 3. Version Constraints
+
+- Prefer **unpinned** (bare-name) dependencies so installs pull the latest
+  compatible releases; add a version constraint only when it is genuinely
+  necessary.
+- When a constraint IS necessary, use a **minimum** lower bound for the
+  feature/API the code relies on (e.g. `pydantic>=2` for the v2 API). Do NOT
+  pin exact versions (`==`) in library projects; exact pinning belongs in lock
+  files or application deployments.
+- Avoid upper bounds unless a known incompatibility requires one; a future
+  release that breaks the build should surface in CI rather than be pre-empted
+  by a speculative cap.
+- The same policy applies to dev/docs dependencies: bare names unless a minimum
+  version is actually required.
+
+## 4. Adding or Updating Dependencies
+
+1. Add the dependency to the correct section in `pyproject.toml`.
+2. Run `pip install -e ".[dev]"` (or the relevant group) to verify installation.
+3. Run the full test suite and type-check to confirm compatibility.
+4. Commit the `pyproject.toml` change with a `build:` commit type.
+
+## 5. Security and Maintenance
+
+- Run `pip audit` in CI to catch known vulnerabilities.
+- Enable automated dependency update tooling (Dependabot, Renovate).
+- Review update PRs for breaking changes before merging.
+- Periodically remove unused dependencies to reduce attack surface.
+
+## 6. Tooling Configuration
+
+Consolidate all tool configuration into `pyproject.toml` where supported:
+
+| Tool | Section |
+|------|---------|
+| pytest | `[tool.pytest.ini_options]` |
+| coverage | `[tool.coverage.run]`, `[tool.coverage.report]` |
+| mypy | `[tool.mypy]`, `[[tool.mypy.overrides]]` |
+| ruff | `[tool.ruff]`, `[tool.ruff.lint]` — use explicit `select = [...]` for E, F, W, I, UP, B, SIM, C4, A, N, PT, RUF (see python) |
+| setuptools_scm | `[tool.setuptools_scm]` |
+
+Do NOT create separate config files (`.coveragerc`, `.mypy.ini`, `.flake8`, `setup.cfg`) when the tool supports `pyproject.toml`.

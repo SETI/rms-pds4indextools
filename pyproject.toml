@@ -5,21 +5,27 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rms-pds4indextools"
 dynamic = ["version"]
-description = "pds4indextools"
+description = "Generate tabular index files and PDS4 labels by scraping PDS4 XML label trees"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
-    "lxml",
-    "pandas",
-    "pyyaml",
-    "requests",
-    "rms-pdstemplate"
+  "lxml",
+  "pyyaml",
+  "pydantic>=2",
+  "rms-pdstemplate>=2.4",
+  "requests",
+  "requests-file",
+  "platformdirs",
+  "tqdm",
 ]
 license = {text = "Apache-2.0"}
-maintainers = [
-  {name = "Emilie R. Simpson", email = "esimpson@seti.org"}
+authors = [
+  {name = "Robert S. French", email = "rfrench@seti.org"}
 ]
-keywords = ["pds4indextools"]
+maintainers = [
+  {name = "Robert S. French", email = "rfrench@seti.org"}
+]
+keywords = ["pds4", "planetary data system", "index", "metadata", "xml"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Natural Language :: English",
@@ -28,7 +34,6 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Utilities",
   "License :: OSI Approved :: Apache Software License",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -45,13 +50,150 @@ Repository = "https://github.com/SETI/rms-pds4indextools"
 Source = "https://github.com/SETI/rms-pds4indextools"
 Issues = "https://github.com/SETI/rms-pds4indextools/issues"
 
-[project.scripts]
-pds4_create_xml_index = "pds4indextools.pds4_create_xml_index:main"
-pds4_create_collection_product = "pds4indextools.pds4_create_collection_product:main"
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
+testpaths = ["tests"]
+addopts = [
+  "-n", "auto",
+  "--cov=src",
+  "--cov-branch",
+  "--strict-markers",
+  "--strict-config",
+  "--timeout=60",
+  "--timeout-method=thread",
+]
+markers = [
+  "live: marks tests requiring live network beyond XSD lookup (deselect with -m \"not live\")",
+  "integration: marks integration tests (deselect with -m \"not integration\")",
+]
+# Warnings policy lives entirely in `filterwarnings`. Do NOT add
+# `-W error` to addopts — it preempts `filterwarnings` and turns
+# pkg_resources/setuptools_scm DeprecationWarnings into collection
+# errors before the ignores fire (critique skill §22).
+filterwarnings = [
+  "error",
+  # Each ignore MUST pair with a TODO comment + tracking issue URL when
+  # the upstream fix is known (critique skill §16).
+  "ignore::DeprecationWarning:_pytest.*",           # pytest internal noise
+  "ignore::DeprecationWarning:pkg_resources.*",     # setuptools_scm/pyroma
+  "ignore::DeprecationWarning:pdstemplate.*",       # TODO: track upstream pdstemplate
+  # google.api_core emits this at import time ONLY on Python 3.10 (EOL notice),
+  # reached transitively via pdstemplate -> rms-filecache -> google-cloud-storage;
+  # not actionable here and gone once 3.10 is dropped from the matrix.
+  "ignore:You are using a Python version:FutureWarning",
+  "ignore::PendingDeprecationWarning",              # broad floor; promote specific ones as discovered
+]
 
 [tool.setuptools]
-packages = ["pds4indextools"]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"pds4indextools" = ["py.typed", "templates/*.yaml", "templates/*.xml"]
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
-write_to = "pds4indextools/_version.py"
+write_to = "src/pds4indextools/_version.py"
+
+[project.optional-dependencies]
+dev = [
+  "rms-pds4indextools",
+  "coverage",
+  "freezegun",
+  "lxml-stubs",
+  "mypy",
+  "pymarkdownlnt",
+  "pytest",
+  "pytest-cov",
+  "pytest-timeout",
+  "pytest-xdist",
+  "responses",
+  "ruff",
+  "types-PyYAML",
+  "types-requests",
+  # "bandit[toml]",
+  "pyroma",
+  "vulture",
+  "rms-pds4indextools[docs]",
+]
+docs = [
+  "myst-parser",
+  "sphinx",
+  "sphinxcontrib-mermaid",
+  "sphinx-rtd-theme",
+]
+
+[project.scripts]
+pds4_create_xml_index = "pds4indextools.cli:cli_entrypoint"
+
+# Tool configuration
+
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ["pds4indextools"]
+omit = ["tests/*", "*/_version.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise NotImplementedError",
+]
+fail_under = 90
+
+[tool.mypy]
+strict = true
+disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = "pds4indextools._version"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pdstemplate.*", "requests_file.*", "tqdm.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = [
+#  "TODO"
+]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+# Explicit rule set (recommended for library projects). Categories:
+# E, W = pycodestyle errors/warnings; F = Pyflakes; I = isort; UP = pyupgrade;
+# B = bugbear; SIM = simplify; C4 = comprehensions; A = builtins (no shadowing);
+# N = pep8-naming; PT = pytest-style; RUF = Ruff-specific (e.g. unused noqa).
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "A", "N", "PT", "RUF"]
+# PT011 - pytest.raises is too broad.
+# SIM105 - Use contextlib.suppress for suppressions.
+# SIM108 - Use ternary operator for simple if/else.
+extend-ignore = ["PT011", "SIM105", "SIM108"]
+
+[tool.ruff.lint.per-file-ignores]
+#"TODO" = ["TODO"]
+
+[tool.pymarkdown.plugins.md013]
+# Line length (disable so README/CONTRIBUTING can use longer lines).
+enabled = false
+
+[tool.pymarkdown.plugins.md033]
+# Inline HTML (e.g. <br>) allowed in Markdown.
+enabled = false
+
+# Uncomment when enabling bandit in [project.optional-dependencies].dev.
+# [tool.bandit]
+# exclude_dirs = ["tests", "venv", ".venv"]
+# targets = ["src"]
+
+[tool.vulture]
+paths = ["src"]
+exclude = ["tests/"]
+min_confidence = 70

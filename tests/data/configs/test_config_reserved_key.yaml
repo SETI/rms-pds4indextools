@@ -1,0 +1,4 @@
+label_contents:
+  logical_identifier: urn:nasa:pds:test_bundle:test:test_index
+  product_class: Product_Ancillary
+  index_file_name: /tmp/should_be_rejected.csv
