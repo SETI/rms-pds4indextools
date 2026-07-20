@@ -18,6 +18,7 @@ The trusted expected VALUE table in ``expected_values.json`` was derived
 independently of the tool (see the stress plan) and is cross-checked here
 against both the tool's CSV and pdstable.
 """
+
 from __future__ import annotations
 
 import csv
@@ -119,9 +120,7 @@ def _run(
     patterns: tuple[str, ...] = ('**/*.lblx',),
     tag: str = 'cfg',
 ) -> tuple[Path, Path]:
-    cfg = _write_config(
-        tmp_path, columns, fixed_width=fixed_width, sort_by=sort_by, tag=tag
-    )
+    cfg = _write_config(tmp_path, columns, fixed_width=fixed_width, sort_by=sort_by, tag=tag)
     out = tmp_path / f'{tag}.csv'
     result = cli_mod.run_generate_index_file(
         cli_mod.GenerateIndexFileArgs(
@@ -172,8 +171,7 @@ def test_fixed_width_pdstable_reconstructs_every_cell(
     every reconstructed cell must equal the tool's own CSV cell (R-LBL byte math).
     Catches cumulative field_location / record_length errors across 20 columns
     and 20 rows — the class of bug the record_character fix exposed."""
-    out, lblx = _run(seeded_cache_overlay, tmp_path, FULL_COLUMNS,
-                     fixed_width=True, tag='fw')
+    out, lblx = _run(seeded_cache_overlay, tmp_path, FULL_COLUMNS, fixed_width=True, tag='fw')
     header, tool_rows = _parse_csv(out)
     p_rows = _pdstable_rows(lblx)
     assert len(p_rows) == len(tool_rows) == 20
@@ -217,23 +215,22 @@ def test_variable_width_csv_module_roundtrip_honors_quoting(
     # A value that embeds the delimiter must survive the quoted round-trip.
     by_lid = {row[0]: row for row in parsed[1:]}
     title_idx = [h for h, _s, _a in FULL_COLUMNS].index('TITLE')
-    assert (by_lid['urn:nasa:pds:stress:calibration:cal_a'][title_idx]
-            == 'Calibration frame, dark')
+    assert by_lid['urn:nasa:pds:stress:calibration:cal_a'][title_idx] == 'Calibration frame, dark'
     purpose_idx = [h for h, _s, _a in FULL_COLUMNS].index('PURPOSE')
-    assert (by_lid['urn:nasa:pds:stress:spectra:spec01'][purpose_idx]
-            == 'Science, calibration')
+    assert by_lid['urn:nasa:pds:stress:spectra:spec01'][purpose_idx] == 'Science, calibration'
 
 
 # --- Property: sort is a permutation ----------------------------------------
-def test_multikey_mixed_sort_is_a_permutation(
-    seeded_cache_overlay: Path, tmp_path: Path
-) -> None:
+def test_multikey_mixed_sort_is_a_permutation(seeded_cache_overlay: Path, tmp_path: Path) -> None:
     """A complex multi-key mixed asc/desc sort must reorder — not add, drop, or
     mutate — rows: the sorted multiset equals the unsorted multiset."""
     unsorted_out, _ = _run(seeded_cache_overlay, tmp_path, FULL_COLUMNS, tag='u')
     sorted_out, _ = _run(
-        seeded_cache_overlay, tmp_path, FULL_COLUMNS,
-        sort_by=['TARGET', '-OBSID', 'LID'], tag='s',
+        seeded_cache_overlay,
+        tmp_path,
+        FULL_COLUMNS,
+        sort_by=['TARGET', '-OBSID', 'LID'],
+        tag='s',
     )
     _, u_rows = _parse_csv(unsorted_out)
     _, s_rows = _parse_csv(sorted_out)
@@ -253,8 +250,11 @@ def test_multikey_mixed_sort_orders_by_string_comparison(
     then LID asc. String comparison means OBSID '100' precedes '2' under desc only
     by string order, and an empty TARGET sorts first."""
     out, _ = _run(
-        seeded_cache_overlay, tmp_path, FULL_COLUMNS,
-        sort_by=['TARGET', '-OBSID', 'LID'], tag='s2',
+        seeded_cache_overlay,
+        tmp_path,
+        FULL_COLUMNS,
+        sort_by=['TARGET', '-OBSID', 'LID'],
+        tag='s2',
     )
     _, rows = _parse_csv(out)
     triples = [(r['TARGET'], r['OBSID'], r['LID']) for r in rows]
@@ -284,8 +284,7 @@ def test_fixed_and_variable_width_carry_identical_values(
     """The same columns emitted fixed-width vs variable-width must contain the
     identical logical values in the identical row order (only padding differs)."""
     vw_out, _ = _run(seeded_cache_overlay, tmp_path, FULL_COLUMNS, tag='v')
-    fw_out, _ = _run(seeded_cache_overlay, tmp_path, FULL_COLUMNS,
-                     fixed_width=True, tag='f')
+    fw_out, _ = _run(seeded_cache_overlay, tmp_path, FULL_COLUMNS, fixed_width=True, tag='f')
     _, vw_rows = _parse_csv(vw_out)
     _, fw_rows = _parse_csv(fw_out)
     assert len(vw_rows) == len(fw_rows) == 20
@@ -297,9 +296,7 @@ def test_fixed_and_variable_width_carry_identical_values(
 
 
 # --- Property: column set equals the generate_xpath_list union --------------
-def test_columns_cover_full_xpath_list_union(
-    seeded_cache_overlay: Path, tmp_path: Path
-) -> None:
+def test_columns_cover_full_xpath_list_union(seeded_cache_overlay: Path, tmp_path: Path) -> None:
     """Every non-auto selector in FULL_COLUMNS must appear in the union of
     canonical XPaths that generate_xpath_list discovers over the bundle, so the
     stress config is not silently missing (or inventing) columns."""
@@ -326,7 +323,7 @@ def test_columns_cover_full_xpath_list_union(
     for line in out.read_text(encoding='utf-8').splitlines():
         stripped = line.strip()
         if stripped.startswith('- xpath:'):
-            discovered.add(stripped[len('- xpath:'):].strip())
+            discovered.add(stripped[len('- xpath:') :].strip())
     selectors = {sel for _h, sel, is_auto in FULL_COLUMNS if not is_auto}
     missing = selectors - discovered
     assert not missing, f'selectors absent from generate_xpath_list union: {missing}'
@@ -338,9 +335,7 @@ def _rows_by_lid(out: Path) -> dict[str, dict[str, str]]:
     return {r['LID']: r for r in rows}
 
 
-def test_renumbering_repeated_observing_system(
-    seeded_cache_overlay: Path, tmp_path: Path
-) -> None:
+def test_renumbering_repeated_observing_system(seeded_cache_overlay: Path, tmp_path: Path) -> None:
     """Observing_System<1..3>/name across labels with 0/1/2/3 systems and a
     nested (one system, two names) case fills present occurrences and blanks the
     rest — exact per-label renumbering."""
@@ -349,9 +344,11 @@ def test_renumbering_repeated_observing_system(
     by = _rows_by_lid(out)
     pfx = 'urn:nasa:pds:stress:'
     # 3 systems -> all three filled
-    assert (by[pfx + 'imaging:img0003']['OS1'],
-            by[pfx + 'imaging:img0003']['OS2'],
-            by[pfx + 'imaging:img0003']['OS3']) == ('Cam A', 'Cam B', 'Cam C')
+    assert (
+        by[pfx + 'imaging:img0003']['OS1'],
+        by[pfx + 'imaging:img0003']['OS2'],
+        by[pfx + 'imaging:img0003']['OS3'],
+    ) == ('Cam A', 'Cam B', 'Cam C')
     # 2 systems -> OS3 blank
     assert by[pfx + 'imaging:img0002']['OS2'] == 'Camera B'
     assert by[pfx + 'imaging:img0002']['OS3'] == ''
@@ -361,26 +358,26 @@ def test_renumbering_repeated_observing_system(
     assert by[pfx + 'spectra:titan1']['OS2'] == ''
     assert by[pfx + 'spectra:titan1']['OS3'] == ''
     # 0 systems -> all blank
-    assert (by[pfx + 'imaging:img0004']['OS1'],
-            by[pfx + 'imaging:img0004']['OS2'],
-            by[pfx + 'imaging:img0004']['OS3']) == ('', '', '')
+    assert (
+        by[pfx + 'imaging:img0004']['OS1'],
+        by[pfx + 'imaging:img0004']['OS2'],
+        by[pfx + 'imaging:img0004']['OS3'],
+    ) == ('', '', '')
 
 
-def test_nil_absent_and_blank_start_date_time(
-    seeded_cache_overlay: Path, tmp_path: Path
-) -> None:
+def test_nil_absent_and_blank_start_date_time(seeded_cache_overlay: Path, tmp_path: Path) -> None:
     """One column, four states across labels: real date, nil (three reasons ->
     three distinct date substitutions), entirely absent, and present-but-blank."""
     cols = [c for c in FULL_COLUMNS if c[0] in {'LID', 'START'}]
     out, _ = _run(seeded_cache_overlay, tmp_path, cols, tag='nil')
     by = _rows_by_lid(out)
     pfx = 'urn:nasa:pds:stress:'
-    assert by[pfx + 'imaging:img0001']['START'] == '2023-05-01'    # real
+    assert by[pfx + 'imaging:img0001']['START'] == '2023-05-01'  # real
     assert by[pfx + 'calibration:cal_b']['START'] == '0002-01-01'  # nil missing
-    assert by[pfx + 'imaging:img0002']['START'] == '0003-01-01'    # nil unknown
-    assert by[pfx + 'spectra:spec02']['START'] == '0001-01-01'     # nil inapplicable
-    assert by[pfx + 'calibration:plain']['START'] == ''            # absent
-    assert by[pfx + 'document:overview']['START'] == ''            # present-blank
+    assert by[pfx + 'imaging:img0002']['START'] == '0003-01-01'  # nil unknown
+    assert by[pfx + 'spectra:spec02']['START'] == '0001-01-01'  # nil inapplicable
+    assert by[pfx + 'calibration:plain']['START'] == ''  # absent
+    assert by[pfx + 'document:overview']['START'] == ''  # present-blank
 
 
 def test_auto_columns_reflect_path_and_identifier(
@@ -388,8 +385,9 @@ def test_auto_columns_reflect_path_and_identifier(
 ) -> None:
     """filespec/filename vary by directory depth; lidvid concatenates lid+vid;
     bundle_name is the 4th LID token."""
-    cols = [c for c in FULL_COLUMNS
-            if c[0] in {'LID', 'LIDVID', 'FILE_NAME', 'FILE_SPEC', 'BUNDLE'}]
+    cols = [
+        c for c in FULL_COLUMNS if c[0] in {'LID', 'LIDVID', 'FILE_NAME', 'FILE_SPEC', 'BUNDLE'}
+    ]
     out, _ = _run(seeded_cache_overlay, tmp_path, cols, tag='auto')
     by = _rows_by_lid(out)
     deep = by['urn:nasa:pds:stress:imaging:img0003']
@@ -402,13 +400,12 @@ def test_auto_columns_reflect_path_and_identifier(
     assert root['FILE_SPEC'] == 'overview.lblx'
 
 
-def test_glob_pattern_selects_label_subset(
-    seeded_cache_overlay: Path, tmp_path: Path
-) -> None:
+def test_glob_pattern_selects_label_subset(seeded_cache_overlay: Path, tmp_path: Path) -> None:
     """A narrower glob includes a different label subset from the same bundle."""
     cols = [c for c in FULL_COLUMNS if c[0] == 'LID']
-    out, _ = _run(seeded_cache_overlay, tmp_path, cols,
-                  patterns=('data/spectra/*.lblx',), tag='glob')
+    out, _ = _run(
+        seeded_cache_overlay, tmp_path, cols, patterns=('data/spectra/*.lblx',), tag='glob'
+    )
     lids = set(_rows_by_lid(out))
     assert all(':spectra:' in lid for lid in lids)
     assert 'urn:nasa:pds:stress:spectra:spec01' in lids
@@ -416,9 +413,7 @@ def test_glob_pattern_selects_label_subset(
     assert len(lids) == 6  # spec01-04, titan1, titan2
 
 
-def test_column_omission_and_selective_renaming(
-    seeded_cache_overlay: Path, tmp_path: Path
-) -> None:
+def test_column_omission_and_selective_renaming(seeded_cache_overlay: Path, tmp_path: Path) -> None:
     """A subset of columns, some renamed and some left at their selector text,
     in an order unrelated to document order: header row is exactly as configured."""
     columns = [
@@ -432,9 +427,7 @@ def test_column_omission_and_selective_renaming(
     assert header == ['TARGET', 'LID', f'{_ID}/pds:title<1>']
 
 
-def test_duplicate_selector_is_rejected(
-    seeded_cache_overlay: Path, tmp_path: Path
-) -> None:
+def test_duplicate_selector_is_rejected(seeded_cache_overlay: Path, tmp_path: Path) -> None:
     """The same selector under two different names is a config error (a column
     set may not address one canonical XPath twice)."""
     title_sel = f'{_ID}/pds:title<1>'
@@ -477,9 +470,7 @@ def test_selector_with_unknown_leaf_type_is_rejected(
         _run(seeded_cache_overlay, tmp_path, columns, tag='unkleaf')
 
 
-def test_whitespace_and_newlines_are_collapsed(
-    seeded_cache_overlay: Path, tmp_path: Path
-) -> None:
+def test_whitespace_and_newlines_are_collapsed(seeded_cache_overlay: Path, tmp_path: Path) -> None:
     """R-VAL-010: irregular internal whitespace and multiline padded/wrapped
     comments are collapsed to single spaces (newlines never preserved)."""
     cols = [
@@ -493,11 +484,15 @@ def test_whitespace_and_newlines_are_collapsed(
     # irregular internal spaces collapsed
     assert by[pfx + 'spectra:titan2']['TITLE'] == 'Titan flyby, pass 2'
     # multiline padded comment collapsed (no newlines, single spaces)
-    assert by[pfx + 'imaging:img0003']['COMMENT'] == \
-        'Observation notes: target acquired tracking nominal'
+    assert (
+        by[pfx + 'imaging:img0003']['COMMENT']
+        == 'Observation notes: target acquired tracking nominal'
+    )
     # wrapped-sentence comment collapsed
-    assert by[pfx + 'imaging:ence1']['COMMENT'] == \
-        'Plume activity observed near the south pole during closest approach.'
+    assert (
+        by[pfx + 'imaging:ence1']['COMMENT']
+        == 'Plume activity observed near the south pole during closest approach.'
+    )
 
 
 # --- Trusted independent oracle: expected_values.json -----------------------
@@ -520,8 +515,7 @@ def test_variable_width_values_match_independent_oracle(
         want = _EXPECTED['values'][row['LID']]
         for header, _sel, _auto in FULL_COLUMNS:
             assert row[header] == want[header], (
-                f"{row['LID']} col {header!r}: tool={row[header]!r} "
-                f"oracle={want[header]!r}"
+                f'{row["LID"]} col {header!r}: tool={row[header]!r} oracle={want[header]!r}'
             )
 
 
@@ -531,16 +525,16 @@ def test_fixed_width_pdstable_values_match_independent_oracle(
     """pdstable's reconstruction of the fixed-width label equals the independently
     derived expected values — two independent derivations agreeing, neither being
     the tool's CSV writer."""
-    _out, lblx = _run(seeded_cache_overlay, tmp_path, FULL_COLUMNS,
-                      fixed_width=True, tag='oracle_fw')
+    _out, lblx = _run(
+        seeded_cache_overlay, tmp_path, FULL_COLUMNS, fixed_width=True, tag='oracle_fw'
+    )
     p_rows = _pdstable_rows(lblx)
     assert [r['LID'] for r in p_rows] == _EXPECTED['row_order']
     for p_row in p_rows:
         want = _EXPECTED['values'][p_row['LID']]
         for header, _sel, _auto in FULL_COLUMNS:
             assert p_row[header] == want[header], (
-                f"{p_row['LID']} col {header!r}: pdstable={p_row[header]!r} "
-                f"oracle={want[header]!r}"
+                f'{p_row["LID"]} col {header!r}: pdstable={p_row[header]!r} oracle={want[header]!r}'
             )
 
 
@@ -550,8 +544,11 @@ def test_mixed_sort_order_matches_independent_oracle(
     """The tool's row order under sort_by=[TARGET, -OBSID, LID] equals the
     independently derived sorted order (string comparison, mixed directions)."""
     out, _ = _run(
-        seeded_cache_overlay, tmp_path, FULL_COLUMNS,
-        sort_by=['TARGET', '-OBSID', 'LID'], tag='oracle_sort',
+        seeded_cache_overlay,
+        tmp_path,
+        FULL_COLUMNS,
+        sort_by=['TARGET', '-OBSID', 'LID'],
+        tag='oracle_sort',
     )
     _header, rows = _parse_csv(out)
     assert [r['LID'] for r in rows] == _EXPECTED['sort_TARGET_OBSID_desc_LID']

@@ -148,6 +148,8 @@ fail_under = 90
 [tool.mypy]
 strict = true
 disallow_subclassing_any = false
+# Fixture data and the deterministic bundle generator are not production code.
+exclude = ["tests/data/"]
 
 [[tool.mypy.overrides]]
 module = "pds4indextools._version"
@@ -161,7 +163,9 @@ ignore_missing_imports = true
 target-version = "py310"
 line-length = 100
 exclude = [
-#  "TODO"
+  # Fixture data and the deterministic bundle generator (long embedded data
+  # strings) are not held to the source lint rules.
+  "tests/data",
 ]
 
 [tool.ruff.format]

@@ -448,7 +448,10 @@ def test_sort_rows_multi_key_mixed_ascending_descending() -> None:
     ]
     result = sort_rows(rows, OutputSection(sort_by=['k1', '-k2']))
     assert [(r['k1'], r['k2']) for r in result] == [
-        ('a', '2'), ('a', '1'), ('b', '2'), ('b', '1'),
+        ('a', '2'),
+        ('a', '1'),
+        ('b', '2'),
+        ('b', '1'),
     ]
 
 

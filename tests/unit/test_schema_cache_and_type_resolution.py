@@ -517,9 +517,7 @@ def test_typeresolver_prefixed_leaf_resolves_against_its_own_namespace(
         '</xs:schema>\n',
         encoding='utf-8',
     )
-    schema_location = (
-        f'{NS_PDS} {pds_xsd.as_uri()} {NS_GEOM} {geom_xsd.as_uri()}'
-    )
+    schema_location = f'{NS_PDS} {pds_xsd.as_uri()} {NS_GEOM} {geom_xsd.as_uri()}'
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         f'<Product_Observational xmlns="{NS_PDS}" xmlns:geom="{NS_GEOM}"'
