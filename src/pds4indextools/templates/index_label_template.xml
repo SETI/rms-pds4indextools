@@ -171,7 +171,7 @@ $IF(Table_Character)
             <offset unit="byte">$object_length_h$</offset>
             <records>$records$</records>
             <description>Index of metadata scraped from PDS4 labels.</description>
-            <record_character>
+            <Record_Character>
                 <fields>$fields$</fields>
                 <groups>0</groups>
                 <record_length unit="byte">$maximum_record_length$</record_length>
@@ -185,7 +185,7 @@ $IF(Table_Character)
                     <description>XPath: $field['xpath']$</description>
                 </Field_Character>
             $END_FOR
-            </record_character>
+            </Record_Character>
         </Table_Character>
 $END_IF
 $IF(Table_Delimited)
