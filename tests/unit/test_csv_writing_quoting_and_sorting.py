@@ -416,3 +416,49 @@ def test_write_csv_byte_identical_across_runs(
         out2,
     )
     assert out1.read_bytes() == out2.read_bytes()
+
+
+def test_write_csv_fixed_width_mixed_quoted_and_unquoted_rows_padded_to_quoted_width(
+    tmp_path: Path,
+) -> None:
+    """A fixed-width column that must quote (a comma in ONE row) quotes EVERY cell,
+    then pads the short comma-free cell to the QUOTED width: ``z`` -> ``"z"`` -> ``"z"``
+    plus padding. Pins the padding-vs-quoting interaction end-to-end at the byte
+    level (T-CSV-020/022, R-CSV-070) — previously only the width stat was checked."""
+    plan = _make_plan(
+        [{'a': 'x,y', 'b': 'yy'}, {'a': 'z', 'b': 'wwww'}],
+        ['a', 'b'],
+        fixed_width=True,
+    )
+    out = tmp_path / 'out.csv'
+    write_csv(plan, out)
+    # col a width = len('"x,y"') = 5; col b width = len('wwww') = 4.
+    assert _data_lines(out.read_bytes(), b'\n') == [b'"x,y",yy  ', b'"z"  ,wwww']
+
+
+def test_sort_rows_multi_key_mixed_ascending_descending() -> None:
+    """A mixed asc/desc multi-key sort applies each key's own direction: primary
+    ``k1`` ascending, secondary ``k2`` descending within each ``k1`` group
+    (R-SORT-020)."""
+    rows = [
+        {'k1': 'a', 'k2': '1'},
+        {'k1': 'b', 'k2': '1'},
+        {'k1': 'a', 'k2': '2'},
+        {'k1': 'b', 'k2': '2'},
+    ]
+    result = sort_rows(rows, OutputSection(sort_by=['k1', '-k2']))
+    assert [(r['k1'], r['k2']) for r in result] == [
+        ('a', '2'), ('a', '1'), ('b', '2'), ('b', '1'),
+    ]
+
+
+def test_sort_rows_descending_preserves_input_order_on_ties() -> None:
+    """A descending sort is stable: rows equal on the key keep their input order
+    rather than being reversed (R-SORT-020 stability)."""
+    rows = [
+        {'k': 'a', 'tag': '1'},
+        {'k': 'a', 'tag': '2'},
+        {'k': 'a', 'tag': '3'},
+    ]
+    result = sort_rows(rows, OutputSection(sort_by=['-k']))
+    assert [r['tag'] for r in result] == ['1', '2', '3']

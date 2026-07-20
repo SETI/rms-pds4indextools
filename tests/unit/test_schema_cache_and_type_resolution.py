@@ -488,3 +488,49 @@ def test_register_label_with_non_default_scheme_uses_registered_adapter(
     resolver.register_label(Path('label.xml'), _label_root(f'{NS_PDS} {ftp_url}'))
 
     assert resolver.resolve('logical_identifier') == 'pds:ASCII_LID'
+
+
+def test_typeresolver_prefixed_leaf_resolves_against_its_own_namespace(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-SCH-030: when two registered schemas define the SAME leaf local-name,
+    a prefixed leaf tag resolves against the schema of ITS OWN namespace, not
+    whichever schema registered first. Regression for the namespace-prefix bug
+    where resolution matched by bare local-name across all trees."""
+    pds_xsd = tmp_path / 'pds_collision.xsd'
+    pds_xsd.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:pds="{NS_PDS}" targetNamespace="{NS_PDS}"\n'
+        '           elementFormDefault="qualified">\n'
+        '  <xs:element name="shared_leaf" type="pds:ASCII_Real"/>\n'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    geom_xsd = tmp_path / 'geom_collision.xsd'
+    geom_xsd.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:geom="{NS_GEOM}" targetNamespace="{NS_GEOM}"\n'
+        '           elementFormDefault="qualified">\n'
+        '  <xs:element name="shared_leaf" type="geom:ASCII_Integer"/>\n'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    schema_location = (
+        f'{NS_PDS} {pds_xsd.as_uri()} {NS_GEOM} {geom_xsd.as_uri()}'
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        f'<Product_Observational xmlns="{NS_PDS}" xmlns:geom="{NS_GEOM}"'
+        f' xmlns:xsi="{NS_XSI}" xsi:schemaLocation="{schema_location}">'
+        '<Identification_Area/></Product_Observational>'
+    )
+    root = etree.fromstring(xml.encode('utf-8'))
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(Path('label.xml'), root)
+
+    # pds registers first; without namespace-awareness both would resolve to
+    # pds:ASCII_Real. Each prefix must select its own namespace's type.
+    assert resolver.resolve('pds:shared_leaf') == 'pds:ASCII_Real'
+    assert resolver.resolve('geom:shared_leaf') == 'geom:ASCII_Integer'
