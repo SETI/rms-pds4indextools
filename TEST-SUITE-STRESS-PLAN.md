@@ -54,7 +54,10 @@ Added in this plan:
 - **Multiple nilReasons** (`missing`, `unknown`, `inapplicable`) with distinct
   configured substitutions.
 - **Per-label namespace sets differ** (geom only / rings only / both / neither).
-- **LID token-count variety** (4 / 5 / 7 tokens).
+- **LID suffix-length variety** — every label uses the real PDS4 6-token product
+  LID form (`urn:nasa:pds:stress:<collection>:<product>`); only the collection/
+  product suffix *lengths* vary, never the token count (PDS4 LIDs have a fixed
+  token count). `bundle_name` is therefore constant (`stress`) and `lidvid` varies.
 - **Same selector listed twice under different names** (duplicate-column edge).
 - **CRLF vs LF**, with the label byte math (record_length / object_length)
   including the terminator, validated by pdstable.

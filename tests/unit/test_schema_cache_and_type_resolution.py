@@ -532,3 +532,52 @@ def test_typeresolver_prefixed_leaf_resolves_against_its_own_namespace(
     # pds:ASCII_Real. Each prefix must select its own namespace's type.
     assert resolver.resolve('pds:shared_leaf') == 'pds:ASCII_Real'
     assert resolver.resolve('geom:shared_leaf') == 'geom:ASCII_Integer'
+
+
+def test_typeresolver_conflicting_prefix_binding_falls_back_safely(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """When two labels bind the SAME canonical prefix to DIFFERENT namespaces,
+    the prefix is ambiguous, so resolve() must not silently prefer one schema:
+    it falls back to the registration-order scan (R-SCH-030) and still returns a
+    valid base type rather than erroring or reintroducing a prefix-gated version
+    of the namespace-blind bug."""
+    ns_rings = 'http://pds.nasa.gov/pds4/rings/v1'
+    geom_xsd = tmp_path / 'g.xsd'
+    geom_xsd.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:geom="{NS_GEOM}" targetNamespace="{NS_GEOM}"\n'
+        '           elementFormDefault="qualified">\n'
+        '  <xs:element name="shared_leaf" type="geom:ASCII_Integer"/>\n'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    rings_xsd = tmp_path / 'r.xsd'
+    rings_xsd.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:rings="{ns_rings}" targetNamespace="{ns_rings}"\n'
+        '           elementFormDefault="qualified">\n'
+        '  <xs:element name="shared_leaf" type="rings:ASCII_Real"/>\n'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    # Label A binds prefix ``x`` to the geom namespace...
+    root_a = etree.fromstring(
+        f'<Product_Observational xmlns="{NS_PDS}" xmlns:x="{NS_GEOM}"'
+        f' xmlns:xsi="{NS_XSI}" xsi:schemaLocation="{NS_GEOM} {geom_xsd.as_uri()}">'
+        '<Identification_Area/></Product_Observational>'.encode()
+    )
+    resolver.register_label(Path('a.xml'), root_a)
+    # ...label B binds the SAME prefix ``x`` to the rings namespace.
+    root_b = etree.fromstring(
+        f'<Product_Observational xmlns="{NS_PDS}" xmlns:x="{ns_rings}"'
+        f' xmlns:xsi="{NS_XSI}" xsi:schemaLocation="{ns_rings} {rings_xsd.as_uri()}">'
+        '<Identification_Area/></Product_Observational>'.encode()
+    )
+    resolver.register_label(Path('b.xml'), root_b)
+
+    # ``x`` is now ambiguous: no fast path, safe fall back to a full scan.
+    assert resolver.resolve('x:shared_leaf') in {'geom:ASCII_Integer', 'rings:ASCII_Real'}

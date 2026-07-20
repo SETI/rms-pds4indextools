@@ -388,6 +388,9 @@ class SchemaTypeResolver:
         # Canonical XPath prefix -> namespace URI, accumulated from label nsmaps
         # so :meth:`resolve` can prefer the schema of a leaf tag's OWN namespace.
         self._prefix_namespaces: dict[str, str] = {}
+        # Prefixes bound to conflicting URIs across labels in this run: dropped
+        # to the safe full scan rather than preferring one namespace's schema.
+        self._ambiguous_prefixes: set[str] = set()
 
     def register_label(self, label_path: Path, root: etree._Element) -> None:
         """Register every ``.xsd`` URL declared in a label's ``xsi:schemaLocation``.
@@ -434,7 +437,14 @@ class SchemaTypeResolver:
         # schema first. The default namespace is aliased to ``pds`` (R-XP-010).
         for prefix, uri in root.nsmap.items():
             key = _PDS_PREFIX.rstrip(':') if prefix is None else prefix
-            self._prefix_namespaces.setdefault(key, uri)
+            existing = self._prefix_namespaces.get(key)
+            if existing is not None and existing != uri:
+                # Same canonical prefix bound to different URIs across labels:
+                # neither may claim the resolve() fast path, so fall back to the
+                # full registration-order scan (R-SCH-030) for this prefix.
+                self._ambiguous_prefixes.add(key)
+            else:
+                self._prefix_namespaces.setdefault(key, uri)
 
     def resolve(self, xpath_leaf_tag: str) -> str:
         """Resolve an XPath leaf tag to its PDS4 base type.
@@ -484,10 +494,11 @@ class SchemaTypeResolver:
         ordered_urls: list[str] = []
         if ':' in xpath_leaf_tag:
             prefix = xpath_leaf_tag.rsplit(':', 1)[0]
-            uri = self._prefix_namespaces.get(prefix)
-            url = self._namespace_urls.get(uri) if uri is not None else None
-            if url is not None and url in self._trees:
-                ordered_urls.append(url)
+            if prefix not in self._ambiguous_prefixes:
+                uri = self._prefix_namespaces.get(prefix)
+                url = self._namespace_urls.get(uri) if uri is not None else None
+                if url is not None and url in self._trees:
+                    ordered_urls.append(url)
         ordered_urls.extend(url for url in self._trees if url not in ordered_urls)
         return [self._trees[url] for url in ordered_urls]
 

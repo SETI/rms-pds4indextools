@@ -9,7 +9,7 @@ output). Regenerate with `./venv/bin/python tests/data/bundles/stress/generate.p
 
 All labels share this nesting (containers emitted only when they have content):
 
-```
+```text
 Product_Observational<1>
   Identification_Area<1>: logical_identifier, version_id, title?
   Observation_Area<1>
