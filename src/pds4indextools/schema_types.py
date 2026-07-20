@@ -385,6 +385,12 @@ class SchemaTypeResolver:
         self._cache = cache
         self._trees: dict[str, etree._Element] = {}
         self._namespace_urls: dict[str, str] = {}
+        # Canonical XPath prefix -> namespace URI, accumulated from label nsmaps
+        # so :meth:`resolve` can prefer the schema of a leaf tag's OWN namespace.
+        self._prefix_namespaces: dict[str, str] = {}
+        # Prefixes bound to conflicting URIs across labels in this run: dropped
+        # to the safe full scan rather than preferring one namespace's schema.
+        self._ambiguous_prefixes: set[str] = set()
 
     def register_label(self, label_path: Path, root: etree._Element) -> None:
         """Register every ``.xsd`` URL declared in a label's ``xsi:schemaLocation``.
@@ -426,6 +432,20 @@ class SchemaTypeResolver:
             if url not in self._trees:
                 self._trees[url] = self._cache.parse_xsd(url)
 
+        # Record the canonical XPath prefix -> namespace URI bindings this label
+        # declares, so a prefixed leaf tag resolves against its own namespace's
+        # schema first. The default namespace is aliased to ``pds`` (R-XP-010).
+        for prefix, uri in root.nsmap.items():
+            key = _PDS_PREFIX.rstrip(':') if prefix is None else prefix
+            existing = self._prefix_namespaces.get(key)
+            if existing is not None and existing != uri:
+                # Same canonical prefix bound to different URIs across labels:
+                # neither may claim the resolve() fast path, so fall back to the
+                # full registration-order scan (R-SCH-030) for this prefix.
+                self._ambiguous_prefixes.add(key)
+            else:
+                self._prefix_namespaces.setdefault(key, uri)
+
     def resolve(self, xpath_leaf_tag: str) -> str:
         """Resolve an XPath leaf tag to its PDS4 base type.
 
@@ -442,11 +462,14 @@ class SchemaTypeResolver:
             SchemaResolutionError: If no registered XSD yields a base type for
                 the tag (R-SCH-050).
 
-        Runs the 22-query Appendix G chain against every registered tree in
-        registration order and returns the first non-empty match (R-SCH-030).
+        Runs the 22-query Appendix G chain against the registered trees and
+        returns the first non-empty match (R-SCH-030). The tree bound to the
+        leaf tag's OWN namespace prefix is queried first, so a local-name defined
+        in more than one registered schema resolves to the type in its own
+        namespace rather than whichever schema registered first.
         """
         target_name = xpath_leaf_tag.rsplit(':', 1)[-1]
-        for tree in self._trees.values():
+        for tree in self._ordered_trees(xpath_leaf_tag):
             namespaces = {'xs': _XS_NAMESPACE, 'pds': _PDS_NAMESPACE}
             for prefix, uri in tree.nsmap.items():
                 if prefix is not None:
@@ -455,6 +478,29 @@ class SchemaTypeResolver:
             if result is not None:
                 return result
         raise SchemaResolutionError(f'no PDS4 base type for {xpath_leaf_tag}')
+
+    def _ordered_trees(self, xpath_leaf_tag: str) -> list[etree._Element]:
+        """Return the registered trees, the leaf tag's own namespace tree first.
+
+        Parameters:
+            xpath_leaf_tag: The canonical leaf tag, e.g. ``geom:method``.
+
+        Returns:
+            The registered XSD trees ordered so that the tree bound to the tag's
+            namespace prefix (if any) comes first, followed by the remaining
+            trees in registration order. Falling back to the other trees keeps
+            resolution total, so this never resolves fewer tags than before.
+        """
+        ordered_urls: list[str] = []
+        if ':' in xpath_leaf_tag:
+            prefix = xpath_leaf_tag.rsplit(':', 1)[0]
+            if prefix not in self._ambiguous_prefixes:
+                uri = self._prefix_namespaces.get(prefix)
+                url = self._namespace_urls.get(uri) if uri is not None else None
+                if url is not None and url in self._trees:
+                    ordered_urls.append(url)
+        ordered_urls.extend(url for url in self._trees if url not in ordered_urls)
+        return [self._trees[url] for url in ordered_urls]
 
     def auto_column_type(self, token: str) -> str:
         """Return the fixed PDS4 type for one of the five auto-column tokens.

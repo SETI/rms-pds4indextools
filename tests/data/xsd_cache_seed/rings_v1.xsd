@@ -12,4 +12,9 @@
       <xs:restriction base="rings:ASCII_Short_String_Collapsed"/>
     </xs:simpleType>
   </xs:element>
+  <xs:element name="feature_type">
+    <xs:simpleType>
+      <xs:restriction base="rings:ASCII_Short_String_Collapsed"/>
+    </xs:simpleType>
+  </xs:element>
 </xs:schema>

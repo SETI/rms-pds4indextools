@@ -12,4 +12,9 @@
       <xs:restriction base="geom:ASCII_Short_String_Collapsed"/>
     </xs:simpleType>
   </xs:element>
+  <xs:element name="reference_frame">
+    <xs:simpleType>
+      <xs:restriction base="geom:ASCII_Short_String_Collapsed"/>
+    </xs:simpleType>
+  </xs:element>
 </xs:schema>

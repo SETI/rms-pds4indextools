@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xmlns:geom="http://pds.nasa.gov/pds4/geom/v1"
+ xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1L00.xsd
+                      http://pds.nasa.gov/pds4/geom/v1 https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1L00_2000.xsd">
+    <Identification_Area>
+        <logical_identifier>urn:nasa:pds:stress:spectra:titan1</logical_identifier>
+        <version_id>1.0</version_id>
+        <title>Titan haze layers, limb, north</title>
+    </Identification_Area>
+    <Observation_Area>
+        <Time_Coordinates>
+            <start_date_time>2019-03-03</start_date_time>
+        </Time_Coordinates>
+        <Target_Identification>
+            <target_name>Titan</target_name>
+        </Target_Identification>
+        <Observation_Parameters>
+            <observation_id>12</observation_id>
+            <exposure_duration>45.0</exposure_duration>
+        </Observation_Parameters>
+        <Observing_System>
+            <name>Spectrometer 1</name>
+            <name>Spectrometer 2</name>
+        </Observing_System>
+        <geom:Geometry>
+            <geom:method>centered</geom:method>
+        </geom:Geometry>
+    </Observation_Area>
+</Product_Observational>

@@ -47,7 +47,7 @@
             <offset unit="byte">20</offset>
             <records>1</records>
             <description>Index of metadata scraped from PDS4 labels.</description>
-            <record_character>
+            <Record_Character>
                 <fields>3</fields>
                 <groups>0</groups>
                 <record_length unit="byte">52</record_length>
@@ -75,7 +75,7 @@
                     <field_length unit="byte">5</field_length>
                     <description>XPath: pds:Product_Observational&lt;1&gt;/pds:Identification_Area&lt;1&gt;/pds:title&lt;1&gt;</description>
                 </Field_Character>
-            </record_character>
+            </Record_Character>
         </Table_Character>
     </File_Area_Ancillary>
 </Product_Ancillary>
