@@ -294,25 +294,86 @@ def test_typeresolver_basic_resolution_logical_identifier(
     assert resolver.resolve('logical_identifier') == 'pds:ASCII_LID'
 
 
-def test_typeresolver_unit_aware_wo_units_fallback(isolated_xsd_cache: Path) -> None:
-    """R-SCH-030: a ``_WO_Units`` complexType resolves through the extension/base chain.
+def test_typeresolver_unit_aware_wo_units_follows_restriction_base(
+    isolated_xsd_cache: Path,
+) -> None:
+    """R-SCH-030: a ``_WO_Units`` wrapper is followed to its restriction base.
 
     ``Wavelength_Range`` is a named complexType whose ``xs:simpleContent`` wraps an
-    ``xs:extension base="pds:Wavelength_Range_WO_Units"``. That base is returned by
-    Appendix G query #1
-    (``.//xs:complexType[@name='{tag}']//xs:extension/@base``): its ``//`` descendant
-    step reaches the simpleContent-nested extension, so query #1 is the FIRST
-    non-empty match and DECIDES this case. This test therefore verifies the
-    named-complexType extension/base resolution -- it does NOT reach the deeper
-    simpleContent slots (queries 13-17), which query #1 subsumes for this shape.
-    The deep tail (a non-query-1 slot) is exercised by
-    ``test_typeresolver_deep_query_direct_element_type_decides`` below.
+    ``xs:extension base="pds:Wavelength_Range_WO_Units"``. Appendix G query #1
+    (``.//xs:complexType[@name='{tag}']//xs:extension/@base``) matches that wrapper
+    first. Because the name ends in ``_WO_Units``, the resolver re-runs the chain on
+    it; query #4 then finds the named simpleType's ``xs:restriction
+    base="pds:ASCII_Real"``, which is the recorded type.
     """
     _seed_cache(isolated_xsd_cache, PDS_URL, 'pds_v1_units.xsd')
     resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
     resolver.register_label(Path('label.xml'), _label_root(f'{NS_PDS} {PDS_URL}'))
 
-    assert resolver.resolve('pds:Wavelength_Range') == 'pds:Wavelength_Range_WO_Units'
+    assert resolver.resolve('pds:Wavelength_Range') == 'pds:ASCII_Real'
+
+
+def test_typeresolver_wo_units_cross_namespace_resolves_to_pds_base(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-SCH-030: a discipline ``_WO_Units`` wrapper resolves to its ``pds:`` base.
+
+    Mirrors the real rings schema: ``rings:minimum_projected_sun_diameter`` extends
+    ``rings:minimum_projected_sun_diameter_WO_Units``, which restricts
+    ``pds:ASCII_Real``. The label's ``data_type`` must be ``ASCII_Real``, not the
+    wrapper name.
+    """
+    ns_rings = 'http://pds.nasa.gov/pds4/rings/v1'
+    xsd_path = tmp_path / 'rings_units.xsd'
+    xsd_path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:pds="{NS_PDS}" xmlns:rings="{ns_rings}"\n'
+        f'           targetNamespace="{ns_rings}" elementFormDefault="qualified">\n'
+        '  <xs:simpleType name="minimum_projected_sun_diameter_WO_Units">\n'
+        '    <xs:restriction base="pds:ASCII_Real">\n'
+        '      <xs:minInclusive value="-1.7976931348623157e308"/>\n'
+        '      <xs:maxInclusive value="1.7976931348623157e308"/>\n'
+        '    </xs:restriction>\n'
+        '  </xs:simpleType>\n'
+        '  <xs:complexType name="minimum_projected_sun_diameter">\n'
+        '    <xs:simpleContent>\n'
+        '      <xs:extension base="rings:minimum_projected_sun_diameter_WO_Units">\n'
+        '        <xs:attribute name="unit" type="pds:Units_of_Length" use="required"/>\n'
+        '      </xs:extension>\n'
+        '    </xs:simpleContent>\n'
+        '  </xs:complexType>\n'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(Path('label.xml'), _label_root(f'{ns_rings} {xsd_path.as_uri()}'))
+
+    assert resolver.resolve('rings:minimum_projected_sun_diameter') == 'pds:ASCII_Real'
+
+
+def test_typeresolver_wo_units_unfollowable_wrapper_returned_unchanged(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-SCH-030: a ``_WO_Units`` wrapper with no registered definition is kept."""
+    xsd_path = tmp_path / 'dangling_units.xsd'
+    xsd_path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:pds="{NS_PDS}"\n'
+        f'           targetNamespace="{NS_PDS}" elementFormDefault="qualified">\n'
+        '  <xs:complexType name="dangling">\n'
+        '    <xs:simpleContent>\n'
+        '      <xs:extension base="pds:dangling_WO_Units"/>\n'
+        '    </xs:simpleContent>\n'
+        '  </xs:complexType>\n'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(Path('label.xml'), _label_root(f'{NS_PDS} {xsd_path.as_uri()}'))
+
+    assert resolver.resolve('pds:dangling') == 'pds:dangling_WO_Units'
 
 
 def test_typeresolver_deep_query_direct_element_type_decides(

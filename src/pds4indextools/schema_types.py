@@ -57,6 +57,12 @@ namespace prefix ``pds:``. Their one-sentence rationales, in the same order:
 21. An attribute that names its type directly.
 22. An element that names its type directly.
 
+When the first match is a ``<tag>_WO_Units`` wrapper simpleType (the
+unit-less base of a unit-bearing complexType), the chain is re-run on that
+wrapper name so the result is its ``xs:restriction/@base`` (e.g.
+``rings:minimum_projected_sun_diameter_WO_Units`` becomes ``pds:ASCII_Real``).
+A wrapper that the registered schemas cannot follow further is returned as is.
+
 The base type is returned verbatim with its XSD namespace prefix (e.g.
 ``pds:ASCII_LID``); the consumer strips the prefix at label-write time per
 spec section 11.3.
@@ -104,6 +110,11 @@ _PDS_PREFIX = 'pds:'
 # Advisory only (R-FS-005): schemes with a builtin adapter on the default
 # session. Other schemes succeed iff the caller registered an adapter.
 _URL_SCHEMES_WITH_BUILTIN_ADAPTERS: tuple[str, ...] = ('http', 'https', 'file')
+
+# Suffix of the PDS4 unit-less wrapper simpleType that a unit-bearing
+# complexType extends (e.g. ``minimum_projected_sun_diameter_WO_Units``).
+# ``resolve`` follows such a wrapper to its restriction base (R-SCH-030).
+_WO_UNITS_SUFFIX = '_WO_Units'
 
 # Default download timeout in seconds (R-SCH-010).
 _DEFAULT_TIMEOUT_SECONDS = 30.0
@@ -446,15 +457,54 @@ class SchemaTypeResolver:
         registration order and returns the first non-empty match (R-SCH-030).
         """
         target_name = xpath_leaf_tag.rsplit(':', 1)[-1]
-        for tree in self._trees.values():
+        match = self._query_trees(target_name, None)
+        if match is None:
+            raise SchemaResolutionError(f'no PDS4 base type for {xpath_leaf_tag}')
+        result, tree = match
+
+        # A unit-bearing element resolves first to its ``<tag>_WO_Units``
+        # wrapper simpleType (e.g. ``rings:minimum_projected_sun_diameter_WO_Units``).
+        # Follow each wrapper to its ``xs:restriction/@base`` so the label
+        # records the underlying PDS4 base type (e.g. ``pds:ASCII_Real``).
+        # A wrapper that cannot be followed further is returned unchanged.
+        seen: set[str] = set()
+        while result.endswith(_WO_UNITS_SUFFIX) and result not in seen:
+            seen.add(result)
+            match = self._query_trees(result.rsplit(':', 1)[-1], tree)
+            if match is None:
+                break
+            result, tree = match
+        return result
+
+    def _query_trees(
+        self,
+        target_name: str,
+        preferred: etree._Element | None,
+    ) -> tuple[str, etree._Element] | None:
+        """Run the query chain over the registered trees and return the first match.
+
+        Parameters:
+            target_name: The local-name to resolve (no namespace prefix).
+            preferred: A tree to search before the others (the tree that
+                produced the previous step of a ``_WO_Units`` chain), or
+                ``None`` to search in registration order only.
+
+        Returns:
+            ``(base_type, tree)`` for the first non-empty match, or ``None``
+            if no registered tree yields a type.
+        """
+        trees = list(self._trees.values())
+        if preferred is not None:
+            trees = [preferred] + [t for t in trees if t is not preferred]
+        for tree in trees:
             namespaces = {'xs': _XS_NAMESPACE, 'pds': _PDS_NAMESPACE}
             for prefix, uri in tree.nsmap.items():
                 if prefix is not None:
                     namespaces[prefix] = uri
             result = _xsd_query(tree, target_name, namespaces)
             if result is not None:
-                return result
-        raise SchemaResolutionError(f'no PDS4 base type for {xpath_leaf_tag}')
+                return result, tree
+        return None
 
     def auto_column_type(self, token: str) -> str:
         """Return the fixed PDS4 type for one of the five auto-column tokens.

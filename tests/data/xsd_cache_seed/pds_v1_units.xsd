@@ -7,8 +7,11 @@
   <xs:simpleType name="ASCII_NonNegative_Integer">
     <xs:restriction base="xs:integer"/>
   </xs:simpleType>
-  <xs:simpleType name="Wavelength_Range_WO_Units">
+  <xs:simpleType name="ASCII_Real">
     <xs:restriction base="xs:double"/>
+  </xs:simpleType>
+  <xs:simpleType name="Wavelength_Range_WO_Units">
+    <xs:restriction base="pds:ASCII_Real"/>
   </xs:simpleType>
   <xs:complexType name="Wavelength_Range">
     <xs:simpleContent>

@@ -601,7 +601,12 @@ type by:
 - **R-SCH-030** Type resolution applies the chain of XPath queries used by
   the legacy implementation (see `legacy::find_base_attribute`), trying
   the bare leaf tag first and then `<tag>_WO_Units` as a fallback for
-  unit-aware elements. The first non-None match wins.
+  unit-aware elements. The first non-None match wins. When that match is a
+  `<tag>_WO_Units` wrapper simpleType (the unit-less base that a
+  unit-bearing complexType extends), the chain is re-run on the wrapper
+  name so the recorded type is the wrapper's `xs:restriction/@base` (e.g.
+  `rings:minimum_projected_sun_diameter_WO_Units` -> `pds:ASCII_Real`). A
+  wrapper the registered schemas cannot follow further is kept as is.
 - **R-SCH-040** Across all labels in a single run, every namespace URI must
   resolve to exactly ONE schema URL (and therefore one schema version).
   The first label to declare a given namespace fixes its schema URL; any
