@@ -236,8 +236,9 @@ def _project_rows(
         columns: The configured output columns.
 
     Returns:
-        One row dict per result, keyed by column header; an XPath column
-        matching no label yields an empty cell (R-MAP-311).
+        One row dict per result, keyed by column header. An XPath column whose
+        element a label lacks gets the column's ``missing_value`` text, or an
+        empty cell when none is set (R-MAP-311, R-MISS-010, R-MISS-030).
     """
     rows: list[dict[str, str]] = []
     for result in results:
@@ -247,7 +248,7 @@ def _project_rows(
             if token is not None:
                 row[column.header] = result.auto_columns[token]
             else:
-                row[column.header] = result.rows.get(column.selector, '')
+                row[column.header] = result.rows.get(column.selector, column.missing_text)
         rows.append(row)
     return rows
 

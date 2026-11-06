@@ -52,6 +52,8 @@ different place than you intended.
 
 *How to fix it:* first, check whether the labels with blank cells really
 contain that piece of information; if some do not, the blank is correct.
+If you would rather have a placeholder such as ``-999`` than a blank, set
+``missing_value:`` on that column (see :doc:`configuration-reference`).
 Otherwise, re-check the column address against a label that *does* have the
 value. The surest way to get an address right is to let the index tool write it for
 you with ``generate_xpath_list`` and copy the exact line, rather than typing an

@@ -46,6 +46,11 @@ Valid auto tokens                    An ``auto`` value must be one of the
 Name charset                         A non-blank ``name`` holds only
                                      printable ASCII with no comma and no
                                      double-quote.
+``missing_value`` on ``xpath`` only  An optional string/int/float written
+                                     when a label lacks the XPath; rejected
+                                     on ``auto`` entries, and its text holds
+                                     only printable ASCII with no
+                                     double-quote.
 No whitespace in ``xpath``           An ``xpath`` selector contains no
                                      internal whitespace.
 No duplicate selectors               Two entries never share the same
@@ -70,6 +75,10 @@ The ``nillable`` key maps a PDS4 data-type name to a
 :class:`~pds4indextools.config.NillableEntry` giving the four replacement
 values written when a scraped value carries a ``nilReason`` attribute:
 ``inapplicable``, ``missing``, ``unknown``, and ``anticipated``.
+It is consulted only for nilled elements (``xsi:nil="true"``). An element the
+label lacks entirely is filled from the column's
+:attr:`~pds4indextools.config.ColumnSpec.missing_value` instead, or left empty
+when that is unset (R-MISS-010, R-MISS-030).
 
 The ``output`` key
 ------------------

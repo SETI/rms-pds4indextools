@@ -332,6 +332,7 @@ class ColumnSpec(BaseModel):
     xpath: str | None = None   # canonical XPath selector
     auto:  str | None = None   # one of the five auto-column tokens (R-AUTO-001)
     name:  str | None = None   # emitted header; None/blank -> selector text
+    missing_value: str | int | float | None = None  # cell text when the XPath is absent (§12.2)
 ```
 
 ### 7.1 Entry shape
@@ -362,6 +363,13 @@ class ColumnSpec(BaseModel):
   the range 0x20–0x7E only, MUST NOT contain a comma or a double-quote
   (`"`), and MUST be non-empty after strip. An omitted/blank `name`
   falls back to the raw selector as the header.
+- **R-MAP-044** `missing_value` is accepted only on an `xpath` entry; on
+  an `auto` entry it is a hard `ConfigError` (auto-columns are always
+  present). Its value MUST be a string, integer, or float (booleans are
+  rejected). The text written to the CSV is `str(missing_value)`, which
+  MUST consist of ASCII printable characters (0x20–0x7E) and MUST NOT
+  contain a double-quote (`"`). Quote the value in YAML to control its
+  exact text (e.g. `'-999.'` rather than `-999.0`).
 
 ### 7.3 Application during scrape
 
@@ -638,7 +646,7 @@ There are two distinct cases:
 | Case | Meaning | Substitution |
 |---|---|---|
 | Nilled element | A label HAS the element with attribute `xsi:nil="true"`. | Use the config-supplied default for `(data_type, nilReason)`. |
-| Missing element (in mapping but absent from label) | The label simply does not contain the requested XPath. | Emit empty string. |
+| Missing element (in mapping but absent from label) | The label simply does not contain the requested XPath. | Emit the column's `missing_value` if set, else the empty string. |
 
 ### 12.1 Nilled elements
 
@@ -658,16 +666,22 @@ There are two distinct cases:
 - **R-NIL-040** A leaf element with empty/whitespace-only text and no
   children, AND no `xsi:nil="true"` attribute, is treated as if the
   element did not appear in the label (its XPath is not added to the row
-  dict). The corresponding cell is therefore the empty string per
-  R-MISS-010.
+  dict). The corresponding cell is therefore filled per R-MISS-010 /
+  R-MISS-030.
 
 ### 12.2 Missing elements (no XPath in this label)
 
 - **R-MISS-010** When a config `columns:` entry names an XPath that is not
-  present in a given label, the cell value is the empty string. No nillable
-  substitution occurs.
+  present in a given label and the entry sets no `missing_value`, the cell
+  value is the empty string. No nillable substitution occurs.
 - **R-MISS-020** This applies whether or not the XPath is present in OTHER
   labels in the same run.
+- **R-MISS-030** When the entry sets `missing_value` (R-MAP-044), a label
+  that lacks the XPath gets `str(missing_value)` in that cell instead of
+  the empty string. The `nillable` table is still NOT consulted: the value
+  is the literal from the column entry, independent of the data type.
+  Labels that contain the element, including nilled ones (§12.1), are
+  unaffected.
 
 ## 13. CSV output format
 
@@ -1528,6 +1542,7 @@ namespace-prefixed by the module they primarily exercise. Every
 |---|---|---|
 | T-MAP-023 | A column entry setting both `xpath` and `auto`, and one setting neither, each rejected with the entry index | R-MAP-300 |
 | T-MAP-024 | An `xpath` selector matches a label XPath by exact string equality (no wildcarding) | R-MAP-300 |
+| T-MAP-025 | `missing_value` on an `auto` entry, a boolean, a non-ASCII value, or one with `"` is rejected; numbers render via `str()` | R-MAP-044 |
 | T-MAP-060 | Two entries with the same `xpath` selector rejected citing both entry indexes | R-MAP-030 |
 | T-MAP-061 | Two entries with the same `auto` token rejected citing both entry indexes | R-MAP-030 |
 | T-MAP-062 | Two entries resolving to the same emitted header rejected | R-MAP-031 |
@@ -1597,6 +1612,7 @@ namespace-prefixed by the module they primarily exercise. Every
 | T-NIL-020 | `<x xsi:nil="true" nilReason="missing"/>` for type not in nillable config exits 2 | R-NIL-030 |
 | T-NIL-030 | `<x></x>` (empty text, no nil attr) is treated as element-absent (column empty for that row) | R-NIL-040 |
 | T-NIL-040 | Mapping XPath absent from label → empty cell, no nil substitution | R-MISS-010 |
+| T-NIL-041 | Mapping XPath absent from label with `missing_value` set → that literal; present and nilled elements unaffected | R-MISS-030 |
 
 ### 24.8 CSV output (T-CSV-*)
 
@@ -1802,7 +1818,7 @@ duplicated content makes maintenance painful.)
 - **R-XP-001..R-XP-030** — XPath canonicalization (§10)
 - **R-SCH-010..R-SCH-070** — Schema-type lookup (§11)
 - **R-NIL-001..R-NIL-040** — Nil handling (§12.1)
-- **R-MISS-010, R-MISS-020** — Missing-element handling (§12.2)
+- **R-MISS-010..R-MISS-030** — Missing-element handling (§12.2)
 - **R-CSV-001..R-CSV-080** — CSV output (§13)
 - **R-SORT-010..R-SORT-030** — Sort (§13.8)
 - **R-LBL-001..R-LBL-012** — Template + product class + reserved

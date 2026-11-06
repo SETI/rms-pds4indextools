@@ -517,6 +517,71 @@ def test_missing_xpath_empty_even_when_present_in_another_label(
     assert lines[2] == 'urn:nasa:pds:t:c:b,b_no_title.lblx,'
 
 
+def test_missing_value_fills_absent_xpath_only(seeded_cache_overlay: Path, tmp_path: Path) -> None:
+    """T-NIL-041, R-MISS-030: ``missing_value`` fills only labels lacking the XPath.
+
+    ``a_with_title.lblx`` carries a ``title``, ``b_no_title.lblx`` omits it, and
+    ``c_empty_title.lblx`` has an empty ``title`` (treated as absent per R-NIL-040).
+    With ``missing_value: '-999.'`` on the TITLE column, the label with a title
+    keeps its value and the other two get the literal.
+    """
+    bundle = tmp_path / 'bundle'
+    bundle.mkdir()
+
+    def _label(name: str, lid: str, *, title_line: str) -> None:
+        (bundle / name).write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1"\n'
+            ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n'
+            ' xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 '
+            f'{PDS_1L00_URL}">\n'
+            '    <Identification_Area>\n'
+            f'        <logical_identifier>{lid}</logical_identifier>\n'
+            '        <version_id>1.0</version_id>\n'
+            f'{title_line}'
+            '    </Identification_Area>\n'
+            '</Product_Observational>\n',
+            encoding='utf-8',
+        )
+
+    _label('a_with_title.lblx', 'urn:nasa:pds:t:c:a', title_line='        <title>Present</title>\n')
+    _label('b_no_title.lblx', 'urn:nasa:pds:t:c:b', title_line='')
+    _label('c_empty_title.lblx', 'urn:nasa:pds:t:c:c', title_line='        <title>  </title>\n')
+    config = tmp_path / 'missing_value.yaml'
+    config.write_text(
+        (CONFIGS / 'simple.yaml').read_text(encoding='utf-8') + "    missing_value: '-999.'\n",
+        encoding='utf-8',
+    )
+    out = tmp_path / 'index.csv'
+    runners_mod.run_generate_index_file(
+        GenerateIndexFileArgs(
+            bundle_root=bundle,
+            patterns=('**/*.lblx',),
+            config_files=(config, seeded_cache_overlay),
+            output_file=out,
+        )
+    )
+    lines = out.read_text(encoding='utf-8').splitlines()
+    assert lines[0] == 'LID,FILE_NAME,TITLE'
+    assert lines[1] == 'urn:nasa:pds:t:c:a,a_with_title.lblx,Present'
+    assert lines[2] == 'urn:nasa:pds:t:c:b,b_no_title.lblx,-999.'
+    assert lines[3] == 'urn:nasa:pds:t:c:c,c_empty_title.lblx,-999.'
+
+
+def test_missing_value_does_not_override_nilled_element(
+    seeded_cache_overlay: Path, tmp_path: Path
+) -> None:
+    """T-NIL-041, R-MISS-030, R-NIL-020: a nilled element still takes the nillable default."""
+    config = tmp_path / 'nilled_missing_value.yaml'
+    config.write_text(
+        (CONFIGS / 'nilled.yaml').read_text(encoding='utf-8') + "    missing_value: 'ABSENT'\n",
+        encoding='utf-8',
+    )
+    out = tmp_path / 'index.csv'
+    _run('nilled', (config, seeded_cache_overlay), out)
+    assert out.read_text(encoding='utf-8').splitlines()[1].split(',')[1] == '0002-01-01'
+
+
 def test_columns_not_listing_an_observed_xpath_drops_it(
     seeded_cache_overlay: Path, tmp_path: Path
 ) -> None:
