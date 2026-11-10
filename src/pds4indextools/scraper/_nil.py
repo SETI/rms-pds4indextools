@@ -98,8 +98,8 @@ def resolve_nil_value(
             file_path=label_path,
         )
 
-    local_tag = etree.QName(element).localname
-    data_type = resolver.resolve(local_tag)
+    qname = etree.QName(element)
+    data_type = resolver.resolve(qname.localname, namespace_uri=qname.namespace)
     entry = nillable_config.get(data_type)
     if entry is None:
         raise NilError(

@@ -376,6 +376,125 @@ def test_typeresolver_wo_units_unfollowable_wrapper_returned_unchanged(
     assert resolver.resolve('pds:dangling') == 'pds:dangling_WO_Units'
 
 
+def _write_xsd(path: Path, target_ns: str, prefix: str, body: str) -> str:
+    """Write a minimal XSD for ``target_ns`` and return its ``file://`` URL.
+
+    Parameters:
+        path: Where to write the schema.
+        target_ns: The schema's ``targetNamespace``.
+        prefix: The prefix the schema binds ``target_ns`` to.
+        body: The schema's top-level declarations.
+
+    Returns:
+        The schema's ``file://`` URL, for an ``xsi:schemaLocation`` entry.
+    """
+    own = '' if prefix == 'pds' else f' xmlns:{prefix}="{target_ns}"'
+    path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:pds="{NS_PDS}"{own}\n'
+        f'           targetNamespace="{target_ns}" elementFormDefault="qualified">\n'
+        f'{body}'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    return path.as_uri()
+
+
+_PDS_REUSE_BODY = (
+    '  <xs:simpleType name="ASCII_Text_Preserved">\n'
+    '    <xs:restriction base="xs:string"/>\n'
+    '  </xs:simpleType>\n'
+    '  <xs:simpleType name="ASCII_NonNegative_Integer">\n'
+    '    <xs:restriction base="xs:nonNegativeInteger"/>\n'
+    '  </xs:simpleType>\n'
+    '  <xs:simpleType name="comment">\n'
+    '    <xs:restriction base="pds:ASCII_Text_Preserved"/>\n'
+    '  </xs:simpleType>\n'
+    '  <xs:element name="comment" type="pds:comment"/>\n'
+    '  <xs:element name="sequence_number" type="pds:ASCII_NonNegative_Integer"/>\n'
+)
+NS_RINGS = 'http://pds.nasa.gov/pds4/rings/v1'
+NS_IMG = 'http://pds.nasa.gov/pds4/img/v1'
+
+
+@pytest.mark.parametrize('rings_first', [False, True])
+def test_typeresolver_follows_reused_common_type_in_any_order(
+    isolated_xsd_cache: Path, tmp_path: Path, rings_first: bool
+) -> None:
+    """R-SCH-030: an element typed by a reused ``pds:`` type resolves to its base.
+
+    Mirrors the real rings schema, which declares ``<xs:element name="comment"
+    type="pds:comment"/>`` without defining ``pds:comment``. The pds schema
+    defines ``pds:comment`` as a restriction of ``pds:ASCII_Text_Preserved``.
+    The result is the base type whichever schema the label lists first; before
+    in-between types were followed, listing rings first gave ``pds:comment``.
+    """
+    pds_url = _write_xsd(tmp_path / 'pds.xsd', NS_PDS, 'pds', _PDS_REUSE_BODY)
+    rings_url = _write_xsd(
+        tmp_path / 'rings.xsd',
+        NS_RINGS,
+        'rings',
+        '  <xs:element name="comment" type="pds:comment"/>\n',
+    )
+    pairs = [f'{NS_PDS} {pds_url}', f'{NS_RINGS} {rings_url}']
+    if rings_first:
+        pairs.reverse()
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(Path('label.xml'), _label_root(' '.join(pairs)))
+
+    assert resolver.resolve('rings:comment') == 'pds:ASCII_Text_Preserved'
+
+
+def test_typeresolver_same_local_name_resolves_in_own_namespace(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-SCH-030: same-named elements in two dictionaries keep their own types.
+
+    Mirrors the real schemas: ``pds:sequence_number`` is an
+    ``ASCII_NonNegative_Integer`` while ``img:sequence_number`` restricts
+    ``pds:ASCII_Short_String_Collapsed``. Searching by local name alone in
+    registration order gave the img element the pds type.
+    """
+    pds_url = _write_xsd(tmp_path / 'pds.xsd', NS_PDS, 'pds', _PDS_REUSE_BODY)
+    img_url = _write_xsd(
+        tmp_path / 'img.xsd',
+        NS_IMG,
+        'img',
+        '  <xs:simpleType name="sequence_number">\n'
+        '    <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>\n'
+        '  </xs:simpleType>\n'
+        '  <xs:element name="sequence_number" type="img:sequence_number"/>\n',
+    )
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(
+        Path('label.xml'), _label_root(f'{NS_PDS} {pds_url} {NS_IMG} {img_url}')
+    )
+
+    assert resolver.resolve('pds:sequence_number') == 'pds:ASCII_NonNegative_Integer'
+    assert resolver.resolve('img:sequence_number') == 'pds:ASCII_Short_String_Collapsed'
+    assert (
+        resolver.resolve('sequence_number', namespace_uri=NS_IMG)
+        == 'pds:ASCII_Short_String_Collapsed'
+    )
+
+
+def test_typeresolver_type_cycle_stops(isolated_xsd_cache: Path, tmp_path: Path) -> None:
+    """R-SCH-030: in-between types that refer back to each other do not loop forever."""
+    url = _write_xsd(
+        tmp_path / 'cycle.xsd',
+        NS_PDS,
+        'pds',
+        '  <xs:simpleType name="loop_a"><xs:restriction base="pds:loop_b"/></xs:simpleType>\n'
+        '  <xs:simpleType name="loop_b"><xs:restriction base="pds:loop_a"/></xs:simpleType>\n'
+        '  <xs:element name="cyclic" type="pds:loop_a"/>\n',
+    )
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(Path('label.xml'), _label_root(f'{NS_PDS} {url}'))
+
+    assert resolver.resolve('pds:cyclic') in {'pds:loop_a', 'pds:loop_b'}
+
+
 def test_typeresolver_deep_query_direct_element_type_decides(
     isolated_xsd_cache: Path, tmp_path: Path
 ) -> None:
