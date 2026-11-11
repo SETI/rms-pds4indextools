@@ -737,12 +737,16 @@ def test_columns_list_replaced_wholesale_on_merge(configs_dir: Path) -> None:
         ("'N/A'", 'N/A'),
         ("''", ''),
     ],
-    ids=['quoted-string', 'int', 'float', 'text', 'empty-string'],
+    ids=['quoted-string', 'int', 'float', 'text', 'empty'],
 )
 def test_columns_missing_value_accepted_and_rendered(
     yaml_value: str, expected_text: str, tmp_path: Path
 ) -> None:
-    """``missing_value`` on an xpath entry renders via ``str()``. T-ID: T-MAP-025, R-MAP-044."""
+    """``missing_value`` on an xpath entry renders via ``str()``. T-ID: T-MAP-025, R-MAP-044.
+
+    The empty string loads; whether it is allowed depends on the column's data
+    type, which is checked per run (R-MISS-010).
+    """
     content = (
         _VALID_LABEL_CONTENTS
         + f'columns:\n  - xpath: pds:A<1>\n    name: A\n    missing_value: {yaml_value}\n'
@@ -753,8 +757,11 @@ def test_columns_missing_value_accepted_and_rendered(
     assert config.columns[0].missing_text == expected_text
 
 
-def test_columns_missing_value_omitted_renders_empty(tmp_path: Path) -> None:
-    """Without ``missing_value`` the missing text is empty. T-ID: R-MISS-010, R-MAP-044."""
+def test_columns_missing_value_omitted_is_none(tmp_path: Path) -> None:
+    """``missing_value`` is optional at load time; absence is checked per run.
+
+    T-ID: R-MISS-010, R-MAP-044.
+    """
     content = _VALID_LABEL_CONTENTS + 'columns:\n  - xpath: pds:A<1>\n    name: A\n'
     path = _write_config(tmp_path, 'no_missing_value.yaml', content)
     config = load_config([path])
@@ -772,8 +779,9 @@ def test_columns_missing_value_omitted_renders_empty(tmp_path: Path) -> None:
         ("  - xpath: pds:A<1>\n    missing_value: 'a\"b'\n", 'double-quote'),
         ('  - xpath: pds:A<1>\n    missing_value: "a\\tb"\n', 'non-printable'),
         ('  - xpath: pds:A<1>\n    missing_value: [1]\n', 'missing_value'),
+        ("  - xpath: pds:A<1>\n    missing_value: '   '\n", 'only whitespace'),
     ],
-    ids=['on-auto', 'boolean', 'non-ascii', 'double-quote', 'tab', 'list'],
+    ids=['on-auto', 'boolean', 'non-ascii', 'double-quote', 'tab', 'list', 'spaces'],
 )
 def test_columns_missing_value_rejected(entry: str, message: str, tmp_path: Path) -> None:
     """Invalid ``missing_value`` entries are a ConfigError. T-ID: T-MAP-025, R-MAP-044."""

@@ -249,7 +249,10 @@ in subsequent sections (§7–§14).
    are computed per §8. Drop unselected XPaths silently. Order the output
    columns exactly as declared in the `columns:` list (R-MAP-320). The
    empty-column-set case is rejected earlier at config validation time
-   (R-MAP-312).
+   (R-MAP-312). An XPath column a label lacks takes the column's
+   `missing_value`, or `missing` for a string-typed column that sets none;
+   if any non-string column has none, the run fails here with one
+   `ConfigError` listing every offending column (R-MISS-010).
 7. **Sort rows** alphabetically by `filespec` by default; if `output.sort_by` is
    set in the merged config, use that (R-SORT-010..R-SORT-030).
 8. **Per-column quoting analysis** (R-CSV-040..R-CSV-050).
@@ -367,8 +370,11 @@ class ColumnSpec(BaseModel):
   an `auto` entry it is a hard `ConfigError` (auto-columns are always
   present). Its value MUST be a string, integer, or float (booleans are
   rejected). The text written to the CSV is `str(missing_value)`, which
-  MUST consist of ASCII printable characters (0x20–0x7E) and MUST NOT
-  contain a double-quote (`"`). Quote the value in YAML to control its
+  MUST consist of ASCII printable characters (0x20–0x7E), MUST NOT
+  contain a double-quote (`"`), and MUST NOT be whitespace-only. The empty
+  string `''` loads; at run time it is accepted with a warning for a
+  string-typed column and is a `ConfigError` for any other column
+  (R-MISS-010). Quote the value in YAML to control its
   exact text (e.g. `'-999.'` rather than `-999.0`).
 
 ### 7.3 Application during scrape
@@ -377,8 +383,10 @@ class ColumnSpec(BaseModel):
   whose canonical form is NOT named by an `xpath` entry is silently
   dropped from the row dict.
 - **R-MAP-311** An `xpath` entry that never matches any XPath in any
-  scraped label produces a column whose value is empty for every row.
-  This is not a warning; the run succeeds.
+  scraped label is an ordinary case of R-MISS-010: with a `missing_value`
+  every row gets that value; without one a string-typed column gets
+  `missing` in every row and any other column makes the run fail with a
+  `ConfigError`.
 - **R-MAP-312** A merged config whose `columns` list is empty (`[]`) is
   rejected at config-validation time with a `ConfigError` and exit code
   1 (NOT fail-slow eligible: this is a user/configuration error, not
@@ -656,7 +664,7 @@ There are two distinct cases:
 | Case | Meaning | Substitution |
 |---|---|---|
 | Nilled element | A label HAS the element with attribute `xsi:nil="true"`. | Use the config-supplied default for `(data_type, nilReason)`. |
-| Missing element (in mapping but absent from label) | The label simply does not contain the requested XPath. | Emit the column's `missing_value` if set, else the empty string. |
+| Missing element (in mapping but absent from label) | The label simply does not contain the requested XPath. | Emit the column's `missing_value`; if it is unset, emit `missing` for a string-typed column, otherwise the run fails. |
 
 ### 12.1 Nilled elements
 
@@ -682,13 +690,35 @@ There are two distinct cases:
 ### 12.2 Missing elements (no XPath in this label)
 
 - **R-MISS-010** When a config `columns:` entry names an XPath that is not
-  present in a given label and the entry sets no `missing_value`, the cell
-  value is the empty string. No nillable substitution occurs.
+  present in a given label and the entry sets no `missing_value`, the
+  outcome depends on the column's resolved data type (§11):
+  - A string type (one whose name contains `String` or `Text`, e.g.
+    `ASCII_Short_String_Collapsed`, `ASCII_Text_Preserved`,
+    `UTF8_Text_Preserved`) gets the literal `missing`, the same text the
+    default `nillable` table uses for `pds:ASCII_Short_String_Collapsed`.
+    An INFO log line per column records how many labels were filled.
+  - Any other type (numbers, dates, identifiers, and other formatted
+    types) has no safe default, so `generate_index_file` raises a
+    `ConfigError` (exit 1) after scraping, before any output is written.
+    One error covers the whole run: it names every offending column (in
+    declaration order) with its data type, how many of the scraped labels
+    lack its element, up to three example bundle-relative label paths, and
+    an example entry showing the `missing_value` key to add (suggesting the
+    type's `nillable` `missing` value when there is one, otherwise `-999`).
+    The error is a `ConfigError` rather than a `LabelError` because the
+    labels are valid and the fix is in the config; it is therefore not
+    fail-slow eligible.
+
+  A column that sets `missing_value: ''` writes a blank cell. That is
+  allowed only for a string-typed column, and each such column logs a
+  WARNING (also returned in `GenerateIndexFileResult.warnings`); on any
+  other column it is a `ConfigError` naming every such column with its
+  type, raised before any output is written. No nillable substitution
+  occurs for absent elements.
 - **R-MISS-020** This applies whether or not the XPath is present in OTHER
   labels in the same run.
 - **R-MISS-030** When the entry sets `missing_value` (R-MAP-044), a label
-  that lacks the XPath gets `str(missing_value)` in that cell instead of
-  the empty string. The `nillable` table is still NOT consulted: the value
+  that lacks the XPath gets `str(missing_value)` in that cell. The `nillable` table is still NOT consulted: the value
   is the literal from the column entry, independent of the data type.
   Labels that contain the element, including nilled ones (§12.1), are
   unaffected.
@@ -1084,7 +1114,10 @@ All custom exceptions live in `pds4indextools.errors`:
 ```text
 Pds4IndexError                       (base; never instantiated directly)
 ├── CliError                         (argparse / user-input errors → exit 1)
-├── ConfigError                      (config validation, columns, sort_by misuse → exit 1)
+├── ConfigError                      (config validation, columns, sort_by misuse,
+│                                     absent non-string element with no
+│                                     missing_value, or '' on a non-string
+│                                     column → exit 1)
 ├── LabelError                       (label-content errors → exit 2)
 │   ├── ParseError                   (XML parse, BOM, missing default ns)
 │   ├── LidError                     (LID regex, missing version_id, cross-label LID collision per R-LID-020)
@@ -1559,7 +1592,7 @@ namespace-prefixed by the module they primarily exercise. Every
 | T-MAP-063 | An `xpath` entry and an `auto` entry resolving to the same header rejected | R-MAP-031 |
 | T-MAP-071 | `name` containing `"` rejected | R-MAP-043 |
 | T-MAP-072 | `name` containing a control char or a non-ASCII char rejected | R-MAP-043 |
-| T-MAP-080 | An `xpath` entry not found in any label produces an empty column; run succeeds | R-MAP-311 |
+| T-MAP-080 | An `xpath` entry not found in any label: a string column with no `missing_value` gets `missing` in every row; with one, every row gets it | R-MAP-311 |
 | T-MAP-081 | A discovered XPath not named by any `xpath` entry is silently dropped | R-MAP-310 |
 | T-MAP-082 | A merged config with an empty (or missing) `columns` list exits 1 | R-MAP-312 |
 | T-MAP-090 | Output column order matches `columns` declaration order with auto and xpath entries interleaved | R-MAP-320 |
@@ -1621,7 +1654,7 @@ namespace-prefixed by the module they primarily exercise. Every
 | T-NIL-010 | `<x xsi:nil="true" nilReason="bogus"/>` exits 2 | R-NIL-010 |
 | T-NIL-020 | `<x xsi:nil="true" nilReason="missing"/>` for type not in nillable config exits 2 | R-NIL-030 |
 | T-NIL-030 | `<x></x>` (empty text, no nil attr) is treated as element-absent (column empty for that row) | R-NIL-040 |
-| T-NIL-040 | Mapping XPath absent from label → empty cell, no nil substitution | R-MISS-010 |
+| T-NIL-040 | Mapping XPath absent from some labels with no `missing_value`: string columns get `missing`; non-string columns → one ConfigError listing every such column with its type, counts, and up to three example labels; no output written. `missing_value: ''` warns on a string column and is a ConfigError otherwise | R-MISS-010 |
 | T-NIL-041 | Mapping XPath absent from label with `missing_value` set → that literal; present and nilled elements unaffected | R-MISS-030 |
 
 ### 24.8 CSV output (T-CSV-*)

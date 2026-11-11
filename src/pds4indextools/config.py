@@ -368,8 +368,13 @@ class ColumnSpec(BaseModel):
         name: The emitted CSV header; ``None`` or blank falls back to the
             selector text (R-MAP-012.1).
         missing_value: The literal written into the cell when a label does
-            not contain the ``xpath`` element (R-MISS-030); ``None`` (the
-            default) leaves the cell empty (R-MISS-010). Only valid on an
+            not contain the ``xpath`` element (R-MISS-030). When it is ``None``
+            (the default) and some label lacks the element, a string-typed
+            column is filled with ``missing`` and any other column makes
+            ``generate_index_file`` fail with a
+            :exc:`~pds4indextools.errors.ConfigError` (R-MISS-010). The empty
+            string ``''`` is accepted for a string-typed column only, with a
+            warning; whitespace-only text is rejected. Only valid on an
             ``xpath`` entry. Numbers are written with :func:`str`, so quote
             the value in YAML to control its exact text (e.g. ``'-999.'``).
 
@@ -411,8 +416,9 @@ class ColumnSpec(BaseModel):
         """Return the cell text for a label that lacks this column's XPath.
 
         Returns:
-            ``str(missing_value)`` when it is set, otherwise the empty string
-            (R-MISS-010, R-MISS-030).
+            ``str(missing_value)`` when it is set, otherwise the empty string.
+            The caller decides what an unset value means for the column's data
+            type (R-MISS-010, R-MISS-030).
         """
         return '' if self.missing_value is None else str(self.missing_value)
 
@@ -437,7 +443,13 @@ class ColumnSpec(BaseModel):
                 raise ValueError(
                     f"missing_value is only valid on an 'xpath' entry, not auto {self.auto!r}"
                 )
-            _validate_missing_value_text(self.missing_text)
+            text = self.missing_text
+            if text != '' and text.strip() == '':
+                raise ValueError(
+                    "missing_value must not be only whitespace; use '' for a blank "
+                    'cell in a string column (R-MAP-044)'
+                )
+            _validate_missing_value_text(text)
         return self
 
 

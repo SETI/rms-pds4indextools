@@ -226,31 +226,196 @@ def _scrape_all(
     return results
 
 
-def _project_rows(
-    results: Sequence[ScrapeResult], columns: Sequence[ColumnSpec]
-) -> list[dict[str, str]]:
-    """Project each scrape result onto the configured columns (R-MAP-310/311).
+# How many example label paths a missing-value error names per column.
+_MISSING_EXAMPLES = 3
+
+# Cell text for a string-typed column whose element a label lacks when the
+# column sets no missing_value (R-MISS-010). It matches the ``missing``
+# replacement of ``pds:ASCII_Short_String_Collapsed`` in the default nillable
+# config.
+_STRING_MISSING_DEFAULT = 'missing'
+
+# The suggested missing_value shown for a type with no nillable entry.
+_FALLBACK_MISSING_HINT = '-999'
+
+
+def _is_string_type(data_type: str) -> bool:
+    """Return whether a resolved PDS4 data type is a string (text) type.
 
     Parameters:
-        results: The successful scrape results.
+        data_type: A resolved type such as ``pds:ASCII_Short_String_Collapsed``.
+
+    Returns:
+        ``True`` for the free-text types, whose names contain ``String`` or
+        ``Text`` (e.g. ``ASCII_Short_String_Collapsed``, ``ASCII_Text_Preserved``,
+        ``UTF8_String``); ``False`` for numbers, dates, identifiers, and the
+        other formatted types.
+    """
+    local = data_type.rpartition(':')[2]
+    return 'String' in local or 'Text' in local
+
+
+def _check_missing_values(
+    columns: Sequence[ColumnSpec], column_types: Mapping[str, str]
+) -> tuple[str, ...]:
+    """Validate empty ``missing_value`` settings against each column's type.
+
+    Parameters:
         columns: The configured output columns.
+        column_types: The resolved data type of every column, keyed by header.
+
+    Returns:
+        One warning per string-typed column whose ``missing_value`` is ``''``.
+
+    Raises:
+        ConfigError: If a column that is not string-typed sets
+            ``missing_value: ''``; a blank cell is only allowed for text
+            (R-MAP-044, R-MISS-010).
+    """
+    warnings: list[str] = []
+    not_string: list[str] = []
+    for column in columns:
+        if column.missing_value != '':
+            continue
+        data_type = column_types[column.header]
+        if _is_string_type(data_type):
+            warnings.append(
+                f"column {column.header}: missing_value is ''; labels that lack "
+                'this element get a blank cell'
+            )
+        else:
+            not_string.append(f'  {column.header} ({_type_name(data_type)})')
+    if not_string:
+        raise ConfigError(
+            "missing_value '' is only allowed for string columns; give these "
+            'column(s) a non-blank missing_value:\n' + '\n'.join(not_string)
+        )
+    return tuple(warnings)
+
+
+def _type_name(data_type: str) -> str:
+    """Return a resolved data type without its namespace prefix."""
+    return data_type.rpartition(':')[2]
+
+
+def _project_rows(
+    results: Sequence[ScrapeResult],
+    columns: Sequence[ColumnSpec],
+    column_types: Mapping[str, str],
+    config: IndexConfig,
+) -> list[dict[str, str]]:
+    """Project each scrape result onto the configured columns.
+
+    Parameters:
+        results: The successful scrape results, in discovery order.
+        columns: The configured output columns.
+        column_types: The resolved data type of every column, keyed by header.
+        config: The merged config, whose ``nillable`` section supplies the
+            suggested values in the error message.
 
     Returns:
         One row dict per result, keyed by column header. An XPath column whose
-        element a label lacks gets the column's ``missing_value`` text, or an
-        empty cell when none is set (R-MAP-311, R-MISS-010, R-MISS-030).
+        element a label lacks gets the column's ``missing_value`` text, or
+        ``missing`` for a string-typed column that sets none (R-MISS-010,
+        R-MISS-030).
+
+    Raises:
+        ConfigError: If any label lacks the element of a column that is not
+            string-typed and sets no ``missing_value``. Every such column is
+            reported in one error, with the number of labels lacking it and
+            example label paths, so the user can fix the config in one pass
+            (R-MISS-010, R-MAP-311).
     """
     rows: list[dict[str, str]] = []
+    lacking: dict[str, list[str]] = {}
+    defaulted: dict[str, int] = {}
     for result in results:
         row: dict[str, str] = {}
         for column in columns:
             token = column.auto
             if token is not None:
                 row[column.header] = result.auto_columns[token]
-            else:
-                row[column.header] = result.rows.get(column.selector, column.missing_text)
+                continue
+            value = result.rows.get(column.selector)
+            if value is None:
+                if column.missing_value is not None:
+                    value = column.missing_text
+                elif _is_string_type(column_types[column.header]):
+                    value = _STRING_MISSING_DEFAULT
+                    defaulted[column.header] = defaulted.get(column.header, 0) + 1
+                else:
+                    lacking.setdefault(column.header, []).append(result.auto_columns['filespec'])
+                    value = ''
+            row[column.header] = value
         rows.append(row)
+    if lacking:
+        raise ConfigError(
+            _missing_value_message(lacking, columns, column_types, config, len(results))
+        )
+    for column in columns:
+        count = defaulted.get(column.header)
+        if count is not None:
+            _logger.info(
+                'column %s: absent from %d label(s); wrote %r',
+                column.header,
+                count,
+                _STRING_MISSING_DEFAULT,
+            )
     return rows
+
+
+def _missing_value_message(
+    lacking: Mapping[str, Sequence[str]],
+    columns: Sequence[ColumnSpec],
+    column_types: Mapping[str, str],
+    config: IndexConfig,
+    label_count: int,
+) -> str:
+    """Render the R-MISS-010 error naming every column that needs a ``missing_value``.
+
+    Parameters:
+        lacking: For each offending column header, the bundle-relative paths of
+            the labels that lack its element, in scrape order.
+        columns: The configured output columns, used to keep the report in
+            column declaration order.
+        column_types: The resolved data type of every column, keyed by header.
+        config: The merged config; a column type's ``nillable`` ``missing``
+            value, when there is one, is the suggested ``missing_value``.
+        label_count: The number of scraped labels.
+
+    Returns:
+        A multi-line message: a summary line, then one line per column giving
+        its type, how many labels lack the element, and up to three example
+        paths, then a hint showing the ``missing_value`` key to add.
+    """
+    lines = [
+        f'{len(lacking)} non-string column(s) are absent from some labels and set no '
+        "missing_value. Add a missing_value to each of these columns' entries in "
+        'the config:'
+    ]
+    first: ColumnSpec | None = None
+    for column in columns:
+        paths = lacking.get(column.header)
+        if paths is None:
+            continue
+        first = first or column
+        shown = ', '.join(paths[:_MISSING_EXAMPLES])
+        extra = len(paths) - _MISSING_EXAMPLES
+        more = f', ... ({extra} more)' if extra > 0 else ''
+        lines.append(
+            f'  {column.header} ({_type_name(column_types[column.header])}): absent from '
+            f'{len(paths)} of {label_count} label(s), e.g. {shown}{more}'
+        )
+    if first is not None:
+        entry = config.nillable.get(column_types[first.header])
+        hint = _FALLBACK_MISSING_HINT if entry is None else str(entry.missing)
+        lines += [
+            'For example:',
+            f'  - xpath: {first.selector}',
+            f'    name: {first.header}',
+            f"    missing_value: '{hint}'",
+        ]
+    return '\n'.join(lines)
 
 
 def _build_column_metadata(
@@ -394,10 +559,13 @@ def run_generate_index_file(args: GenerateIndexFileArgs) -> GenerateIndexFileRes
     results = _scrape_all(
         bundle_root, labels, config=config, resolver=resolver, fail_slow=args.fail_slow
     )
-    rows = _project_rows(results, columns)
     headers, column_is_auto, auto_tokens, column_xpaths, column_types = _build_column_metadata(
         columns, resolver
     )
+    missing_warnings = _check_missing_values(columns, column_types)
+    _emit_warnings(missing_warnings)
+    warnings = (*warnings, *missing_warnings)
+    rows = _project_rows(results, columns, column_types, config)
     plan = build_plan(
         rows=rows,
         columns=headers,

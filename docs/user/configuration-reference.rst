@@ -47,7 +47,19 @@ Each entry may also carry these optional keys:
 
 ``missing_value:``
    What to write in the cell when a label does not contain the element at all
-   (``xpath:`` entries only). Without it, such a cell is left blank. This is
+   (``xpath:`` entries only). If you leave it out, what happens depends on
+   the column's data type:
+
+   - A text column (a type such as ``ASCII_Short_String_Collapsed`` or
+     ``ASCII_Text_Preserved``) gets the word ``missing``, the same text the
+     shipped ``nillable:`` defaults use for text.
+   - Any other column (numbers, dates, identifiers) has no safe default, so
+     ``generate_index_file`` stops before writing anything and lists every
+     such column, so you can add them all at once.
+
+   For a text column you may set ``missing_value: ''`` to leave the cell
+   blank; the run warns you that it did. On any other column ``''`` is an
+   error, and a value made only of spaces is always rejected. This is
    different from ``nillable:`` below, which applies only when the label
    *has* the element and marks it as having no value; those cells still use
    ``nillable:``. The value may be text or a number. A number is written the

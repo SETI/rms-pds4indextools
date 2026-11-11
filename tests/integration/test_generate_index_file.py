@@ -443,15 +443,15 @@ def test_mapping_full_features_byte_identical_to_expected_csv(
     assert out.read_bytes() == (EXPECTED / 'mapping_full_features' / 'index.csv').read_bytes()
 
 
-def test_mapping_xpath_not_in_any_label_produces_empty_column(
+def test_mapping_xpath_not_in_any_label_string_column_defaults_to_missing(
     seeded_cache_overlay: Path, tmp_path: Path
 ) -> None:
-    """T-MAP-080, T-NIL-040, R-MAP-311, R-MISS-010: an absent XPath yields empty cells.
+    """T-MAP-080, T-NIL-040, R-MAP-311, R-MISS-010: an absent string column with no
+    ``missing_value`` is filled with ``missing``.
 
-    The committed ``xpath_not_in_label.yaml`` targets ``pds:description``,
-    which the seed XSD types successfully but which is absent from every
-    ``multi_namespace`` label, so the missing-value path is exercised
-    faithfully through the full pipeline.
+    The committed ``xpath_not_in_label.yaml`` targets ``pds:description``
+    (``ASCII_Text_Preserved`` in the seed XSD), which is absent from every
+    ``multi_namespace`` label.
     """
     out = tmp_path / 'index.csv'
     _run(
@@ -465,88 +465,221 @@ def test_mapping_xpath_not_in_any_label_produces_empty_column(
     )
     lines = out.read_text(encoding='utf-8').splitlines()
     assert lines[0] == 'LID,GONE'
-    assert all(line.endswith(',') for line in lines[1:])
+    assert len(lines) == 4
+    assert all(line.endswith(',missing') for line in lines[1:])
+
+
+def test_mapping_xpath_not_in_any_label_with_missing_value_fills_column(
+    seeded_cache_overlay: Path, tmp_path: Path
+) -> None:
+    """R-MAP-311, R-MISS-030: an XPath absent everywhere is filled when ``missing_value`` is set."""
+    config = tmp_path / 'gone_missing_value.yaml'
+    config.write_text(
+        (CONFIGS / 'xpath_not_in_label.yaml').read_text(encoding='utf-8')
+        + "    missing_value: 'N/A'\n",
+        encoding='utf-8',
+    )
+    out = tmp_path / 'index.csv'
+    _run('multi_namespace', (CONFIGS / 'multi_namespace.yaml', config, seeded_cache_overlay), out)
+    lines = out.read_text(encoding='utf-8').splitlines()
+    assert lines[0] == 'LID,GONE'
+    assert all(line.endswith(',N/A') for line in lines[1:])
     assert len(lines) == 4
 
 
-def test_missing_xpath_empty_even_when_present_in_another_label(
-    seeded_cache_overlay: Path, tmp_path: Path
+def _write_title_bundle(
+    bundle: Path,
+    titles: dict[str, str | None],
+    dates: dict[str, str] | None = None,
 ) -> None:
-    """R-MISS-020: a label missing a mapped XPath yields an empty cell even when
-    another label in the same run supplies that XPath.
+    """Write one minimal label per ``titles`` entry; ``None`` omits the title.
 
-    Two labels are scraped: ``a_with_title.lblx`` carries a ``title`` element,
-    ``b_no_title.lblx`` omits it. ``simple.yaml`` maps ``title`` to the TITLE
-    column. The row for the title-less label must be empty in TITLE despite the
-    other row supplying a value for the same XPath.
+    Parameters:
+        bundle: The bundle directory to create and fill.
+        titles: Maps a label stem (also the LID's last segment) to its
+            ``<title>`` line text, or ``None`` for no title element.
+        dates: Maps a label stem to its ``<stop_date_time>`` text; a stem not
+            listed gets no ``stop_date_time`` element.
     """
-    bundle = tmp_path / 'bundle'
     bundle.mkdir()
-
-    def _label(name: str, lid: str, *, title: str | None) -> None:
+    dates = dates or {}
+    for stem, title in titles.items():
         title_line = f'        <title>{title}</title>\n' if title is not None else ''
-        (bundle / name).write_text(
+        date = dates.get(stem)
+        date_line = f'        <stop_date_time>{date}</stop_date_time>\n' if date else ''
+        (bundle / f'{stem}.lblx').write_text(
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1"\n'
             ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n'
             ' xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 '
             f'{PDS_1L00_URL}">\n'
             '    <Identification_Area>\n'
-            f'        <logical_identifier>{lid}</logical_identifier>\n'
+            f'        <logical_identifier>urn:nasa:pds:t:c:{stem}</logical_identifier>\n'
             '        <version_id>1.0</version_id>\n'
             f'{title_line}'
+            f'{date_line}'
             '    </Identification_Area>\n'
             '</Product_Observational>\n',
             encoding='utf-8',
         )
 
-    _label('a_with_title.lblx', 'urn:nasa:pds:t:c:a', title='Present')
-    _label('b_no_title.lblx', 'urn:nasa:pds:t:c:b', title=None)
+
+# A DATE column on ``pds:stop_date_time``, which the seed XSD types as
+# ``ASCII_Date_YMD`` (not a string type), appended to ``simple.yaml``.
+_DATE_COLUMN = (
+    '  - xpath: pds:Product_Observational<1>/pds:Identification_Area<1>'
+    '/pds:stop_date_time<1>\n'
+    '    name: DATE\n'
+)
+
+
+def _run_args(bundle: Path, config: Path, cache: Path, out: Path) -> GenerateIndexFileArgs:
+    """Return the run arguments for ``bundle`` with ``config`` and the seeded cache."""
+    return GenerateIndexFileArgs(
+        bundle_root=bundle,
+        patterns=('**/*.lblx',),
+        config_files=(config, cache),
+        output_file=out,
+    )
+
+
+def test_missing_string_column_defaults_to_missing_per_label(
+    tmp_path: Path, seeded_cache_overlay: Path
+) -> None:
+    """R-MISS-010, R-NIL-040: only labels lacking a string column's element get ``missing``.
+
+    ``a`` carries a ``title``; ``b`` omits it and ``c`` has a whitespace-only
+    title (treated as absent per R-NIL-040). ``simple.yaml`` maps ``title``
+    (``ASCII_Short_String_Collapsed``) with no ``missing_value``.
+    """
+    bundle = tmp_path / 'bundle'
+    _write_title_bundle(bundle, {'a': 'Present', 'b': None, 'c': '  '})
     out = tmp_path / 'index.csv'
     runners_mod.run_generate_index_file(
-        GenerateIndexFileArgs(
-            bundle_root=bundle,
-            patterns=('**/*.lblx',),
-            config_files=(CONFIGS / 'simple.yaml', seeded_cache_overlay),
-            output_file=out,
-        )
+        _run_args(bundle, CONFIGS / 'simple.yaml', seeded_cache_overlay, out)
     )
     lines = out.read_text(encoding='utf-8').splitlines()
-    assert lines[0] == 'LID,FILE_NAME,TITLE'
-    assert lines[1] == 'urn:nasa:pds:t:c:a,a_with_title.lblx,Present'
-    assert lines[2] == 'urn:nasa:pds:t:c:b,b_no_title.lblx,'
+    assert lines[1:] == [
+        'urn:nasa:pds:t:c:a,a.lblx,Present',
+        'urn:nasa:pds:t:c:b,b.lblx,missing',
+        'urn:nasa:pds:t:c:c,c.lblx,missing',
+    ]
+
+
+def test_missing_non_string_column_error_even_when_present_in_another_label(
+    tmp_path: Path, seeded_cache_overlay: Path
+) -> None:
+    """R-MISS-010, R-MISS-020: one label lacking a non-string column's element fails
+    the run even when another label supplies it, and the error names the lacking label.
+
+    DATE (``ASCII_Date_YMD``) is present only in ``a``. The run raises a
+    ConfigError naming DATE with its type, the 2-of-3 count, both lacking
+    labels, and the nillable ``missing`` value as the suggested
+    ``missing_value``; no output is written.
+    """
+    bundle = tmp_path / 'bundle'
+    _write_title_bundle(bundle, {'a': 'A', 'b': 'B', 'c': 'C'}, dates={'a': '2020-01-01'})
+    config = tmp_path / 'date.yaml'
+    config.write_text(
+        (CONFIGS / 'simple.yaml').read_text(encoding='utf-8') + _DATE_COLUMN, encoding='utf-8'
+    )
+    out = tmp_path / 'index.csv'
+    with pytest.raises(ConfigError) as exc_info:
+        runners_mod.run_generate_index_file(_run_args(bundle, config, seeded_cache_overlay, out))
+    message = str(exc_info.value)
+    assert 'DATE (ASCII_Date_YMD): absent from 2 of 3 label(s), e.g. b.lblx, c.lblx' in message
+    assert "missing_value: '0002-01-01'" in message
+    assert not out.exists()
+
+
+def test_missing_value_error_lists_every_column_and_truncates_examples(
+    tmp_path: Path, seeded_cache_overlay: Path
+) -> None:
+    """R-MISS-010: the error reports every non-string column and at most three examples.
+
+    TITLE is absent too, but it is a string column, so it is filled with
+    ``missing`` and not reported.
+    """
+    bundle = tmp_path / 'bundle'
+    _write_title_bundle(bundle, dict.fromkeys(('a', 'b', 'c', 'd', 'e')))
+    config = tmp_path / 'two_missing.yaml'
+    config.write_text(
+        (CONFIGS / 'simple.yaml').read_text(encoding='utf-8')
+        + _DATE_COLUMN
+        + '  - xpath: pds:Product_Observational<1>/pds:stop_date_time<1>\n'
+        '    name: DATE2\n',
+        encoding='utf-8',
+    )
+    with pytest.raises(ConfigError) as exc_info:
+        runners_mod.run_generate_index_file(
+            _run_args(bundle, config, seeded_cache_overlay, tmp_path / 'index.csv')
+        )
+    message = str(exc_info.value)
+    assert message.startswith('2 non-string column(s)')
+    assert (
+        'DATE (ASCII_Date_YMD): absent from 5 of 5 label(s), '
+        'e.g. a.lblx, b.lblx, c.lblx, ... (2 more)' in message
+    )
+    assert 'DATE2 (ASCII_Date_YMD): absent from 5 of 5 label(s)' in message
+    assert message.index('DATE (') < message.index('DATE2 (')
+    assert 'TITLE' not in message
+
+
+def test_empty_missing_value_on_string_column_writes_blank_with_warning(
+    tmp_path: Path, seeded_cache_overlay: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """R-MISS-030, R-MAP-044: ``missing_value: ''`` on a string column writes a
+    blank cell and warns."""
+    bundle = tmp_path / 'bundle'
+    _write_title_bundle(bundle, {'a': 'Present', 'b': None})
+    config = tmp_path / 'empty_title.yaml'
+    config.write_text(
+        (CONFIGS / 'simple.yaml').read_text(encoding='utf-8') + "    missing_value: ''\n",
+        encoding='utf-8',
+    )
+    out = tmp_path / 'index.csv'
+    with caplog.at_level(logging.WARNING):
+        result = runners_mod.run_generate_index_file(
+            _run_args(bundle, config, seeded_cache_overlay, out)
+        )
+    lines = out.read_text(encoding='utf-8').splitlines()
+    assert lines[2] == 'urn:nasa:pds:t:c:b,b.lblx,'
+    assert any("column TITLE: missing_value is ''" in w for w in result.warnings)
+    assert "column TITLE: missing_value is ''" in caplog.text
+
+
+def test_empty_missing_value_on_non_string_column_is_configerror(
+    tmp_path: Path, seeded_cache_overlay: Path
+) -> None:
+    """R-MISS-010, R-MAP-044: ``missing_value: ''`` on a non-string column is a ConfigError."""
+    bundle = tmp_path / 'bundle'
+    _write_title_bundle(bundle, {'a': 'A'}, dates={'a': '2020-01-01'})
+    config = tmp_path / 'empty_date.yaml'
+    config.write_text(
+        (CONFIGS / 'simple.yaml').read_text(encoding='utf-8')
+        + _DATE_COLUMN
+        + "    missing_value: ''\n",
+        encoding='utf-8',
+    )
+    out = tmp_path / 'index.csv'
+    with pytest.raises(ConfigError, match='only allowed for string columns') as exc_info:
+        runners_mod.run_generate_index_file(_run_args(bundle, config, seeded_cache_overlay, out))
+    assert 'DATE (ASCII_Date_YMD)' in str(exc_info.value)
+    assert not out.exists()
 
 
 def test_missing_value_fills_absent_xpath_only(seeded_cache_overlay: Path, tmp_path: Path) -> None:
     """T-NIL-041, R-MISS-030: ``missing_value`` fills only labels lacking the XPath.
 
-    ``a_with_title.lblx`` carries a ``title``, ``b_no_title.lblx`` omits it, and
-    ``c_empty_title.lblx`` has an empty ``title`` (treated as absent per R-NIL-040).
-    With ``missing_value: '-999.'`` on the TITLE column, the label with a title
-    keeps its value and the other two get the literal.
+    ``a_with_title`` carries a ``title``, ``b_no_title`` omits it, and
+    ``c_empty_title`` has a whitespace-only ``title`` (treated as absent per
+    R-NIL-040). With ``missing_value: '-999.'`` on the TITLE column, the label
+    with a title keeps its value and the other two get the literal.
     """
     bundle = tmp_path / 'bundle'
-    bundle.mkdir()
-
-    def _label(name: str, lid: str, *, title_line: str) -> None:
-        (bundle / name).write_text(
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1"\n'
-            ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n'
-            ' xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 '
-            f'{PDS_1L00_URL}">\n'
-            '    <Identification_Area>\n'
-            f'        <logical_identifier>{lid}</logical_identifier>\n'
-            '        <version_id>1.0</version_id>\n'
-            f'{title_line}'
-            '    </Identification_Area>\n'
-            '</Product_Observational>\n',
-            encoding='utf-8',
-        )
-
-    _label('a_with_title.lblx', 'urn:nasa:pds:t:c:a', title_line='        <title>Present</title>\n')
-    _label('b_no_title.lblx', 'urn:nasa:pds:t:c:b', title_line='')
-    _label('c_empty_title.lblx', 'urn:nasa:pds:t:c:c', title_line='        <title>  </title>\n')
+    _write_title_bundle(
+        bundle, {'a_with_title': 'Present', 'b_no_title': None, 'c_empty_title': '  '}
+    )
     config = tmp_path / 'missing_value.yaml'
     config.write_text(
         (CONFIGS / 'simple.yaml').read_text(encoding='utf-8') + "    missing_value: '-999.'\n",
@@ -563,9 +696,9 @@ def test_missing_value_fills_absent_xpath_only(seeded_cache_overlay: Path, tmp_p
     )
     lines = out.read_text(encoding='utf-8').splitlines()
     assert lines[0] == 'LID,FILE_NAME,TITLE'
-    assert lines[1] == 'urn:nasa:pds:t:c:a,a_with_title.lblx,Present'
-    assert lines[2] == 'urn:nasa:pds:t:c:b,b_no_title.lblx,-999.'
-    assert lines[3] == 'urn:nasa:pds:t:c:c,c_empty_title.lblx,-999.'
+    assert lines[1] == 'urn:nasa:pds:t:c:a_with_title,a_with_title.lblx,Present'
+    assert lines[2] == 'urn:nasa:pds:t:c:b_no_title,b_no_title.lblx,-999.'
+    assert lines[3] == 'urn:nasa:pds:t:c:c_empty_title,c_empty_title.lblx,-999.'
 
 
 def test_missing_value_does_not_override_nilled_element(

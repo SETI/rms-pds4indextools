@@ -48,9 +48,11 @@ Name charset                         A non-blank ``name`` holds only
                                      double-quote.
 ``missing_value`` on ``xpath`` only  An optional string/int/float written
                                      when a label lacks the XPath; rejected
-                                     on ``auto`` entries, and its text holds
-                                     only printable ASCII with no
-                                     double-quote.
+                                     on ``auto`` entries, and its text is
+                                     printable ASCII with no double-quote,
+                                     and not whitespace-only. ``''`` loads
+                                     but is checked against the column type
+                                     at run time.
 No whitespace in ``xpath``           An ``xpath`` selector contains no
                                      internal whitespace.
 No duplicate selectors               Two entries never share the same
@@ -77,8 +79,15 @@ values written when a scraped value carries a ``nilReason`` attribute:
 ``inapplicable``, ``missing``, ``unknown``, and ``anticipated``.
 It is consulted only for nilled elements (``xsi:nil="true"``). An element the
 label lacks entirely is filled from the column's
-:attr:`~pds4indextools.config.ColumnSpec.missing_value` instead, or left empty
-when that is unset (R-MISS-010, R-MISS-030).
+:attr:`~pds4indextools.config.ColumnSpec.missing_value` instead. When some
+label lacks a column's element and that column has no ``missing_value``, a
+string-typed column (a resolved type whose name contains ``String`` or
+``Text``) is filled with ``missing``; for any other type
+``run_generate_index_file`` raises one
+:exc:`~pds4indextools.errors.ConfigError` after scraping that lists every such
+column. ``missing_value: ''`` is allowed on a string-typed column with a
+warning and is a ``ConfigError`` on any other column (R-MISS-010,
+R-MISS-030).
 
 The ``output`` key
 ------------------
