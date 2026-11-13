@@ -39,20 +39,50 @@ through every label, gathers all the problems, and lists them together at the
 end. Note that even with ``--fail-slow``, if any label failed, no index is
 written; fix them all and rerun. See :doc:`running-it`.
 
-"A value looks wrong or empty"
-------------------------------
+"Some non-string columns are absent from some labels and set no missing_value"
+------------------------------------------------------------------------------
 
-*What you see:* the index builds fine, but a column is blank for some rows, or
-holds a value you did not expect.
+*What you see:* the run stops before writing anything, with a message that
+lists one or more columns with their data types, how many labels lack each
+one, and a few example label files.
 
-*What it means:* usually one of two things. Either the element that column
-points to is genuinely absent from those particular labels, in which case a
-blank cell is the honest answer, or the column address points at a slightly
-different place than you intended.
+*What it means:* each listed column is a number, date, or other non-text
+column that points to an element some labels do not contain, and the column
+does not say what to write in its place. (A text column in the same situation
+is simply filled with ``missing``.) Either the element really is absent from
+those labels, or the column address points at a slightly different place than
+you intended.
 
-*How to fix it:* first, check whether the labels with blank cells really
-contain that piece of information; if some do not, the blank is correct.
-Otherwise, re-check the column address against a label that *does* have the
+*How to fix it:* open one of the example labels and check whether it really
+lacks that piece of information. If it does, add a ``missing_value:`` to that
+column's entry; the message suggests one, such as ``'-998.0'`` for a real
+number. See :doc:`configuration-reference`. If the label *does* have it,
+re-check the column address against that label.
+
+"It says missing_value '' is only allowed for string columns"
+-------------------------------------------------------------
+
+*What you see:* the run stops before writing anything and lists columns that
+set ``missing_value: ''``.
+
+*What it means:* a blank cell is allowed only in a text column. The listed
+columns hold numbers, dates, or other formatted values.
+
+*How to fix it:* give each listed column a non-blank ``missing_value:``, such
+as ``'-999'``.
+
+"A value looks wrong"
+---------------------
+
+*What you see:* the index builds fine, but a column holds a value you did not
+expect, such as ``missing``.
+
+*What it means:* usually the column address points at a slightly different
+place than you intended, or the label lacks the element and the cell holds
+the placeholder: your ``missing_value:``, or ``missing`` for a text column
+that sets none.
+
+*How to fix it:* re-check the column address against a label that has the
 value. The surest way to get an address right is to let the index tool write it for
 you with ``generate_xpath_list`` and copy the exact line, rather than typing an
 address by hand. See :doc:`choosing-columns`.
