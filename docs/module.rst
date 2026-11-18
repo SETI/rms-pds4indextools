@@ -66,6 +66,8 @@ The package-level logger accessor is:
 
 .. autodata:: pds4indextools.schema_types.AUTO_COLUMN_TYPES
 
+.. autodata:: pds4indextools.schema_types.AUTO_COLUMN_DESCRIPTIONS
+
 ``scraper`` Submodule
 ---------------------
 

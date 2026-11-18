@@ -18,7 +18,7 @@ and the ``product_class`` literal (R-LBL-010); absolute-path enforcement for
 ``xsd_cache_dir`` (R-CFG-024/040); the ``columns`` list of
 :class:`~pds4indextools.config.ColumnSpec` entries with exactly-one-selector,
 auto-token, whitespace, charset, duplicate, and order rules (R-MAP-030/031,
-R-MAP-040/043, R-MAP-300/312/320, R-AUTO-001); and sort-key shape parsing
+R-MAP-040/043/044, R-MAP-300/312/320, R-AUTO-001); and sort-key shape parsing
 (R-SORT-010/020).
 """
 
@@ -34,6 +34,9 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictFloat,
+    StrictInt,
+    StrictStr,
     ValidationError,
     model_validator,
 )
@@ -160,6 +163,25 @@ def _validate_name_charset(name: str) -> None:
         raise ValueError(f'column name must not contain a comma: {name!r}')
     if '"' in name:
         raise ValueError(f'column name must not contain a double-quote: {name!r}')
+
+
+def _validate_missing_value_text(text: str) -> None:
+    """Enforce the R-MAP-044 charset on a rendered ``missing_value``.
+
+    Parameters:
+        text: The ``missing_value`` as it will be written into the CSV.
+
+    Raises:
+        ValueError: If ``text`` contains any character outside printable
+            ASCII (0x20-0x7E) or a double-quote.
+    """
+    for character in text:
+        if ord(character) < 0x20 or ord(character) > 0x7E:
+            raise ValueError(
+                f'missing_value contains a non-printable or non-ASCII character: {text!r}'
+            )
+    if '"' in text:
+        raise ValueError(f'missing_value must not contain a double-quote: {text!r}')
 
 
 def _reserved_label_content_keys() -> frozenset[str]:
@@ -345,8 +367,18 @@ class ColumnSpec(BaseModel):
             (:data:`~pds4indextools.config.AUTO_COLUMN_TOKENS`).
         name: The emitted CSV header; ``None`` or blank falls back to the
             selector text (R-MAP-012.1).
+        missing_value: The literal written into the cell when a label does
+            not contain the ``xpath`` element (R-MISS-030). When it is ``None``
+            (the default) and some label lacks the element, a string-typed
+            column is filled with ``missing`` and any other column makes
+            ``generate_index_file`` fail with a
+            :exc:`~pds4indextools.errors.ConfigError` (R-MISS-010). The empty
+            string ``''`` is accepted for a string-typed column only, with a
+            warning; whitespace-only text is rejected. Only valid on an
+            ``xpath`` entry. Numbers are written with :func:`str`, so quote
+            the value in YAML to control its exact text (e.g. ``'-999.'``).
 
-    Implements R-MAP-300, R-MAP-040, R-MAP-043, and R-AUTO-001.
+    Implements R-MAP-300, R-MAP-040, R-MAP-043, R-MAP-044, and R-AUTO-001.
     """
 
     model_config = ConfigDict(extra='forbid')
@@ -354,6 +386,7 @@ class ColumnSpec(BaseModel):
     xpath: str | None = None
     auto: str | None = None
     name: str | None = None
+    missing_value: StrictStr | StrictInt | StrictFloat | None = None
 
     @property
     def selector(self) -> str:
@@ -378,6 +411,17 @@ class ColumnSpec(BaseModel):
             return self.name.strip()
         return self.selector
 
+    @property
+    def missing_text(self) -> str:
+        """Return the cell text for a label that lacks this column's XPath.
+
+        Returns:
+            ``str(missing_value)`` when it is set, otherwise the empty string.
+            The caller decides what an unset value means for the column's data
+            type (R-MISS-010, R-MISS-030).
+        """
+        return '' if self.missing_value is None else str(self.missing_value)
+
     @model_validator(mode='after')
     def _validate_entry(self) -> 'ColumnSpec':
         """Enforce the per-entry selector, token, whitespace, and name rules."""
@@ -394,6 +438,18 @@ class ColumnSpec(BaseModel):
             raise ValueError(f'xpath selector must not contain whitespace: {self.xpath!r}')
         if self.name is not None and self.name.strip() != '':
             _validate_name_charset(self.name)
+        if self.missing_value is not None:
+            if has_auto:
+                raise ValueError(
+                    f"missing_value is only valid on an 'xpath' entry, not auto {self.auto!r}"
+                )
+            text = self.missing_text
+            if text != '' and text.strip() == '':
+                raise ValueError(
+                    "missing_value must not be only whitespace; use '' for a blank "
+                    'cell in a string column (R-MAP-044)'
+                )
+            _validate_missing_value_text(text)
         return self
 
 

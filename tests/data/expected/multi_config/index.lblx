@@ -58,14 +58,14 @@
                     <field_number>1</field_number>
                     <data_type>ASCII_LID</data_type>
                     <maximum_field_length unit="byte">35</maximum_field_length>
-                    <description>XPath: lid</description>
+                    <description>The logical identifier (LID) of the product described by the label.</description>
                 </Field_Delimited>
                 <Field_Delimited>
                     <name>FILE_NAME</name>
                     <field_number>2</field_number>
                     <data_type>ASCII_File_Name</data_type>
                     <maximum_field_length unit="byte">9</maximum_field_length>
-                    <description>XPath: filename</description>
+                    <description>The file name of the label.</description>
                 </Field_Delimited>
                 <Field_Delimited>
                     <name>TITLE</name>

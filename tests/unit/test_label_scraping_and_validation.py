@@ -108,11 +108,12 @@ class _StubResolver(SchemaTypeResolver):
         """
         self._data_type = data_type
 
-    def resolve(self, xpath_leaf_tag: str) -> str:
+    def resolve(self, xpath_leaf_tag: str, namespace_uri: str | None = None) -> str:
         """Return the fixed data type regardless of ``xpath_leaf_tag``.
 
         Parameters:
             xpath_leaf_tag: The canonical leaf tag being resolved (ignored).
+            namespace_uri: The leaf's namespace URI (ignored).
 
         Returns:
             The fixed data type supplied at construction.

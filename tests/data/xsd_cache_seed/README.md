@@ -9,8 +9,8 @@ schemas.
 
 `pds_v1_basic.xsd` serves both `PDS4_PDS_1L00.xsd` and
 `PDS4_PDS_1K00.xsd` fixture URLs; `geom_v1.xsd` / `rings_v1.xsd` serve
-the geom and rings URLs; `pds_v1_units.xsd` exercises the `_WO_Units`
-fallback. The mapping from fixture URL to seed file is
+the geom and rings URLs; `pds_v1_units.xsd` exercises following a `_WO_Units`
+wrapper to its restriction base. The mapping from fixture URL to seed file is
 `_FIXTURE_SCHEMA_URLS` in `tests/conftest.py` (mirrored by
 `scripts/generate_expected_outputs.py`).
 

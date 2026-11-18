@@ -58,21 +58,21 @@
                     <field_number>1</field_number>
                     <data_type>ASCII_LID</data_type>
                     <maximum_field_length unit="byte">38</maximum_field_length>
-                    <description>XPath: lid</description>
+                    <description>The logical identifier (LID) of the product described by the label.</description>
                 </Field_Delimited>
                 <Field_Delimited>
                     <name>filename</name>
                     <field_number>2</field_number>
                     <data_type>ASCII_File_Name</data_type>
                     <maximum_field_length unit="byte">6</maximum_field_length>
-                    <description>XPath: filename</description>
+                    <description>The file name of the label.</description>
                 </Field_Delimited>
                 <Field_Delimited>
                     <name>BUNDLE</name>
                     <field_number>3</field_number>
                     <data_type>ASCII_Text_Preserved</data_type>
                     <maximum_field_length unit="byte">13</maximum_field_length>
-                    <description>XPath: bundle_name</description>
+                    <description>The name of the bundle that contains the label.</description>
                 </Field_Delimited>
                 <Field_Delimited>
                     <name>pds:Product_Observational&lt;1&gt;/pds:Identification_Area&lt;1&gt;/pds:title&lt;1&gt;</name>

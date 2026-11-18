@@ -79,6 +79,7 @@ from pds4indextools.label_writer import (  # noqa: E402
     write_label,
 )
 from pds4indextools.schema_types import (  # noqa: E402
+    AUTO_COLUMN_DESCRIPTIONS,
     AUTO_COLUMN_TYPES,
     SchemaCache,
     SchemaTypeResolver,
@@ -87,6 +88,7 @@ from pds4indextools.scraper import ScrapeResult, scrape_label  # noqa: E402
 from pds4indextools.xpath_norm import canonicalize_xpath, renumber_xpaths  # noqa: E402
 
 __all__ = [
+    'AUTO_COLUMN_DESCRIPTIONS',
     'AUTO_COLUMN_TOKENS',
     'AUTO_COLUMN_TYPES',
     'EXIT_INTERNAL_ERROR',

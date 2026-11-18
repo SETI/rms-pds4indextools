@@ -54,8 +54,14 @@ It also writes ``index.lblx``. The field definition for the first column is::
         <field_number>1</field_number>
         <data_type>ASCII_LID</data_type>
         <maximum_field_length unit="byte">42</maximum_field_length>
-        <description>XPath: lid</description>
+        <description>The logical identifier (LID) of the product described by the label.</description>
     </Field_Delimited>
+
+An XPath column's ``<description>`` is the element's definition from the PDS4
+dictionary schema the data labels reference (for example, a ``pds:title``
+column is described by the ``title`` definition in the common dictionary). A
+column whose element no registered schema documents falls back to
+``XPath: <its xpath>``.
 
 Sorting the rows by title
 -------------------------

@@ -57,6 +57,21 @@ namespace prefix ``pds:``. Their one-sentence rationales, in the same order:
 21. An attribute that names its type directly.
 22. An element that names its type directly.
 
+The chain is run first against the schema of the leaf's own namespace, then
+against the other registered schemas, so two dictionaries that declare an
+element of the same local name (e.g. ``pds:sequence_number`` and
+``img:sequence_number``) each resolve to their own type. When the first match
+names an in-between type rather than a PDS4 base type, the chain is re-run on
+that type name in its own namespace until a base type is reached. A base type
+is one whose name starts with ``ASCII_`` or ``UTF8_`` (in the PDS4 dictionaries
+these are all defined in the ``pds:`` namespace). Two kinds of
+in-between type occur in the PDS4 dictionaries: the ``<tag>_WO_Units`` wrapper
+that a unit-bearing complexType extends (e.g.
+``rings:minimum_projected_sun_diameter_WO_Units`` becomes ``pds:ASCII_Real``)
+and a common-dictionary type reused by name (e.g. ``rings:comment`` is typed
+``pds:comment``, which becomes ``pds:ASCII_Text_Preserved``). A type that the
+registered schemas cannot follow further is returned as is.
+
 The base type is returned verbatim with its XSD namespace prefix (e.g.
 ``pds:ASCII_LID``); the consumer strips the prefix at label-write time per
 spec section 11.3.
@@ -84,6 +99,7 @@ from pds4indextools.errors import (
 )
 
 __all__ = [
+    'AUTO_COLUMN_DESCRIPTIONS',
     'AUTO_COLUMN_TYPES',
     'SchemaCache',
     'SchemaTypeResolver',
@@ -104,6 +120,11 @@ _PDS_PREFIX = 'pds:'
 # Advisory only (R-FS-005): schemes with a builtin adapter on the default
 # session. Other schemes succeed iff the caller registered an adapter.
 _URL_SCHEMES_WITH_BUILTIN_ADAPTERS: tuple[str, ...] = ('http', 'https', 'file')
+
+# Name prefixes of the PDS4 base types (``pds:ASCII_Real``, ``pds:UTF8_Text_Preserved``,
+# ...). ``resolve`` keeps following in-between types until it reaches a type
+# whose name starts with one of these (R-SCH-030).
+_BASE_TYPE_PREFIXES: tuple[str, ...] = ('ASCII_', 'UTF8_')
 
 # Default download timeout in seconds (R-SCH-010).
 _DEFAULT_TIMEOUT_SECONDS = 30.0
@@ -161,6 +182,54 @@ AUTO_COLUMN_TYPES: Mapping[str, str] = MappingProxyType(
         'bundle_name': 'pds:ASCII_Text_Preserved',
     }
 )
+
+
+# Fixed label descriptions for the auto-column tokens (spec section 8.2,
+# R-LBL-020); an auto column has no schema element to take a definition from.
+AUTO_COLUMN_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
+    {
+        'lid': 'The logical identifier (LID) of the product described by the label.',
+        'lidvid': 'The versioned logical identifier (LIDVID) of the product described by '
+        'the label.',
+        'filespec': 'The path of the label file, relative to the bundle root.',
+        'filename': 'The file name of the label.',
+        'bundle_name': 'The name of the bundle that contains the label.',
+    }
+)
+
+# Where a PDS4 dictionary records an element's definition: the
+# ``xs:annotation/xs:documentation`` of the simpleType or complexType named
+# after the element, or (rarely) of the element declaration itself.
+_DOCUMENTATION_QUERIES: tuple[str, ...] = (
+    ".//*[(local-name()='simpleType' or local-name()='complexType') and @name='{tag}']"
+    "/*[local-name()='annotation']/*[local-name()='documentation']",
+    ".//*[local-name()='element' and @name='{tag}']"
+    "/*[local-name()='annotation']/*[local-name()='documentation']",
+)
+
+
+def _xsd_documentation(xsd_tree: etree._Element, target_name: str) -> str | None:
+    """Return the definition an XSD records for ``target_name``, or ``None``.
+
+    Parameters:
+        xsd_tree: The parsed root of one XSD.
+        target_name: The element's local-name (no namespace prefix).
+
+    Returns:
+        The first non-blank ``xs:documentation`` text found by
+        ``_DOCUMENTATION_QUERIES``, with runs of whitespace collapsed to one
+        space, or ``None`` when the schema documents no such name.
+    """
+    for template in _DOCUMENTATION_QUERIES:
+        matches = xsd_tree.xpath(template.format(tag=target_name))
+        if not isinstance(matches, list):
+            continue
+        for match in matches:
+            if isinstance(match, etree._Element):
+                text = ' '.join(''.join(str(t) for t in match.itertext()).split())
+                if text:
+                    return text
+    return None
 
 
 def _xsd_query(
@@ -366,7 +435,8 @@ class SchemaTypeResolver:
     Holds the XSD trees registered for a single run and the namespace-to-URL
     bookkeeping that enforces R-SCH-040 (each namespace binds to exactly one
     schema URL per run). :meth:`resolve` runs the 22-query Appendix G chain
-    against every registered tree and returns the first non-empty match.
+    against the leaf's own namespace's tree first, then the others, and
+    follows any in-between type to a PDS4 base type.
 
     Parameters:
         cache: The :class:`~pds4indextools.schema_types.SchemaCache` used to
@@ -385,6 +455,7 @@ class SchemaTypeResolver:
         self._cache = cache
         self._trees: dict[str, etree._Element] = {}
         self._namespace_urls: dict[str, str] = {}
+        self._prefixes: dict[str, str] = {'pds': _PDS_NAMESPACE}
 
     def register_label(self, label_path: Path, root: etree._Element) -> None:
         """Register every ``.xsd`` URL declared in a label's ``xsi:schemaLocation``.
@@ -404,13 +475,19 @@ class SchemaTypeResolver:
 
         Each ``namespace-URI schema-URL`` pair whose URL ends in ``.xsd`` is
         downloaded (once) and parsed. The first label to declare a namespace
-        fixes its URL for the whole run (R-SCH-040).
+        fixes its URL for the whole run (R-SCH-040). The root's namespace
+        prefixes are recorded so :meth:`resolve` can map a prefixed leaf tag
+        to its own namespace's schema; the first binding of a prefix wins.
         """
         schema_location = root.get(f'{{{_XSI_NAMESPACE}}}schemaLocation')
         if schema_location is None or not schema_location.strip():
             raise SchemaResolutionError(
                 'no xsi:schemaLocation declared in label', file_path=label_path
             )
+
+        for prefix, uri in root.nsmap.items():
+            if prefix is not None:
+                self._prefixes.setdefault(prefix, uri)
 
         tokens = schema_location.split()
         for namespace_uri, url in zip(tokens[::2], tokens[1::2], strict=False):
@@ -426,12 +503,15 @@ class SchemaTypeResolver:
             if url not in self._trees:
                 self._trees[url] = self._cache.parse_xsd(url)
 
-    def resolve(self, xpath_leaf_tag: str) -> str:
+    def resolve(self, xpath_leaf_tag: str, namespace_uri: str | None = None) -> str:
         """Resolve an XPath leaf tag to its PDS4 base type.
 
         Parameters:
             xpath_leaf_tag: The canonical leaf tag (e.g. ``pds:logical_identifier``);
-                any namespace prefix is stripped before matching by local-name.
+                the local-name is matched against the schemas and the prefix
+                selects the leaf's own namespace.
+            namespace_uri: The leaf's namespace URI, when the caller knows it
+                (e.g. from the parsed element); it overrides the prefix.
 
         Returns:
             The base type recorded in the XSD, with its namespace prefix
@@ -442,19 +522,146 @@ class SchemaTypeResolver:
             SchemaResolutionError: If no registered XSD yields a base type for
                 the tag (R-SCH-050).
 
-        Runs the 22-query Appendix G chain against every registered tree in
-        registration order and returns the first non-empty match (R-SCH-030).
+        Runs the 22-query Appendix G chain against the schema of the leaf's
+        own namespace first and then the other registered trees in
+        registration order, and follows any in-between type to a PDS4 base
+        type (R-SCH-030).
         """
-        target_name = xpath_leaf_tag.rsplit(':', 1)[-1]
+        prefix, _, target_name = xpath_leaf_tag.rpartition(':')
+        if namespace_uri is None and prefix:
+            namespace_uri = self._namespace_for_prefix(prefix)
+        match = self._query_trees(target_name, self._tree_for_namespace(namespace_uri))
+        if match is None:
+            raise SchemaResolutionError(f'no PDS4 base type for {xpath_leaf_tag}')
+        result, tree = match
+
+        # The first match may name an in-between type instead of a base type:
+        # a ``<tag>_WO_Units`` wrapper (``rings:minimum_projected_sun_diameter_WO_Units``)
+        # or a common-dictionary type reused by name (``pds:comment``). Re-run
+        # the chain on that type in its own namespace until an ``ASCII_*`` or
+        # ``UTF8_*`` base type is reached. A type that cannot be followed
+        # further is returned unchanged.
+        seen: set[tuple[str | None, str]] = set()
+        while True:
+            type_prefix, _, type_name = result.rpartition(':')
+            type_uri = tree.nsmap.get(type_prefix or None)
+            if type_prefix == '' and type_uri is None:
+                type_uri = tree.get('targetNamespace')
+            if type_uri == _XS_NAMESPACE:
+                break
+            if type_name.startswith(_BASE_TYPE_PREFIXES):
+                break
+            if (type_uri, type_name) in seen:
+                break
+            seen.add((type_uri, type_name))
+            type_tree = self._tree_for_namespace(type_uri)
+            match = self._query_trees(type_name, tree if type_tree is None else type_tree)
+            if match is None:
+                break
+            result, tree = match
+        return result
+
+    def describe(self, xpath_leaf_tag: str, namespace_uri: str | None = None) -> str | None:
+        """Return the dictionary definition of an XPath leaf element.
+
+        Parameters:
+            xpath_leaf_tag: The canonical leaf tag (e.g. ``rings:background_signal``);
+                the prefix selects the leaf's own namespace, as in :meth:`resolve`.
+            namespace_uri: The leaf's namespace URI, when the caller knows it;
+                it overrides the prefix.
+
+        Returns:
+            The ``xs:documentation`` text the registered schemas give for the
+            element, with whitespace collapsed, or ``None`` if none of them
+            documents it. The schema of the leaf's own namespace is searched
+            first, then the others in registration order, so an element that
+            reuses a common-dictionary type (``rings:comment`` is typed
+            ``pds:comment``) gets the common dictionary's definition.
+
+        Implements R-LBL-020.
+        """
+        prefix, _, target_name = xpath_leaf_tag.rpartition(':')
+        if namespace_uri is None and prefix:
+            namespace_uri = self._namespace_for_prefix(prefix)
+        own = self._tree_for_namespace(namespace_uri)
+        trees = list(self._trees.values())
+        if own is not None:
+            trees = [own] + [t for t in trees if t is not own]
+        for tree in trees:
+            text = _xsd_documentation(tree, target_name)
+            if text is not None:
+                return text
+        return None
+
+    def _namespace_for_prefix(self, prefix: str) -> str | None:
+        """Return the namespace URI bound to ``prefix``, or ``None`` if unknown.
+
+        Parameters:
+            prefix: A namespace prefix from a canonical XPath (e.g. ``rings``).
+
+        Returns:
+            The URI the labels bind ``prefix`` to, else the URI a registered
+            schema binds it to, else ``None``.
+        """
+        uri = self._prefixes.get(prefix)
+        if uri is not None:
+            return uri
         for tree in self._trees.values():
+            uri = tree.nsmap.get(prefix)
+            if uri is not None:
+                return uri
+        return None
+
+    def _tree_for_namespace(self, namespace_uri: str | None) -> etree._Element | None:
+        """Return the registered schema whose namespace is ``namespace_uri``.
+
+        Parameters:
+            namespace_uri: A namespace URI, or ``None``.
+
+        Returns:
+            The tree registered for that namespace's schema URL, else a
+            registered tree whose ``targetNamespace`` is ``namespace_uri``,
+            else ``None``.
+        """
+        if namespace_uri is None:
+            return None
+        url = self._namespace_urls.get(namespace_uri)
+        if url is not None and url in self._trees:
+            return self._trees[url]
+        for tree in self._trees.values():
+            if tree.get('targetNamespace') == namespace_uri:
+                return tree
+        return None
+
+    def _query_trees(
+        self,
+        target_name: str,
+        preferred: etree._Element | None,
+    ) -> tuple[str, etree._Element] | None:
+        """Run the query chain over the registered trees and return the first match.
+
+        Parameters:
+            target_name: The local-name to resolve (no namespace prefix).
+            preferred: A tree to search before the others (the schema of the
+                name's own namespace), or ``None`` to search in registration
+                order only.
+
+        Returns:
+            ``(base_type, tree)`` for the first non-empty match, or ``None``
+            if no registered tree yields a type.
+        """
+        trees = list(self._trees.values())
+        if preferred is not None:
+            trees = [preferred] + [t for t in trees if t is not preferred]
+        for tree in trees:
             namespaces = {'xs': _XS_NAMESPACE, 'pds': _PDS_NAMESPACE}
             for prefix, uri in tree.nsmap.items():
                 if prefix is not None:
                     namespaces[prefix] = uri
             result = _xsd_query(tree, target_name, namespaces)
             if result is not None:
-                return result
-        raise SchemaResolutionError(f'no PDS4 base type for {xpath_leaf_tag}')
+                return result, tree
+        return None
 
     def auto_column_type(self, token: str) -> str:
         """Return the fixed PDS4 type for one of the five auto-column tokens.

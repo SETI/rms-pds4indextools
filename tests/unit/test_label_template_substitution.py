@@ -139,7 +139,7 @@ def _make_inputs(
 
 _ONE_XPATH_COLUMN = [_Column('lid_col', '<lid>', 'pds:ASCII_LID', 21)]
 
-_SEVEN_KEYS = {
+_FIELD_KEYS = {
     'name',
     'field_number',
     'field_location',
@@ -147,6 +147,7 @@ _SEVEN_KEYS = {
     'field_length',
     'maximum_field_length',
     'xpath',
+    'description',
 }
 
 
@@ -174,8 +175,8 @@ def test_build_substitution_dict_field_content_one_entry_per_column() -> None:
     assert len(field_content) == 2
 
 
-def test_build_substitution_dict_field_content_each_entry_has_seven_keys() -> None:
-    """T-LBL-011, R-LBL-020: each ``Field_Content`` entry has exactly 7 keys."""
+def test_build_substitution_dict_field_content_each_entry_has_eight_keys() -> None:
+    """T-LBL-011, R-LBL-020: each ``Field_Content`` entry has exactly 8 keys."""
     columns = [
         _Column('a', '<a>', 'pds:ASCII_LID', 3),
         _Column('b', '<b>', 'pds:ASCII_Real', 5),
@@ -183,7 +184,25 @@ def test_build_substitution_dict_field_content_each_entry_has_seven_keys() -> No
     result = build_substitution_dict(**_make_inputs(columns))
     field_content = cast(list[dict[str, object]], result['Field_Content'])
     for entry in field_content:
-        assert set(entry.keys()) == _SEVEN_KEYS
+        assert set(entry.keys()) == _FIELD_KEYS
+
+
+def test_build_substitution_dict_description_defaults_to_xpath() -> None:
+    """R-LBL-020: without descriptions, ``description`` is ``XPath: <xpath>``."""
+    columns = [_Column('a', '<a>', 'pds:ASCII_LID', 3)]
+    result = build_substitution_dict(**_make_inputs(columns))
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    assert field_content[0]['description'] == 'XPath: <a>'
+
+
+def test_build_substitution_dict_description_uses_supplied_text() -> None:
+    """R-LBL-020: a supplied column description is used verbatim."""
+    columns = [_Column('a', '<a>', 'pds:ASCII_LID', 3)]
+    result = build_substitution_dict(
+        **_make_inputs(columns), column_descriptions={'a': 'The a attribute.'}
+    )
+    field_content = cast(list[dict[str, object]], result['Field_Content'])
+    assert field_content[0]['description'] == 'The a attribute.'
 
 
 def test_build_substitution_dict_field_content_field_number_and_name() -> None:

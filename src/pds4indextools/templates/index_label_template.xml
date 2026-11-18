@@ -182,7 +182,7 @@ $IF(Table_Character)
                     <field_location unit="byte">$field['field_location']$</field_location>
                     <data_type>$field['data_type']$</data_type>
                     <field_length unit="byte">$field['field_length']$</field_length>
-                    <description>XPath: $field['xpath']$</description>
+                    <description>$field['description']$</description>
                 </Field_Character>
             $END_FOR
             </record_character>
@@ -207,7 +207,7 @@ $IF(Table_Delimited)
                     <field_number>$field['field_number']$</field_number>
                     <data_type>$field['data_type']$</data_type>
                     <maximum_field_length unit="byte">$field['maximum_field_length']$</maximum_field_length>
-                    <description>XPath: $field['xpath']$</description>
+                    <description>$field['description']$</description>
                 </Field_Delimited>
             $END_FOR
             </Record_Delimited>

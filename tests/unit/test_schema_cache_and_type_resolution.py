@@ -32,6 +32,7 @@ from pds4indextools.errors import (
     SchemaVersionError,
 )
 from pds4indextools.schema_types import (
+    AUTO_COLUMN_DESCRIPTIONS,
     AUTO_COLUMN_TYPES,
     SchemaCache,
     SchemaTypeResolver,
@@ -294,25 +295,277 @@ def test_typeresolver_basic_resolution_logical_identifier(
     assert resolver.resolve('logical_identifier') == 'pds:ASCII_LID'
 
 
-def test_typeresolver_unit_aware_wo_units_fallback(isolated_xsd_cache: Path) -> None:
-    """R-SCH-030: a ``_WO_Units`` complexType resolves through the extension/base chain.
+def test_typeresolver_unit_aware_wo_units_follows_restriction_base(
+    isolated_xsd_cache: Path,
+) -> None:
+    """R-SCH-030: a ``_WO_Units`` wrapper is followed to its restriction base.
 
     ``Wavelength_Range`` is a named complexType whose ``xs:simpleContent`` wraps an
-    ``xs:extension base="pds:Wavelength_Range_WO_Units"``. That base is returned by
-    Appendix G query #1
-    (``.//xs:complexType[@name='{tag}']//xs:extension/@base``): its ``//`` descendant
-    step reaches the simpleContent-nested extension, so query #1 is the FIRST
-    non-empty match and DECIDES this case. This test therefore verifies the
-    named-complexType extension/base resolution -- it does NOT reach the deeper
-    simpleContent slots (queries 13-17), which query #1 subsumes for this shape.
-    The deep tail (a non-query-1 slot) is exercised by
-    ``test_typeresolver_deep_query_direct_element_type_decides`` below.
+    ``xs:extension base="pds:Wavelength_Range_WO_Units"``. Appendix G query #1
+    (``.//xs:complexType[@name='{tag}']//xs:extension/@base``) matches that wrapper
+    first. Because the name ends in ``_WO_Units``, the resolver re-runs the chain on
+    it; query #4 then finds the named simpleType's ``xs:restriction
+    base="pds:ASCII_Real"``, which is the recorded type.
     """
     _seed_cache(isolated_xsd_cache, PDS_URL, 'pds_v1_units.xsd')
     resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
     resolver.register_label(Path('label.xml'), _label_root(f'{NS_PDS} {PDS_URL}'))
 
-    assert resolver.resolve('pds:Wavelength_Range') == 'pds:Wavelength_Range_WO_Units'
+    assert resolver.resolve('pds:Wavelength_Range') == 'pds:ASCII_Real'
+
+
+def test_typeresolver_wo_units_cross_namespace_resolves_to_pds_base(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-SCH-030: a discipline ``_WO_Units`` wrapper resolves to its ``pds:`` base.
+
+    Mirrors the real rings schema: ``rings:minimum_projected_sun_diameter`` extends
+    ``rings:minimum_projected_sun_diameter_WO_Units``, which restricts
+    ``pds:ASCII_Real``. The label's ``data_type`` must be ``ASCII_Real``, not the
+    wrapper name.
+    """
+    ns_rings = 'http://pds.nasa.gov/pds4/rings/v1'
+    xsd_path = tmp_path / 'rings_units.xsd'
+    xsd_path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:pds="{NS_PDS}" xmlns:rings="{ns_rings}"\n'
+        f'           targetNamespace="{ns_rings}" elementFormDefault="qualified">\n'
+        '  <xs:simpleType name="minimum_projected_sun_diameter_WO_Units">\n'
+        '    <xs:restriction base="pds:ASCII_Real">\n'
+        '      <xs:minInclusive value="-1.7976931348623157e308"/>\n'
+        '      <xs:maxInclusive value="1.7976931348623157e308"/>\n'
+        '    </xs:restriction>\n'
+        '  </xs:simpleType>\n'
+        '  <xs:complexType name="minimum_projected_sun_diameter">\n'
+        '    <xs:simpleContent>\n'
+        '      <xs:extension base="rings:minimum_projected_sun_diameter_WO_Units">\n'
+        '        <xs:attribute name="unit" type="pds:Units_of_Length" use="required"/>\n'
+        '      </xs:extension>\n'
+        '    </xs:simpleContent>\n'
+        '  </xs:complexType>\n'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(Path('label.xml'), _label_root(f'{ns_rings} {xsd_path.as_uri()}'))
+
+    assert resolver.resolve('rings:minimum_projected_sun_diameter') == 'pds:ASCII_Real'
+
+
+def test_typeresolver_wo_units_unfollowable_wrapper_returned_unchanged(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-SCH-030: a ``_WO_Units`` wrapper with no registered definition is kept."""
+    xsd_path = tmp_path / 'dangling_units.xsd'
+    xsd_path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:pds="{NS_PDS}"\n'
+        f'           targetNamespace="{NS_PDS}" elementFormDefault="qualified">\n'
+        '  <xs:complexType name="dangling">\n'
+        '    <xs:simpleContent>\n'
+        '      <xs:extension base="pds:dangling_WO_Units"/>\n'
+        '    </xs:simpleContent>\n'
+        '  </xs:complexType>\n'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(Path('label.xml'), _label_root(f'{NS_PDS} {xsd_path.as_uri()}'))
+
+    assert resolver.resolve('pds:dangling') == 'pds:dangling_WO_Units'
+
+
+def _write_xsd(path: Path, target_ns: str, prefix: str, body: str) -> str:
+    """Write a minimal XSD for ``target_ns`` and return its ``file://`` URL.
+
+    Parameters:
+        path: Where to write the schema.
+        target_ns: The schema's ``targetNamespace``.
+        prefix: The prefix the schema binds ``target_ns`` to.
+        body: The schema's top-level declarations.
+
+    Returns:
+        The schema's ``file://`` URL, for an ``xsi:schemaLocation`` entry.
+    """
+    own = '' if prefix == 'pds' else f' xmlns:{prefix}="{target_ns}"'
+    path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"\n'
+        f'           xmlns:pds="{NS_PDS}"{own}\n'
+        f'           targetNamespace="{target_ns}" elementFormDefault="qualified">\n'
+        f'{body}'
+        '</xs:schema>\n',
+        encoding='utf-8',
+    )
+    return path.as_uri()
+
+
+_PDS_REUSE_BODY = (
+    '  <xs:simpleType name="ASCII_Text_Preserved">\n'
+    '    <xs:restriction base="xs:string"/>\n'
+    '  </xs:simpleType>\n'
+    '  <xs:simpleType name="ASCII_NonNegative_Integer">\n'
+    '    <xs:restriction base="xs:nonNegativeInteger"/>\n'
+    '  </xs:simpleType>\n'
+    '  <xs:simpleType name="comment">\n'
+    '    <xs:restriction base="pds:ASCII_Text_Preserved"/>\n'
+    '  </xs:simpleType>\n'
+    '  <xs:element name="comment" type="pds:comment"/>\n'
+    '  <xs:element name="sequence_number" type="pds:ASCII_NonNegative_Integer"/>\n'
+)
+NS_RINGS = 'http://pds.nasa.gov/pds4/rings/v1'
+NS_IMG = 'http://pds.nasa.gov/pds4/img/v1'
+
+
+@pytest.mark.parametrize('rings_first', [False, True])
+def test_typeresolver_follows_reused_common_type_in_any_order(
+    isolated_xsd_cache: Path, tmp_path: Path, rings_first: bool
+) -> None:
+    """R-SCH-030: an element typed by a reused ``pds:`` type resolves to its base.
+
+    Mirrors the real rings schema, which declares ``<xs:element name="comment"
+    type="pds:comment"/>`` without defining ``pds:comment``. The pds schema
+    defines ``pds:comment`` as a restriction of ``pds:ASCII_Text_Preserved``.
+    The result is the base type whichever schema the label lists first; before
+    in-between types were followed, listing rings first gave ``pds:comment``.
+    """
+    pds_url = _write_xsd(tmp_path / 'pds.xsd', NS_PDS, 'pds', _PDS_REUSE_BODY)
+    rings_url = _write_xsd(
+        tmp_path / 'rings.xsd',
+        NS_RINGS,
+        'rings',
+        '  <xs:element name="comment" type="pds:comment"/>\n',
+    )
+    pairs = [f'{NS_PDS} {pds_url}', f'{NS_RINGS} {rings_url}']
+    if rings_first:
+        pairs.reverse()
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(Path('label.xml'), _label_root(' '.join(pairs)))
+
+    assert resolver.resolve('rings:comment') == 'pds:ASCII_Text_Preserved'
+
+
+def test_typeresolver_same_local_name_resolves_in_own_namespace(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-SCH-030: same-named elements in two dictionaries keep their own types.
+
+    Mirrors the real schemas: ``pds:sequence_number`` is an
+    ``ASCII_NonNegative_Integer`` while ``img:sequence_number`` restricts
+    ``pds:ASCII_Short_String_Collapsed``. Searching by local name alone in
+    registration order gave the img element the pds type.
+    """
+    pds_url = _write_xsd(tmp_path / 'pds.xsd', NS_PDS, 'pds', _PDS_REUSE_BODY)
+    img_url = _write_xsd(
+        tmp_path / 'img.xsd',
+        NS_IMG,
+        'img',
+        '  <xs:simpleType name="sequence_number">\n'
+        '    <xs:restriction base="pds:ASCII_Short_String_Collapsed"/>\n'
+        '  </xs:simpleType>\n'
+        '  <xs:element name="sequence_number" type="img:sequence_number"/>\n',
+    )
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(
+        Path('label.xml'), _label_root(f'{NS_PDS} {pds_url} {NS_IMG} {img_url}')
+    )
+
+    assert resolver.resolve('pds:sequence_number') == 'pds:ASCII_NonNegative_Integer'
+    assert resolver.resolve('img:sequence_number') == 'pds:ASCII_Short_String_Collapsed'
+    assert (
+        resolver.resolve('sequence_number', namespace_uri=NS_IMG)
+        == 'pds:ASCII_Short_String_Collapsed'
+    )
+
+
+def test_typeresolver_type_cycle_stops(isolated_xsd_cache: Path, tmp_path: Path) -> None:
+    """R-SCH-030: in-between types that refer back to each other do not loop forever."""
+    url = _write_xsd(
+        tmp_path / 'cycle.xsd',
+        NS_PDS,
+        'pds',
+        '  <xs:simpleType name="loop_a"><xs:restriction base="pds:loop_b"/></xs:simpleType>\n'
+        '  <xs:simpleType name="loop_b"><xs:restriction base="pds:loop_a"/></xs:simpleType>\n'
+        '  <xs:element name="cyclic" type="pds:loop_a"/>\n',
+    )
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(Path('label.xml'), _label_root(f'{NS_PDS} {url}'))
+
+    assert resolver.resolve('pds:cyclic') in {'pds:loop_a', 'pds:loop_b'}
+
+
+_DOC_PDS_BODY = (
+    '  <xs:simpleType name="comment">\n'
+    '    <xs:annotation>\n'
+    '      <xs:documentation>The comment attribute is a\n'
+    '        character string expressing one or more remarks.</xs:documentation>\n'
+    '    </xs:annotation>\n'
+    '    <xs:restriction base="pds:ASCII_Text_Preserved"/>\n'
+    '  </xs:simpleType>\n'
+    '  <xs:element name="comment" type="pds:comment"/>\n'
+    '  <xs:element name="undocumented" type="pds:ASCII_Real"/>\n'
+)
+_DOC_RINGS_BODY = (
+    '  <xs:complexType name="background_signal">\n'
+    '    <xs:annotation>\n'
+    '      <xs:documentation>background_signal indicates the anticipated\n'
+    '        signal.</xs:documentation>\n'
+    '    </xs:annotation>\n'
+    '    <xs:simpleContent>\n'
+    '      <xs:extension base="rings:background_signal_WO_Units"/>\n'
+    '    </xs:simpleContent>\n'
+    '  </xs:complexType>\n'
+    '  <xs:element name="background_signal" type="rings:background_signal"/>\n'
+    '  <xs:element name="comment" type="pds:comment"/>\n'
+)
+
+
+def _doc_resolver(isolated_xsd_cache: Path, tmp_path: Path) -> SchemaTypeResolver:
+    """Return a resolver over a documented pds schema and a rings schema."""
+    pds_url = _write_xsd(tmp_path / 'pds_doc.xsd', NS_PDS, 'pds', _DOC_PDS_BODY)
+    rings_url = _write_xsd(tmp_path / 'rings_doc.xsd', NS_RINGS, 'rings', _DOC_RINGS_BODY)
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(
+        Path('label.xml'), _label_root(f'{NS_RINGS} {rings_url} {NS_PDS} {pds_url}')
+    )
+    return resolver
+
+
+def test_describe_returns_type_documentation_with_whitespace_collapsed(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-LBL-020: the element's definition comes from its type's xs:documentation."""
+    resolver = _doc_resolver(isolated_xsd_cache, tmp_path)
+    assert resolver.describe('rings:background_signal') == (
+        'background_signal indicates the anticipated signal.'
+    )
+
+
+def test_describe_reused_common_type_uses_common_definition(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-LBL-020: ``rings:comment`` (typed ``pds:comment``) gets the pds definition."""
+    resolver = _doc_resolver(isolated_xsd_cache, tmp_path)
+    expected = 'The comment attribute is a character string expressing one or more remarks.'
+    assert resolver.describe('rings:comment') == expected
+    assert resolver.describe('comment', namespace_uri=NS_PDS) == expected
+
+
+def test_describe_undocumented_element_returns_none(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-LBL-020: an element no schema documents has no description."""
+    resolver = _doc_resolver(isolated_xsd_cache, tmp_path)
+    assert resolver.describe('pds:undocumented') is None
+    assert resolver.describe('pds:no_such_element') is None
+
+
+def test_auto_column_descriptions_cover_every_auto_token() -> None:
+    """R-LBL-020, R-AUTO-001: every auto token has a fixed description."""
+    assert set(AUTO_COLUMN_DESCRIPTIONS) == set(AUTO_COLUMN_TYPES)
+    assert all(text.strip() for text in AUTO_COLUMN_DESCRIPTIONS.values())
 
 
 def test_typeresolver_deep_query_direct_element_type_decides(
