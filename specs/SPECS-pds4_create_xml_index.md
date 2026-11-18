@@ -889,7 +889,7 @@ PdsTemplate documentation; do not duplicate effort").
 ### 14.3 `Field_Content` shape
 
 - **R-LBL-020** Each entry of the `Field_Content` list passed to
-  PdsTemplate is a dict with EXACTLY the following seven keys:
+  PdsTemplate is a dict with EXACTLY the following eight keys:
 
   - `name` — the column header as it appears in the CSV (the short name
     from the mapping, or the auto-column rename, or the raw canonical
@@ -908,6 +908,18 @@ PdsTemplate documentation; do not duplicate effort").
   - `xpath` — the original raw canonical XPath (or the auto-column
     token); available for templates that wish to embed traceability
     info in `<description>`.
+  - `description` — the text the packaged template writes into the
+    field's `<description>`. For an XPath column it is the element's
+    definition: the `xs:annotation/xs:documentation` of the simpleType or
+    complexType named after the leaf element (else of the element
+    declaration), with runs of whitespace collapsed to one space. The
+    schema of the leaf's own namespace is searched first, then the other
+    registered schemas, so an element that reuses a common-dictionary type
+    (e.g. `rings:comment`, typed `pds:comment`) gets the common
+    definition. When no registered schema documents the element it is
+    `XPath: <xpath>`. For an auto column it is a fixed sentence per token
+    (`AUTO_COLUMN_DESCRIPTIONS`), e.g. `lid` → "The logical identifier
+    (LID) of the product described by the label."
 
 ### 14.4 PdsTemplate invocation
 
@@ -1684,7 +1696,7 @@ namespace-prefixed by the module they primarily exercise. Every
 | T-LBL-001 | Default template is found and rendered | R-LBL-001, R-LBL-040 |
 | T-LBL-002 | `--label-template path/to/custom.xml` is honored | R-LBL-002 |
 | T-LBL-010 | `Field_Content` populated with one entry per output column | R-LBL-020 |
-| T-LBL-011 | Each `Field_Content` entry has all 7 keys | R-LBL-020 |
+| T-LBL-011 | Each `Field_Content` entry has all 8 keys; `description` is the element definition, `XPath: <xpath>` when undocumented, or the fixed auto-column text | R-LBL-020 |
 | T-LBL-020 | `product_class=Product_Ancillary` produces `<Product_Ancillary>` root | R-LBL-010 |
 | T-LBL-021 | `product_class=Product_Metadata_Supplemental` produces `<Product_Metadata_Supplemental>` root | R-LBL-010 |
 | T-LBL-022 | `product_class` value other than the two allowed literals rejected at config-validation time (pydantic Literal enforcement) | R-LBL-010, R-LBL-011 |

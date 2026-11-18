@@ -98,8 +98,9 @@ def _build_field_content(
     plan: CsvWritePlan,
     column_types: Mapping[str, str],
     column_xpaths: Mapping[str, str],
+    column_descriptions: Mapping[str, str] | None,
 ) -> list[dict[str, object]]:
-    """Build the ``Field_Content`` list, one seven-key dict per output column.
+    """Build the ``Field_Content`` list, one eight-key dict per output column.
 
     Parameters:
         column_specs: The per-column selectors, parallel to ``plan.columns``
@@ -110,9 +111,12 @@ def _build_field_content(
             data type (possibly namespace-prefixed).
         column_xpaths: Maps each emitted column header to its raw canonical
             XPath or its auto-column token.
+        column_descriptions: Maps each emitted column header to its label
+            ``<description>`` text, or ``None`` to use ``XPath: <xpath>`` for
+            every column.
 
     Returns:
-        A list of dicts each carrying exactly the seven ``Field_Content`` keys
+        A list of dicts each carrying exactly the eight ``Field_Content`` keys
         of R-LBL-020. ``field_location`` is the 1-based byte offset in
         fixed-width mode (``1 + sum(widths[:index]) + index``, one comma byte
         between columns) or the 1-based column position when delimited.
@@ -135,6 +139,11 @@ def _build_field_content(
                 'field_length': stat.max_byte_length,
                 'maximum_field_length': stat.max_byte_length,
                 'xpath': column_xpaths[header],
+                'description': (
+                    f'XPath: {column_xpaths[header]}'
+                    if column_descriptions is None
+                    else column_descriptions[header]
+                ),
             }
         )
     return field_content
@@ -191,6 +200,7 @@ def build_substitution_dict(
     column_types: Mapping[str, str],
     column_xpaths: Mapping[str, str],
     csv_absolute_path: Path,
+    column_descriptions: Mapping[str, str] | None = None,
 ) -> dict[str, object]:
     """Assemble the full PdsTemplate substitution dictionary.
 
@@ -217,6 +227,9 @@ def build_substitution_dict(
         csv_absolute_path: The absolute path of the just-written CSV, used for
             ``index_file_name`` and the template's ``$FILE_MD5``/``$FILE_ZULU``
             macros.
+        column_descriptions: Maps each emitted column header to its label
+            ``<description>`` text (the element's dictionary definition), or
+            ``None`` to describe every column as ``XPath: <xpath>``.
 
     Returns:
         The substitution mapping ready for :func:`write_label`.
@@ -240,6 +253,7 @@ def build_substitution_dict(
         plan=plan,
         column_types=column_types,
         column_xpaths=column_xpaths,
+        column_descriptions=column_descriptions,
     )
     base_variables: dict[str, object] = {
         'index_file_name': str(csv_absolute_path),

@@ -32,6 +32,7 @@ from pds4indextools.errors import (
     SchemaVersionError,
 )
 from pds4indextools.schema_types import (
+    AUTO_COLUMN_DESCRIPTIONS,
     AUTO_COLUMN_TYPES,
     SchemaCache,
     SchemaTypeResolver,
@@ -493,6 +494,78 @@ def test_typeresolver_type_cycle_stops(isolated_xsd_cache: Path, tmp_path: Path)
     resolver.register_label(Path('label.xml'), _label_root(f'{NS_PDS} {url}'))
 
     assert resolver.resolve('pds:cyclic') in {'pds:loop_a', 'pds:loop_b'}
+
+
+_DOC_PDS_BODY = (
+    '  <xs:simpleType name="comment">\n'
+    '    <xs:annotation>\n'
+    '      <xs:documentation>The comment attribute is a\n'
+    '        character string expressing one or more remarks.</xs:documentation>\n'
+    '    </xs:annotation>\n'
+    '    <xs:restriction base="pds:ASCII_Text_Preserved"/>\n'
+    '  </xs:simpleType>\n'
+    '  <xs:element name="comment" type="pds:comment"/>\n'
+    '  <xs:element name="undocumented" type="pds:ASCII_Real"/>\n'
+)
+_DOC_RINGS_BODY = (
+    '  <xs:complexType name="background_signal">\n'
+    '    <xs:annotation>\n'
+    '      <xs:documentation>background_signal indicates the anticipated\n'
+    '        signal.</xs:documentation>\n'
+    '    </xs:annotation>\n'
+    '    <xs:simpleContent>\n'
+    '      <xs:extension base="rings:background_signal_WO_Units"/>\n'
+    '    </xs:simpleContent>\n'
+    '  </xs:complexType>\n'
+    '  <xs:element name="background_signal" type="rings:background_signal"/>\n'
+    '  <xs:element name="comment" type="pds:comment"/>\n'
+)
+
+
+def _doc_resolver(isolated_xsd_cache: Path, tmp_path: Path) -> SchemaTypeResolver:
+    """Return a resolver over a documented pds schema and a rings schema."""
+    pds_url = _write_xsd(tmp_path / 'pds_doc.xsd', NS_PDS, 'pds', _DOC_PDS_BODY)
+    rings_url = _write_xsd(tmp_path / 'rings_doc.xsd', NS_RINGS, 'rings', _DOC_RINGS_BODY)
+    resolver = SchemaTypeResolver(SchemaCache(isolated_xsd_cache))
+    resolver.register_label(
+        Path('label.xml'), _label_root(f'{NS_RINGS} {rings_url} {NS_PDS} {pds_url}')
+    )
+    return resolver
+
+
+def test_describe_returns_type_documentation_with_whitespace_collapsed(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-LBL-020: the element's definition comes from its type's xs:documentation."""
+    resolver = _doc_resolver(isolated_xsd_cache, tmp_path)
+    assert resolver.describe('rings:background_signal') == (
+        'background_signal indicates the anticipated signal.'
+    )
+
+
+def test_describe_reused_common_type_uses_common_definition(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-LBL-020: ``rings:comment`` (typed ``pds:comment``) gets the pds definition."""
+    resolver = _doc_resolver(isolated_xsd_cache, tmp_path)
+    expected = 'The comment attribute is a character string expressing one or more remarks.'
+    assert resolver.describe('rings:comment') == expected
+    assert resolver.describe('comment', namespace_uri=NS_PDS) == expected
+
+
+def test_describe_undocumented_element_returns_none(
+    isolated_xsd_cache: Path, tmp_path: Path
+) -> None:
+    """R-LBL-020: an element no schema documents has no description."""
+    resolver = _doc_resolver(isolated_xsd_cache, tmp_path)
+    assert resolver.describe('pds:undocumented') is None
+    assert resolver.describe('pds:no_such_element') is None
+
+
+def test_auto_column_descriptions_cover_every_auto_token() -> None:
+    """R-LBL-020, R-AUTO-001: every auto token has a fixed description."""
+    assert set(AUTO_COLUMN_DESCRIPTIONS) == set(AUTO_COLUMN_TYPES)
+    assert all(text.strip() for text in AUTO_COLUMN_DESCRIPTIONS.values())
 
 
 def test_typeresolver_deep_query_direct_element_type_decides(

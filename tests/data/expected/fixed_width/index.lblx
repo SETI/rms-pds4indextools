@@ -57,7 +57,7 @@
                     <field_location unit="byte">1</field_location>
                     <data_type>ASCII_LID</data_type>
                     <field_length unit="byte">35</field_length>
-                    <description>XPath: lid</description>
+                    <description>The logical identifier (LID) of the product described by the label.</description>
                 </Field_Character>
                 <Field_Character>
                     <name>FILE_NAME</name>
@@ -65,7 +65,7 @@
                     <field_location unit="byte">37</field_location>
                     <data_type>ASCII_File_Name</data_type>
                     <field_length unit="byte">9</field_length>
-                    <description>XPath: filename</description>
+                    <description>The file name of the label.</description>
                 </Field_Character>
                 <Field_Character>
                     <name>TITLE</name>

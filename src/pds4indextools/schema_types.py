@@ -99,6 +99,7 @@ from pds4indextools.errors import (
 )
 
 __all__ = [
+    'AUTO_COLUMN_DESCRIPTIONS',
     'AUTO_COLUMN_TYPES',
     'SchemaCache',
     'SchemaTypeResolver',
@@ -181,6 +182,54 @@ AUTO_COLUMN_TYPES: Mapping[str, str] = MappingProxyType(
         'bundle_name': 'pds:ASCII_Text_Preserved',
     }
 )
+
+
+# Fixed label descriptions for the auto-column tokens (spec section 8.2,
+# R-LBL-020); an auto column has no schema element to take a definition from.
+AUTO_COLUMN_DESCRIPTIONS: Mapping[str, str] = MappingProxyType(
+    {
+        'lid': 'The logical identifier (LID) of the product described by the label.',
+        'lidvid': 'The versioned logical identifier (LIDVID) of the product described by '
+        'the label.',
+        'filespec': 'The path of the label file, relative to the bundle root.',
+        'filename': 'The file name of the label.',
+        'bundle_name': 'The name of the bundle that contains the label.',
+    }
+)
+
+# Where a PDS4 dictionary records an element's definition: the
+# ``xs:annotation/xs:documentation`` of the simpleType or complexType named
+# after the element, or (rarely) of the element declaration itself.
+_DOCUMENTATION_QUERIES: tuple[str, ...] = (
+    ".//*[(local-name()='simpleType' or local-name()='complexType') and @name='{tag}']"
+    "/*[local-name()='annotation']/*[local-name()='documentation']",
+    ".//*[local-name()='element' and @name='{tag}']"
+    "/*[local-name()='annotation']/*[local-name()='documentation']",
+)
+
+
+def _xsd_documentation(xsd_tree: etree._Element, target_name: str) -> str | None:
+    """Return the definition an XSD records for ``target_name``, or ``None``.
+
+    Parameters:
+        xsd_tree: The parsed root of one XSD.
+        target_name: The element's local-name (no namespace prefix).
+
+    Returns:
+        The first non-blank ``xs:documentation`` text found by
+        ``_DOCUMENTATION_QUERIES``, with runs of whitespace collapsed to one
+        space, or ``None`` when the schema documents no such name.
+    """
+    for template in _DOCUMENTATION_QUERIES:
+        matches = xsd_tree.xpath(template.format(tag=target_name))
+        if not isinstance(matches, list):
+            continue
+        for match in matches:
+            if isinstance(match, etree._Element):
+                text = ' '.join(''.join(str(t) for t in match.itertext()).split())
+                if text:
+                    return text
+    return None
 
 
 def _xsd_query(
@@ -511,6 +560,38 @@ class SchemaTypeResolver:
                 break
             result, tree = match
         return result
+
+    def describe(self, xpath_leaf_tag: str, namespace_uri: str | None = None) -> str | None:
+        """Return the dictionary definition of an XPath leaf element.
+
+        Parameters:
+            xpath_leaf_tag: The canonical leaf tag (e.g. ``rings:background_signal``);
+                the prefix selects the leaf's own namespace, as in :meth:`resolve`.
+            namespace_uri: The leaf's namespace URI, when the caller knows it;
+                it overrides the prefix.
+
+        Returns:
+            The ``xs:documentation`` text the registered schemas give for the
+            element, with whitespace collapsed, or ``None`` if none of them
+            documents it. The schema of the leaf's own namespace is searched
+            first, then the others in registration order, so an element that
+            reuses a common-dictionary type (``rings:comment`` is typed
+            ``pds:comment``) gets the common dictionary's definition.
+
+        Implements R-LBL-020.
+        """
+        prefix, _, target_name = xpath_leaf_tag.rpartition(':')
+        if namespace_uri is None and prefix:
+            namespace_uri = self._namespace_for_prefix(prefix)
+        own = self._tree_for_namespace(namespace_uri)
+        trees = list(self._trees.values())
+        if own is not None:
+            trees = [own] + [t for t in trees if t is not own]
+        for tree in trees:
+            text = _xsd_documentation(tree, target_name)
+            if text is not None:
+                return text
+        return None
 
     def _namespace_for_prefix(self, prefix: str) -> str | None:
         """Return the namespace URI bound to ``prefix``, or ``None`` if unknown.

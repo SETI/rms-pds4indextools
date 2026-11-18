@@ -47,7 +47,11 @@ from pds4indextools.label_writer import (
     load_packaged_template,
     write_label,
 )
-from pds4indextools.schema_types import SchemaCache, SchemaTypeResolver
+from pds4indextools.schema_types import (
+    AUTO_COLUMN_DESCRIPTIONS,
+    SchemaCache,
+    SchemaTypeResolver,
+)
 from pds4indextools.scraper import ScrapeResult, scrape_label
 
 __all__ = [
@@ -420,7 +424,9 @@ def _missing_value_message(
 
 def _build_column_metadata(
     columns: Sequence[ColumnSpec], resolver: SchemaTypeResolver
-) -> tuple[list[str], dict[str, bool], dict[str, str], dict[str, str], dict[str, str]]:
+) -> tuple[
+    list[str], dict[str, bool], dict[str, str], dict[str, str], dict[str, str], dict[str, str]
+]:
     """Assemble the parallel per-column metadata the writers need.
 
     Parameters:
@@ -429,8 +435,12 @@ def _build_column_metadata(
 
     Returns:
         A ``(headers, column_is_auto, auto_tokens, column_xpaths,
-        column_types)`` tuple. ``auto_tokens`` omits XPath columns; the other
-        maps are keyed by every column header.
+        column_types, column_descriptions)`` tuple. ``auto_tokens`` omits
+        XPath columns; the other maps are keyed by every column header.
+        ``column_descriptions`` holds the label ``<description>`` text: the
+        dictionary definition of an XPath column's element, ``XPath: <xpath>``
+        when no registered schema documents it, or the fixed text of an auto
+        column (R-LBL-020).
 
     Raises:
         SchemaResolutionError: If an XPath column's leaf tag cannot be typed.
@@ -440,13 +450,20 @@ def _build_column_metadata(
     auto_tokens = {column.header: column.auto for column in columns if column.auto is not None}
     column_xpaths = {column.header: column.selector for column in columns}
     column_types: dict[str, str] = {}
+    column_descriptions: dict[str, str] = {}
     for column in columns:
         token = column.auto
         if token is not None:
             column_types[column.header] = resolver.auto_column_type(token)
+            column_descriptions[column.header] = AUTO_COLUMN_DESCRIPTIONS[token]
         else:
-            column_types[column.header] = resolver.resolve(_leaf_tag(column.selector))
-    return headers, column_is_auto, auto_tokens, column_xpaths, column_types
+            leaf = _leaf_tag(column.selector)
+            column_types[column.header] = resolver.resolve(leaf)
+            definition = resolver.describe(leaf)
+            column_descriptions[column.header] = (
+                f'XPath: {column.selector}' if definition is None else definition
+            )
+    return headers, column_is_auto, auto_tokens, column_xpaths, column_types, column_descriptions
 
 
 @contextmanager
@@ -477,6 +494,7 @@ def _write_index_outputs(
     columns: Sequence[ColumnSpec],
     column_types: Mapping[str, str],
     column_xpaths: Mapping[str, str],
+    column_descriptions: Mapping[str, str],
 ) -> None:
     """Write the CSV and label atomically, cleaning up on any failure.
 
@@ -496,6 +514,7 @@ def _write_index_outputs(
         columns: The configured output columns, parallel to ``plan.columns``.
         column_types: Maps each header to its resolved PDS4 type.
         column_xpaths: Maps each header to its raw XPath or auto token.
+        column_descriptions: Maps each header to its label description.
     """
     label_tmp = label_path.with_name(label_path.name + '.tmp')
     with _atomic_writes((label_tmp, label_path)):
@@ -509,6 +528,7 @@ def _write_index_outputs(
                 column_specs=columns,
                 column_types=column_types,
                 column_xpaths=column_xpaths,
+                column_descriptions=column_descriptions,
                 csv_absolute_path=csv_path,
             )
             with _template_source(args.label_template) as template_path:
@@ -559,9 +579,14 @@ def run_generate_index_file(args: GenerateIndexFileArgs) -> GenerateIndexFileRes
     results = _scrape_all(
         bundle_root, labels, config=config, resolver=resolver, fail_slow=args.fail_slow
     )
-    headers, column_is_auto, auto_tokens, column_xpaths, column_types = _build_column_metadata(
-        columns, resolver
-    )
+    (
+        headers,
+        column_is_auto,
+        auto_tokens,
+        column_xpaths,
+        column_types,
+        column_descriptions,
+    ) = _build_column_metadata(columns, resolver)
     missing_warnings = _check_missing_values(columns, column_types)
     _emit_warnings(missing_warnings)
     warnings = (*warnings, *missing_warnings)
@@ -582,6 +607,7 @@ def run_generate_index_file(args: GenerateIndexFileArgs) -> GenerateIndexFileRes
         columns=columns,
         column_types=column_types,
         column_xpaths=column_xpaths,
+        column_descriptions=column_descriptions,
     )
     return GenerateIndexFileResult(
         csv_path=csv_path,
